@@ -1,0 +1,4 @@
+book/
+.DS_Store
+*.swp
+labs/**/.env
