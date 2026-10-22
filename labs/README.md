@@ -1,6 +1,6 @@
 # 실습 환경 (labs)
 
-모든 실습은 `docker compose up --build` 한 줄로 뜬다. 공통 규칙은 책의 [1부 5장 실습 환경 구축](../src/part1-foundations/05-lab-setup.md)을 본다.
+모든 실습은 `docker compose up --build` 한 줄로 뜬다. 공통 규칙은 책의 [1부 5장 실습 환경 구축](../books/vmc-bible/src/vol2-tech/part1-foundations/05-lab-setup.md)을 본다.
 
 ## ⚠️ 경고
 
@@ -14,7 +14,7 @@
 
 | 디렉터리 | 장 | 포트 | 상태 |
 |---|---|---|---|
-| [`web-sqli/`](web-sqli/) | [3부 1장 SQL 인젝션](../src/part3-web/01-sql-injection.md) | 8080 | ✅ 동작 |
+| [`web-sqli/`](web-sqli/) | [3부 1장 SQL 인젝션](../books/vmc-bible/src/vol2-tech/part3-web/01-sql-injection.md) | 8080 | ✅ 동작 |
 | `web-xss/` | 3부 2장 XSS | 8081 | 📝 예정 |
 | `web-ssrf/` | 3부 3장 SSRF | 8082 | 📝 예정 |
 | `binary-base/` | 4부 공통 (gdb, pwndbg, pwntools) | - | 📝 예정 |

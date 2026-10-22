@@ -10,7 +10,7 @@
   cd labs/web-sqli && docker compose up -d
   python3 labs/tools/capture.py web-sqli
 
-출력: books/vulnerability-bible/src/images/labs/<lab>/<name>.png
+출력: books/vmc-bible/src/images/labs/<lab>/<name>.png
 """
 import os
 import sys
@@ -18,7 +18,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT_BASE = ROOT / "books" / "vulnerability-bible" / "src" / "images" / "labs"
+OUT_BASE = ROOT / "books" / "vmc-bible" / "src" / "images" / "labs"
 
 # lab 이름 -> [(파일명, 동작 함수)]
 SCENARIOS = {}

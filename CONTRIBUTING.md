@@ -11,11 +11,23 @@
 | 새 장 추가 | 먼저 이슈로 제안 → 승인 후 PR | 2명 |
 | 구조 변경 (SUMMARY.md) | 이슈에서 토론 필수 | 2명 |
 
+## 내부 정보는 내부 블록에
+
+공개판에 나가면 안 되는 내용(내부 시스템명, 연락처, 내부 규정, 미공개 사례)은 반드시 내부 블록 안에 쓴다. 공개판 빌드에서는 "🔒 내부판에만 포함" 표시로 바뀐다.
+
+```markdown
+<!-- internal:start -->
+접수 시스템: (내부 URL)  담당: (내선)
+<!-- internal:end -->
+```
+
+🔎 항목을 채울 때는 해당 장의 🔎 문장을 지우고 그 자리에 내부 블록을 둔다. 그리고 [부록 F](books/vmc-bible/src/appendix/f-verify.md)의 해당 줄을 ✅로 바꾼다. 내부판은 `INTERNAL=1 ./build.sh`로 확인한다.
+
 ## 새 장을 쓸 때
 
 1. `templates/chapter-template.md`를 복사한다. 워크스루면 `templates/walkthrough-template.md`.
 2. 파일명은 `NN-kebab-case.md` (예: `03-ssrf.md`). 번호는 파트 안에서의 순서.
-3. `src/SUMMARY.md`에 항목을 추가한다. 여기 없으면 책에 나오지 않는다.
+3. `books/vmc-bible/src/SUMMARY.md`에 항목을 추가한다. 여기 없으면 책에 나오지 않는다.
 4. 상단 메타 블록(레벨·상태·최종 개정일)을 채운다.
 5. 템플릿의 섹션은 **삭제하지 말고** 해당 없으면 "해당 없음: 이유"를 적는다.
 6. `mdbook build`가 경고 없이 통과하는지 확인한다.
@@ -61,9 +73,9 @@
 | 종류 | 방법 | 위치 | 이유 |
 |---|---|---|---|
 | 원리 설명 그림 (흐름, 구조, 시퀀스) | **Mermaid** 코드 블록 (` ```mermaid `) | 본문 안 | 텍스트라서 diff·리뷰·검색이 된다 |
-| 정밀한 구조도 (스택 프레임, 힙 청크) | SVG 파일 (draw.io 등에서 내보내기, 원본 `.drawio` 함께 커밋) | `src/images/diagrams/` | 픽셀이 아니라 벡터. 확대해도 깨지지 않는다 |
-| 실습 결과 화면 | **자동 캡처** `labs/tools/capture.py` | `src/images/labs/<lab>/` | 앱이 바뀌면 스크립트만 다시 돌린다. 손으로 찍은 스크린샷은 금방 낡는다 |
-| GUI 도구 화면 (Burp, Ghidra 등) | 수동 캡처. 파일명에 **도구 버전** 포함 | `src/images/tools/<tool>-<version>-<what>.png` | 도구 장이 🔄 개정중이 되면 함께 갱신한다 |
+| 정밀한 구조도 (스택 프레임, 힙 청크) | SVG 파일 (draw.io 등에서 내보내기, 원본 `.drawio` 함께 커밋) | `books/vmc-bible/src/images/diagrams/` | 픽셀이 아니라 벡터. 확대해도 깨지지 않는다 |
+| 실습 결과 화면 | **자동 캡처** `labs/tools/capture.py` | `books/vmc-bible/src/images/labs/<lab>/` | 앱이 바뀌면 스크립트만 다시 돌린다. 손으로 찍은 스크린샷은 금방 낡는다 |
+| GUI 도구 화면 (Burp, Ghidra 등) | 수동 캡처. 파일명에 **도구 버전** 포함 | `books/vmc-bible/src/images/tools/<tool>-<version>-<what>.png` | 도구 장이 🔄 개정중이 되면 함께 갱신한다 |
 | 터미널 출력, HTTP 요청·응답, 에러 메시지 | **이미지 금지**. 코드 블록 | 본문 안 | 복사되고 검색된다 |
 
 규칙:

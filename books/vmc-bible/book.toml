@@ -1,0 +1,123 @@
+[book]
+title = "취약점관리센터 바이블"
+description = "취약점관리센터 직원을 위한 한 권: 센터와 제도, 분석 기술, 현장 적용. 계속 개정되는 살아있는 책"
+authors = ["Anthony Noh", "Contributors"]
+language = "ko"
+src = "src"
+
+[build]
+build-dir = "book"
+create-missing = false
+
+[preprocessor.internal]
+command = "python3 ../../tools/internal-filter.py"
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/anthonynoh5202/anthonynoh"
+edit-url-template = "https://github.com/anthonynoh5202/anthonynoh/edit/main/books/vmc-bible/{path}"
+site-url = "/anthonynoh/"
+additional-js = ["theme/mermaid.min.js", "theme/mermaid-init.js"]
+additional-css = ["theme/book.css"]
+
+[output.html.fold]
+enable = true
+level = 1
+
+[output.html.search]
+enable = true
+limit-results = 30
+use-boolean-and = true
+
+[output.html.playground]
+runnable = false
+
+# 통합 전 두 책의 주소를 새 위치로 보낸다
+[output.html.redirect]
+"/kisa-vmc-handbook/appendix/a-glossary.html" = "../../appendix/a-glossary.html"
+"/kisa-vmc-handbook/appendix/b-timeline.html" = "../../appendix/c-timeline.html"
+"/kisa-vmc-handbook/appendix/c-faq.html" = "../../appendix/d-faq.html"
+"/kisa-vmc-handbook/appendix/d-sources.html" = "../../appendix/e-sources.html"
+"/kisa-vmc-handbook/appendix/e-verify.html" = "../../appendix/f-verify.html"
+"/kisa-vmc-handbook/changelog.html" = "../changelog.html"
+"/kisa-vmc-handbook/index.html" = "../introduction.html"
+"/kisa-vmc-handbook/introduction.html" = "../introduction.html"
+"/kisa-vmc-handbook/part1-center/01-why.html" = "../../vol1-center/01-understanding/01-why.html"
+"/kisa-vmc-handbook/part1-center/02-where.html" = "../../vol1-center/01-understanding/02-where.html"
+"/kisa-vmc-handbook/part1-center/03-roles.html" = "../../vol1-center/01-understanding/03-roles.html"
+"/kisa-vmc-handbook/part1-center/04-workflow.html" = "../../vol1-center/01-understanding/04-workflow.html"
+"/kisa-vmc-handbook/part2-programs/05-bug-bounty.html" = "../../vol1-center/02-programs/05-bug-bounty.html"
+"/kisa-vmc-handbook/part2-programs/06-cvd-vdp.html" = "../../vol1-center/02-programs/06-cvd-vdp.html"
+"/kisa-vmc-handbook/part2-programs/07-portal-advisory.html" = "../../vol1-center/02-programs/07-portal-advisory.html"
+"/kisa-vmc-handbook/part2-programs/08-assessment-support.html" = "../../vol1-center/02-programs/08-assessment-support.html"
+"/kisa-vmc-handbook/part2-programs/09-ai.html" = "../../vol1-center/02-programs/09-ai.html"
+"/kisa-vmc-handbook/part3-partners/10-internal.html" = "../../vol1-center/03-partners/10-internal.html"
+"/kisa-vmc-handbook/part3-partners/11-external.html" = "../../vol1-center/03-partners/11-external.html"
+"/kisa-vmc-handbook/part3-partners/12-legal.html" = "../../vol1-center/03-partners/12-legal.html"
+"/kisa-vmc-handbook/part4-onboarding/13-new-hire.html" = "../../vol3-practice/02-onboarding/13-new-hire.html"
+"/kisa-vmc-handbook/part4-onboarding/14-existing.html" = "../../vol3-practice/02-onboarding/14-existing.html"
+"/kisa-vmc-handbook/part4-onboarding/15-transfer.html" = "../../vol3-practice/02-onboarding/15-transfer.html"
+"/kisa-vmc-handbook/part4-onboarding/16-skills.html" = "../../vol3-practice/02-onboarding/16-skills.html"
+"/kisa-vmc-handbook/reading-paths.html" = "../reading-paths.html"
+"/vulnerability-bible/appendix/a-cheatsheets.html" = "../../appendix/b-cheatsheets.html"
+"/vulnerability-bible/appendix/b-glossary.html" = "../../appendix/a-glossary.html"
+"/vulnerability-bible/appendix/c-resources.html" = "../../appendix/h-resources.html"
+"/vulnerability-bible/appendix/d-contributing.html" = "../../appendix/g-contributing.html"
+"/vulnerability-bible/changelog.html" = "../changelog.html"
+"/vulnerability-bible/how-to-read.html" = "../reading-paths.html"
+"/vulnerability-bible/index.html" = "../vol2-tech/00-index.html"
+"/vulnerability-bible/introduction.html" = "../vol2-tech/00-index.html"
+"/vulnerability-bible/part1-foundations/01-what-is-vulnerability.html" = "../../vol2-tech/part1-foundations/01-what-is-vulnerability.html"
+"/vulnerability-bible/part1-foundations/02-cwe-cve-cvss.html" = "../../vol2-tech/part1-foundations/02-cwe-cve-cvss.html"
+"/vulnerability-bible/part1-foundations/03-attack-surface.html" = "../../vol2-tech/part1-foundations/03-attack-surface.html"
+"/vulnerability-bible/part1-foundations/04-ethics-and-law.html" = "../../vol2-tech/part1-foundations/04-ethics-and-law.html"
+"/vulnerability-bible/part1-foundations/05-lab-setup.html" = "../../vol2-tech/part1-foundations/05-lab-setup.html"
+"/vulnerability-bible/part2-methodology/01-overview.html" = "../../vol2-tech/part2-methodology/01-overview.html"
+"/vulnerability-bible/part2-methodology/02-recon.html" = "../../vol2-tech/part2-methodology/02-recon.html"
+"/vulnerability-bible/part2-methodology/03-threat-modeling.html" = "../../vol2-tech/part2-methodology/03-threat-modeling.html"
+"/vulnerability-bible/part2-methodology/04-static-analysis.html" = "../../vol2-tech/part2-methodology/04-static-analysis.html"
+"/vulnerability-bible/part2-methodology/05-dynamic-analysis.html" = "../../vol2-tech/part2-methodology/05-dynamic-analysis.html"
+"/vulnerability-bible/part2-methodology/06-exploit-verification.html" = "../../vol2-tech/part2-methodology/06-exploit-verification.html"
+"/vulnerability-bible/part2-methodology/07-reporting.html" = "../../vol2-tech/part2-methodology/07-reporting.html"
+"/vulnerability-bible/part3-web/00-overview.html" = "../../vol2-tech/part3-web/00-overview.html"
+"/vulnerability-bible/part3-web/01-sql-injection.html" = "../../vol2-tech/part3-web/01-sql-injection.html"
+"/vulnerability-bible/part3-web/02-xss.html" = "../../vol2-tech/part3-web/02-xss.html"
+"/vulnerability-bible/part3-web/03-ssrf.html" = "../../vol2-tech/part3-web/03-ssrf.html"
+"/vulnerability-bible/part3-web/04-auth-session.html" = "../../vol2-tech/part3-web/04-auth-session.html"
+"/vulnerability-bible/part3-web/05-access-control.html" = "../../vol2-tech/part3-web/05-access-control.html"
+"/vulnerability-bible/part3-web/06-file-upload-path-traversal.html" = "../../vol2-tech/part3-web/06-file-upload-path-traversal.html"
+"/vulnerability-bible/part3-web/07-deserialization.html" = "../../vol2-tech/part3-web/07-deserialization.html"
+"/vulnerability-bible/part3-web/08-xxe.html" = "../../vol2-tech/part3-web/08-xxe.html"
+"/vulnerability-bible/part3-web/09-ssti.html" = "../../vol2-tech/part3-web/09-ssti.html"
+"/vulnerability-bible/part3-web/10-race-condition.html" = "../../vol2-tech/part3-web/10-race-condition.html"
+"/vulnerability-bible/part4-binary/00-overview.html" = "../../vol2-tech/part4-binary/00-overview.html"
+"/vulnerability-bible/part4-binary/01-memory-basics.html" = "../../vol2-tech/part4-binary/01-memory-basics.html"
+"/vulnerability-bible/part4-binary/02-stack-overflow.html" = "../../vol2-tech/part4-binary/02-stack-overflow.html"
+"/vulnerability-bible/part4-binary/03-format-string.html" = "../../vol2-tech/part4-binary/03-format-string.html"
+"/vulnerability-bible/part4-binary/04-heap.html" = "../../vol2-tech/part4-binary/04-heap.html"
+"/vulnerability-bible/part4-binary/05-uaf.html" = "../../vol2-tech/part4-binary/05-uaf.html"
+"/vulnerability-bible/part4-binary/06-integer-overflow.html" = "../../vol2-tech/part4-binary/06-integer-overflow.html"
+"/vulnerability-bible/part4-binary/07-mitigations.html" = "../../vol2-tech/part4-binary/07-mitigations.html"
+"/vulnerability-bible/part4-binary/08-rop.html" = "../../vol2-tech/part4-binary/08-rop.html"
+"/vulnerability-bible/part4-binary/09-fuzzing.html" = "../../vol2-tech/part4-binary/09-fuzzing.html"
+"/vulnerability-bible/part5-extended/01-mobile.html" = "../../vol2-tech/part5-extended/01-mobile.html"
+"/vulnerability-bible/part5-extended/02-cloud.html" = "../../vol2-tech/part5-extended/02-cloud.html"
+"/vulnerability-bible/part5-extended/03-iot-firmware.html" = "../../vol2-tech/part5-extended/03-iot-firmware.html"
+"/vulnerability-bible/part5-extended/04-supply-chain.html" = "../../vol2-tech/part5-extended/04-supply-chain.html"
+"/vulnerability-bible/part5-extended/05-ai-llm.html" = "../../vol2-tech/part5-extended/05-ai-llm.html"
+"/vulnerability-bible/part6-tools/00-when-to-use-what.html" = "../../vol2-tech/part6-tools/00-when-to-use-what.html"
+"/vulnerability-bible/part6-tools/01-burp-proxy.html" = "../../vol2-tech/part6-tools/01-burp-proxy.html"
+"/vulnerability-bible/part6-tools/02-ghidra-ida.html" = "../../vol2-tech/part6-tools/02-ghidra-ida.html"
+"/vulnerability-bible/part6-tools/03-debuggers.html" = "../../vol2-tech/part6-tools/03-debuggers.html"
+"/vulnerability-bible/part6-tools/04-fuzzers.html" = "../../vol2-tech/part6-tools/04-fuzzers.html"
+"/vulnerability-bible/part6-tools/05-sast-semgrep-codeql.html" = "../../vol2-tech/part6-tools/05-sast-semgrep-codeql.html"
+"/vulnerability-bible/part7-walkthroughs/00-overview.html" = "../../vol2-tech/part7-walkthroughs/00-overview.html"
+"/vulnerability-bible/part7-walkthroughs/01-cve-2021-44228-log4shell.html" = "../../vol2-tech/part7-walkthroughs/01-cve-2021-44228-log4shell.html"
+"/vulnerability-bible/part7-walkthroughs/02-cve-2014-0160-heartbleed.html" = "../../vol2-tech/part7-walkthroughs/02-cve-2014-0160-heartbleed.html"
+"/vulnerability-bible/part7-walkthroughs/03-cve-2017-5638-struts.html" = "../../vol2-tech/part7-walkthroughs/03-cve-2017-5638-struts.html"
+"/vulnerability-bible/part7-walkthroughs/04-cve-2021-3156-sudo-baron-samedit.html" = "../../vol2-tech/part7-walkthroughs/04-cve-2021-3156-sudo-baron-samedit.html"
+"/vulnerability-bible/part7-walkthroughs/05-cve-2024-3094-xz-backdoor.html" = "../../vol2-tech/part7-walkthroughs/05-cve-2024-3094-xz-backdoor.html"
+"/vulnerability-bible/part8-reporting/01-report-structure.html" = "../../vol2-tech/part8-reporting/01-report-structure.html"
+"/vulnerability-bible/part8-reporting/02-severity.html" = "../../vol2-tech/part8-reporting/02-severity.html"
+"/vulnerability-bible/part8-reporting/03-patch-verification.html" = "../../vol2-tech/part8-reporting/03-patch-verification.html"
