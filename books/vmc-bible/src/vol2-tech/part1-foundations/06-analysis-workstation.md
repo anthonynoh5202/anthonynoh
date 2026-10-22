@@ -173,6 +173,7 @@ sudo ./tools/setup-analyst.sh --static --codeql                # CodeQL 번들�
 | apt → pipx → 공식 GitHub 릴리스 순서로 설치 | 출처 불명 설치 스크립트를 `curl \| sh`로 실행 |
 | pwntools 계열을 전용 venv(`~/.venvs/analysis`)에 격리 | 시스템 Python을 오염 |
 | 릴리스 바이너리를 `~/tools/bin`에 | `/usr/bin`에 직접 복사 |
+| GitHub API가 막힌 망에서는 git 태그로 최신 버전을 알아내 릴리스 URL을 조립(토큰 불필요) | API 접근을 전제로 실패 |
 | GUI 도구(Burp, ZAP, Android Studio)의 공식 다운로드 위치 안내 | GUI 설치 파일을 자동 실행 |
 
 설치가 끝나면 PATH를 추가하고 새 셸에서 확인한다.
@@ -212,7 +213,8 @@ python3 -m venv ~/.venvs/analysis
 ~/.venvs/analysis/bin/pip install pwntools ropper ROPgadget
 ln -sf ~/.venvs/analysis/bin/{pwn,ROPgadget,ropper,checksec} ~/.local/bin/
 
-# Ghidra: 공식 릴리스 zip. 요구 JDK 버전은 그 릴리스의 README 에 있다
+# Ghidra: 공식 릴리스 zip. 요구 JDK 버전은 압축 안 Ghidra/application.properties 의 application.java.min 에 있다
+# (Ghidra 12.1 기준 21 이상. Ubuntu 24.04의 openjdk-21-jdk 로 동작 확인)
 # https://github.com/NationalSecurityAgency/ghidra/releases → ghidra_X.Y_PUBLIC_YYYYMMDD.zip
 unzip ghidra_*.zip -d ~/tools && ~/tools/ghidra_*/ghidraRun
 ```
@@ -266,6 +268,10 @@ pwn cyclic 32
 
 # 웹·정적
 mitmproxy --version && semgrep --version && sqlmap --version | head -1
+nuclei -version && httpx -version && codeql version | head -1
+
+# Ghidra를 GUI 없이 확인 (프로젝트를 만들어 바이너리 하나를 분석하고 지운다)
+~/tools/ghidra_*/support/analyzeHeadless /tmp/gproj T -import /tmp/t -deleteProject 2>&1 | grep 'REPORT: Import'
 
 # Docker
 docker run --rm hello-world | head -2
@@ -346,4 +352,4 @@ gdb+pwndbg, pwntools, AFL++, radare2가 들어 있다. 단, ptrace 권한을 준
 | 날짜 | 변경 | 기여자 |
 |---|---|---|
 | 2026-10-22 | 초안 작성. 설치 스크립트와 binary-base 컨테이너 추가 | @anthonynoh5202 |
-| 2026-10-22 | 설치 스크립트를 Ubuntu 24.04에서 실제 실행해 검증(apt·pipx·venv·pwndbg 경로). GitHub 릴리스 다운로드는 실행 환경의 네트워크 제한으로 미검증 | @anthonynoh5202 |
+| 2026-10-22 | 설치 스크립트를 Ubuntu 24.04에서 전 모듈 실제 실행해 검증. GitHub 릴리스 도구(nuclei, httpx, jadx, Trivy, CodeQL 번들, Ghidra 12.1)의 다운로드·설치·실행까지 확인. GitHub API가 막힌 망을 위한 대체 해석 경로(git 태그 기반) 추가 | @anthonynoh5202 |

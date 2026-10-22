@@ -48,9 +48,43 @@ ok()   { printf '   \033[1;32m✓\033[0m %s\n' "$*"; }
 warn() { printf '   \033[1;33m!\033[0m %s\n' "$*"; }
 as_user() { sudo -u "$TARGET_USER" -H env PATH="$BIN_DIR:$PATH" "$@"; }
 need_root() { [[ $EUID -eq 0 ]] || { echo "설치는 sudo로 실행한다: sudo $0 ..."; exit 1; }; }
-gh_latest_asset() {  # gh_latest_asset <owner/repo> <정규식>  → 다운로드 URL (실패 시 빈 문자열)
-  curl -fsSL --max-time 30 "https://api.github.com/repos/$1/releases/latest" 2>/dev/null \
-    | grep -oE '"browser_download_url": *"[^"]+"' | cut -d'"' -f4 | grep -E "$2" | head -1 || true
+# ---- GitHub 릴리스 자산 URL 해석 --------------------------------------------
+# 1차: GitHub API (releases/latest). 2차: API가 막힌 망에서는 git ls-remote 로 최신 태그를 얻어
+#      자산 파일명 규칙으로 URL을 조립하고 HEAD 요청으로 존재를 확인한다 (API·토큰 불필요).
+gh_latest_tag() {  # gh_latest_tag <owner/repo> <태그 정규식>
+  git ls-remote --tags --refs "https://github.com/$1.git" 2>/dev/null | sed 's#.*refs/tags/##' | grep -E "$2" | sort -V | tail -1 || true
+}
+url_exists() { [[ "$(curl -sIL --max-time 30 -o /dev/null -w '%{http_code}' "$1")" == "200" ]]; }
+gh_latest_asset() {  # gh_latest_asset <owner/repo> <자산 정규식>  → 다운로드 URL (실패 시 빈 문자열)
+  local repo="$1" re="$2" url tag ver
+  url=$(curl -fsSL --max-time 30 "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null \
+    | grep -oE '"browser_download_url": *"[^"]+"' | cut -d'"' -f4 | grep -E "$re" | head -1 || true)
+  [[ -n "$url" ]] && { echo "$url"; return; }
+  # --- 2차: 태그 기반 조립
+  case "$repo" in
+    projectdiscovery/*) tag=$(gh_latest_tag "$repo" '^v[0-9]+\.[0-9]+\.[0-9]+$'); ver=${tag#v}
+                        url="https://github.com/$repo/releases/download/$tag/${repo#*/}_${ver}_linux_amd64.zip" ;;
+    skylot/jadx)        tag=$(gh_latest_tag "$repo" '^v[0-9]+\.[0-9]+\.[0-9]+$'); ver=${tag#v}
+                        url="https://github.com/$repo/releases/download/$tag/jadx-${ver}.zip" ;;
+    aquasecurity/trivy) tag=$(gh_latest_tag "$repo" '^v[0-9]+\.[0-9]+\.[0-9]+$'); ver=${tag#v}
+                        url="https://github.com/$repo/releases/download/$tag/trivy_${ver}_Linux-64bit.deb" ;;
+    github/codeql-action) tag=$(gh_latest_tag "$repo" '^codeql-bundle-v[0-9]+\.[0-9]+\.[0-9]+$')
+                        url="https://github.com/$repo/releases/download/$tag/codeql-bundle-linux64.tar.gz" ;;
+    NationalSecurityAgency/ghidra)
+      # 자산 이름에 빌드 날짜가 들어간다(ghidra_12.1_PUBLIC_20260513.zip). 태그 커밋 날짜 근처를 탐색한다.
+      tag=$(gh_latest_tag "$repo" '^Ghidra_[0-9.]+_build$'); ver=${tag#Ghidra_}; ver=${ver%_build}
+      local tmp; tmp=$(mktemp -d); local d
+      d=$( (git -C "$tmp" init -q && git -C "$tmp" remote add origin "https://github.com/$repo.git" \
+            && git -C "$tmp" fetch -q --depth 1 --filter=tree:0 origin "refs/tags/$tag" \
+            && git -C "$tmp" log -1 --format=%cd --date=format:%Y%m%d FETCH_HEAD) 2>/dev/null || true); rm -rf "$tmp"
+      [[ -n "$d" ]] || { echo ""; return; }
+      for off in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 -1 -2 -3; do
+        url="https://github.com/$repo/releases/download/$tag/ghidra_${ver}_PUBLIC_$(date -d "$d $off day" +%Y%m%d).zip"
+        url_exists "$url" && { echo "$url"; return; }
+      done; echo ""; return ;;
+    *) echo ""; return ;;
+  esac
+  [[ -n "$tag" ]] && url_exists "$url" && echo "$url" || echo ""
 }
 
 # ---------------------------------------------------------------- check
@@ -68,7 +102,7 @@ if [[ $CHECK_ONLY -eq 1 ]]; then
   log "정적";   chk semgrep --version; chk codeql version
   log "모바일"; chk adb --version; command -v apktool >/dev/null && ok "apktool  $(apktool --version 2>/dev/null | grep -v JAVA_TOOL | head -1)" || warn "apktool 없음"; chk jadx --version; chk frida --version; chk objection version
   log "클라우드"; chk aws --version; chk trivy --version; chk checkov --version
-  log "펌웨어"; (binwalk --help >/dev/null 2>&1 && ok "binwalk") || warn "binwalk 오류 (apt의 2.x는 최신 capstone과 충돌할 수 있다 → 3.x: https://github.com/ReFirmLabs/binwalk)"; chk unsquashfs -v; chk qemu-system-arm --version
+  log "펌웨어"; (binwalk --help >/dev/null 2>&1 && ok "binwalk  $(binwalk --help 2>/dev/null | head -1 | cut -c1-60)") || warn "binwalk 오류 (apt 2.x가 깨진 경우 firmware 모듈을 다시 실행하면 3.x를 cargo로 빌드한다)"; chk unsquashfs -v; chk qemu-system-arm --version
   exit 0
 fi
 
@@ -130,7 +164,13 @@ if has binary; then
   if ! ls -d "$TOOLS_DIR"/ghidra_* >/dev/null 2>&1; then
     url=$(gh_latest_asset "NationalSecurityAgency/ghidra" 'ghidra_[0-9.]+_PUBLIC_[0-9]+\.zip$')
     if [[ -n "$url" ]]; then
-      curl -fsSL "$url" -o /tmp/ghidra.zip && as_user unzip -oq /tmp/ghidra.zip -d "$TOOLS_DIR" && ok "Ghidra → $(ls -d "$TOOLS_DIR"/ghidra_*) (실행: ghidraRun). 요구 JDK 버전은 해당 릴리스의 README로 확인"
+      curl -fsSL "$url" -o /tmp/ghidra.zip && as_user unzip -oq /tmp/ghidra.zip -d "$TOOLS_DIR" && ok "Ghidra → $(ls -d "$TOOLS_DIR"/ghidra_*) (실행: ghidraRun)"
+      # 릴리스가 요구하는 최소 JDK 버전을 읽어, apt에 있으면 설치한다
+      jmin=$(grep -hoE 'application.java.min=[0-9]+' "$TOOLS_DIR"/ghidra_*/Ghidra/application.properties 2>/dev/null | head -1 | cut -d= -f2)
+      if [[ -n "$jmin" ]]; then
+        if apt-get install -y -qq "openjdk-${jmin}-jdk" >/dev/null 2>&1; then ok "Ghidra 요구 JDK $jmin 이상 → openjdk-${jmin}-jdk 설치"
+        else warn "Ghidra 요구 JDK $jmin 이상. apt에 없으면 https://adoptium.net 에서 받아 JAVA_HOME 을 지정한다"; fi
+      fi
     else warn "Ghidra 다운로드 실패: https://github.com/NationalSecurityAgency/ghidra/releases"; fi
   else ok "Ghidra 이미 있음"; fi
   ok "binary 완료"
@@ -179,7 +219,22 @@ if has firmware; then
   log "firmware: binwalk, squashfs, QEMU 시스템 에뮬레이터"
   apt-get update -qq
   apt-get install -y -qq binwalk squashfs-tools qemu-system-arm qemu-system-mips qemu-utils \
-    device-tree-compiler mtd-utils >/dev/null
+    device-tree-compiler mtd-utils p7zip-full >/dev/null
+  # apt의 binwalk는 2.x(Python)다. 시스템 capstone 버전에 따라 깨지는 경우가 있어 동작을 확인하고,
+  # 깨지면 3.x(Rust)를 cargo로 빌드한다(약 1~2분). 3.x는 릴리스 바이너리를 제공하지 않는다.
+  if binwalk --help >/dev/null 2>&1; then
+    binwalk --help 2>/dev/null | grep -q "Binwalk v2" && ok "binwalk 2.x (apt)" || ok "binwalk 3.x 이미 있음 ($(command -v binwalk))"
+  else
+    CARGO=$(command -v cargo || ls "$HOME_DIR/.cargo/bin/cargo" 2>/dev/null || true)
+    if [[ -n "$CARGO" ]]; then
+      apt-get install -y -qq libfontconfig1-dev liblzma-dev pkg-config >/dev/null
+      as_user env PATH="$(dirname "$CARGO"):$PATH" "$CARGO" install --locked binwalk >/dev/null 2>&1 \
+        && ln -sf "$HOME_DIR/.cargo/bin/binwalk" "$BIN_DIR/binwalk" && ok "binwalk 3.x (cargo) → $BIN_DIR/binwalk" \
+        || warn "binwalk 3.x 빌드 실패: https://github.com/ReFirmLabs/binwalk#installation"
+    else
+      warn "apt binwalk 2.x가 동작하지 않는다. Rust 설치(https://rustup.rs) 후 'cargo install --locked binwalk' 로 3.x를 설치한다"
+    fi
+  fi
   warn "EMBA(펌웨어 자동 분석)는 전용 VM 권장: https://github.com/e-m-b-a/emba"
   ok "firmware 완료"
 fi
