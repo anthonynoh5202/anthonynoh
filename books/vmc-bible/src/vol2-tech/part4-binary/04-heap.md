@@ -122,20 +122,21 @@ grep -rnE '\b(malloc|calloc|realloc|alloca)\s*\(' --include='*.c' . | grep -E '\
 grep -rnE '\b(memcpy|memmove|strcpy|read|recv)\s*\(' --include='*.c' .                 # 복사 길이의 출처
 ```
 
-**CodeQL**: `cpp/overrunning-write`, `cpp/overrun-write`(CWE-787), `cpp/integer-multiplication-cast-to-long`, `cpp/uncontrolled-allocation-size`(CWE-789). **Semgrep** `p/c` 룰셋에 `malloc(x * y)` 형태를 잡는 룰이 있다. 정적 분석은 "작은 할당, 큰 복사"의 두 지점이 멀리 떨어져 있을수록 약하다. 그래서 힙은 **동적 탐지가 주력**이다.
+**CodeQL**: `cpp/overrunning-write`(CWE-120/787), `cpp/integer-multiplication-cast-to-long`, `cpp/uncontrolled-allocation-size`(CWE-190/789). **Semgrep** `p/c` 룰셋에 `malloc(x * y)` 형태를 잡는 룰이 있다. 정적 분석은 "작은 할당, 큰 복사"의 두 지점이 멀리 떨어져 있을수록 약하다. 그래서 힙은 **동적 탐지가 주력**이다.
 
 ### 3.2 동적 테스트
 
 **AddressSanitizer가 기준이다.** 1바이트 오버플로도 쓰는 순간 잡는다. 할당자가 나중에 `free`에서 아우성치는 것과 달리 **원인 지점**을 알려 준다.
 
 ```bash
-gcc -g -fsanitize=address -o target_asan target.c
-./target_asan < input
-# ==1234==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x602000000038
-# WRITE of size 64 at 0x602000000038 thread T0
-#     #0 0x... in main target.c:10          ← 원인
-# 0x602000000038 is located 0 bytes to the right of 24-byte region ...
-#     allocated by thread T0 here: ...      ← 어디서 할당한 청크인지
+gcc -g -fsanitize=address -o hof_asan hof.c          # 4.1의 hof.c
+python3 -c "import sys; sys.stdout.buffer.write(b'A'*32)" | ./hof_asan
+# ==10913==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x503000000058
+# WRITE of size 32 at 0x503000000058 thread T0
+#     #0 0x... in read ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:978
+#     #1 0x... in main hof.c:11             ← 원인 (read 인터셉터 바로 위 프레임)
+# 0x503000000058 is located 0 bytes after 24-byte region [0x503000000040,0x503000000058)
+# allocated by thread T0 here: ...          ← 어디서 할당한 청크인지
 ```
 
 **glibc 자체 검사 메시지**를 안다. ASan 없이 돌릴 때 이 문구가 나오면 힙 손상이다. 원인이 아니라 **발각 지점**이라는 것을 기억한다.
@@ -148,7 +149,7 @@ gcc -g -fsanitize=address -o target_asan target.c
 | `malloc(): unaligned tcache chunk detected` | tcache `next`가 16바이트 정렬이 아님 (safe-linking 이후 포이즈닝 실패의 흔한 흔적) |
 | `corrupted size vs. prev_size` | 병합 시 이웃의 prev_size와 size 불일치 |
 
-`MALLOC_CHECK_=3` 환경 변수나 Valgrind(`valgrind --tool=memcheck`)도 쓰지만, 2024년 이후 기본은 ASan이다. 퍼징도 ASan 빌드로 한다. [09장](09-fuzzing.md).
+`MALLOC_CHECK_=3` 환경 변수(glibc 2.34부터는 `LD_PRELOAD=libc_malloc_debug.so.0`을 함께 줘야 동작)나 Valgrind(`valgrind --tool=memcheck`)도 쓰지만, 2024년 이후 기본은 ASan이다. 퍼징도 ASan 빌드로 한다. [09장](09-fuzzing.md).
 
 ## 4. 실습 🧪
 
@@ -177,7 +178,7 @@ int main(void) {
 
 ```bash
 gcc -g -O0 -o hof hof.c
-echo alice | ./hof                                   # name=alice role=user
+echo -n alice | ./hof                                # name=alice role=user
 python3 -c "import sys; sys.stdout.buffer.write(b'A'*24 + b'\x21' + b'\x00'*7 + b'admin\x00')" | ./hof
 # name=AAAAAAAA role=admin                           ← 정상 종료. 할당자는 눈치채지 못한다
 python3 -c "import sys; sys.stdout.buffer.write(b'A'*32)" | ./hof
@@ -230,7 +231,7 @@ gcc -g -O0 -o tcache tcache.c && ./tcache
 
 | 바꾸는 것 | 결과 (glibc 2.39) | 왜 |
 |---|---|---|
-| `(pos >> 12) ^` 를 빼고 `&target`을 그대로 쓴다 | `malloc(): unaligned tcache chunk detected` | safe-linking. 가리지 않은 포인터는 해독 과정에서 엉뚱한 값이 되어 정렬 검사에 걸린다 |
+| `(pos >> 12) ^` 를 빼고 `&target`을 그대로 쓴다 | `malloc(): unaligned tcache chunk detected` | safe-linking. 가리지 않은 포인터는 해독 과정에서 엉뚱한 값이 되어 정렬 검사에 걸린다 (힙 주소의 12~15번째 비트가 우연히 0이면 1/16 확률로 검사를 통과하고 엉뚱한 주소에 쓰다 SIGSEGV) |
 | `target`에서 `aligned(16)`을 뺀다 | 같은 메시지 | 2.32+는 tcache에서 꺼내는 청크가 16바이트 정렬인지 검사한다 |
 | `free(b)`를 두 번 쓴다 | `free(): double free detected in tcache 2` | `key` 필드가 tcache 표식과 같으면 bin을 뒤져 중복을 찾는다 (2.29+) |
 
@@ -305,8 +306,8 @@ heap feng shui의 원리는 단순하다. 할당자는 **결정적**(determinist
 
 | CVE | 제품 | 핵심 | 패치 |
 |---|---|---|---|
-| [CVE-2021-3156](https://nvd.nist.gov/vuln/detail/CVE-2021-3156) | sudo 1.8.2~1.8.31p2, 1.9.0~1.9.5p1 | "Baron Samedit". `sudoedit -s`에서 백슬래시 이스케이프 해제 중 힙 오버플로. 로컬 → root. 📎 Qualys 분석 기준 2011년 7월 커밋에서 도입되어 약 10년간 존재 ([Qualys](https://blog.qualys.com/vulnerabilities-threat-research/2021/01/26/cve-2021-3156-heap-based-buffer-overflow-in-sudo-baron-samedit)) | [sudo 권고](https://sudo.ws/alerts/unescape_overflow.html) |
-| [CVE-2023-4911](https://nvd.nist.gov/vuln/detail/CVE-2023-4911) | glibc 2.34~2.38 ld.so | "Looney Tunables". `GLIBC_TUNABLES` 환경 변수 파싱에서 버퍼 오버플로. setuid 실행 시 로컬 → root | [Qualys 분석](https://blog.qualys.com/vulnerabilities-threat-research/2023/10/03/cve-2023-4911-looney-tunables-local-privilege-escalation-in-the-glibcs-ld-so) |
+| [CVE-2021-3156](https://nvd.nist.gov/vuln/detail/CVE-2021-3156) | sudo 1.8.2~1.8.31p2, 1.9.0~1.9.5p1 | "Baron Samedit". `sudoedit -s`에서 백슬래시 이스케이프 해제 중 힙 오버플로. 로컬 → root. 📎 Qualys 분석 기준 2011년 7월 커밋에서 도입되어 약 10년간 존재 ([Qualys, oss-security](http://www.openwall.com/lists/oss-security/2021/01/26/3)) | [sudo 1.9.5p2 릴리스 노트](https://www.sudo.ws/stable.html#1.9.5p2) |
+| [CVE-2023-4911](https://nvd.nist.gov/vuln/detail/CVE-2023-4911) | glibc 2.34~2.38 ld.so | "Looney Tunables". `GLIBC_TUNABLES` 환경 변수 파싱에서 버퍼 오버플로. setuid 실행 시 로컬 → root | [Qualys 권고](https://www.qualys.com/2023/10/03/cve-2023-4911/looney-tunables-local-privilege-escalation-glibc-ld-so.txt) |
 | [CVE-2018-6789](https://nvd.nist.gov/vuln/detail/CVE-2018-6789) | Exim < 4.90.1 | base64 디코더의 버퍼 크기 계산 오류로 **1바이트** 힙 오버플로. 인증 전 원격 코드 실행 | [DEVCORE 분석](https://devco.re/blog/2018/03/06/exim-off-by-one-RCE-exploiting-CVE-2018-6789-en/) |
 | [CVE-2015-0235](https://nvd.nist.gov/vuln/detail/CVE-2015-0235) | glibc < 2.18 | "GHOST". `gethostbyname()`의 `__nss_hostname_digits_dots()`에서 크기 계산 누락 → 힙 오버플로. 2013년에 고쳐졌지만 보안 패치로 분류되지 않아 배포판에 남음 | [Qualys 권고](https://www.qualys.com/2015/01/27/cve-2015-0235/GHOST-CVE-2015-0235.txt) |
 | [CVE-2023-4863](https://nvd.nist.gov/vuln/detail/CVE-2023-4863) | libwebp < 1.3.2 | 허프만 테이블 구성(`BuildHuffmanTable`)에서 2차 테이블 크기 계산 오류 → 힙 오버플로. WebP 이미지 하나로 브라우저·메신저 원격 코드 실행, 실제 공격에 사용 | [패치 커밋](https://github.com/webmproject/libwebp/commit/902bc919) |
@@ -355,3 +356,4 @@ heap feng shui의 원리는 단순하다. 할당자는 **결정적**(determinist
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. 실습 출력과 검사 메시지는 Ubuntu 24.04 / glibc 2.39에서 실측. glibc 버전별 변화는 how2heap·Check Point 자료로 확인 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CVE 5건 cvelistV5 대조(모두 실존), sudo·Qualys 링크를 레코드 URL로 교체. glibc 버전별 변화(tcache 2.26, key 2.29, safe-linking 2.32, 랜덤 key·훅 제거 2.34)와 3.2절 손상 메시지를 glibc `malloc.c` 태그별 소스로 확인. hof.c·tcache.c와 세 변형을 재실행(모두 본문대로). ASan 출력을 gcc 13 형식(`0 bytes after`)으로 교체, 존재하지 않는 CodeQL ID `cpp/overrun-write` 삭제, `MALLOC_CHECK_`의 2.34+ 조건 추가 | 검증팀 |

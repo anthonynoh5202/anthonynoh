@@ -275,7 +275,7 @@ afl-fuzz -d -i in -o out -N tcp://127.0.0.1/8554 -x rtsp.dict -P RTSP -D 10000 -
    ```bash
    afl-fuzz -i in -o out -- ./records_afl
    ```
-   `count * 4`가 되감기는 값(`0x40000000` 이상)을 변이가 만들어 내면 `uniq crashes`가 올라간다. 수 분 안에 나온다. 그렇지 않으면 CMPLOG(2.2절)를 켜거나 사전에 `"\x01\x00\x00\x40"` 같은 경계값을 넣는다.
+   `count * 4`가 되감기는 값(`0x40000000` 이상)을 변이가 만들어 내면 `uniq crashes`가 올라간다. 입력이 4바이트 정수 하나라 변이 공간이 작아 보통 오래 걸리지 않는다. 한참 안 나오면 CMPLOG(2.2절)를 켜거나 사전에 `"\x01\x00\x00\x40"` 같은 경계값을 넣는다.
 4. 분류. 크래시를 최소화하고 ASan 보고서를 받는다.
    ```bash
    afl-tmin -i out/default/crashes/id:000000,* -o min.bin -- ./records_afl
@@ -323,3 +323,4 @@ afl-fuzz -d -i in -o out -N tcp://127.0.0.1/8554 -x rtsp.dict -P RTSP -D 10000 -
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 8절·실습 작성. 명령·매크로·옵션을 AFL++ 5.03c 문서와 libFuzzer 문서 기준으로 확인 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: AFL++ README(릴리스 5.03c, Docker 명령)·fuzzing_in_depth(MSan 86/LSan 23 종료 코드)·README.persistent_mode(매크로 순서)·AFLNet README(명령줄 옵션)·OSS-Fuzz README(2025-05 수치)를 원문으로 대조해 일치 확인. AFL++ 미설치 환경이라 8절 캠페인은 미실행 → "수 분 안에"라는 시간 추정을 완화 | 검증팀 |

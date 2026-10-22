@@ -38,7 +38,7 @@
 | 규칙 | 내용 | 함정 |
 |---|---|---|
 | **정수 승격**(integer promotion) | `char`, `short`는 연산 전에 `int`로 바뀐다 | `uint16_t a = 65535; uint16_t b = a + 4;` → 계산은 `int`로 65539, 대입하며 3으로 잘린다 |
-| **통상 산술 변환**(usual arithmetic conversions) | 부호 있는 수와 부호 없는 수가 만나면, 같은 폭이면 **부호 없는 쪽**으로 바뀐다 | `int len = -1; if (len > sizeof buf)` → `-1`이 `size_t`로 바뀌어 18,446,744,073,709,551,615가 된다. 검사 통과 |
+| **통상 산술 변환**(usual arithmetic conversions) | 부호 있는 수와 부호 없는 수가 만나면, 같은 폭이면 **부호 없는 쪽**으로 바뀐다 | `int len = -1; memcpy(buf, src, len);` → `len`이 `size_t`로 바뀌어 18,446,744,073,709,551,615바이트를 복사한다. 비교 `len > sizeof buf`에서도 같은 변환이 일어나 `-1`이 거대한 양수로 비교된다(2절) |
 | **부호 없는 오버플로** | 모듈로 2ⁿ으로 되감긴다. 정의된 동작 | 조용하다. 새니타이저도 기본으로는 보고하지 않는다 |
 | **부호 있는 오버플로** | **미정의 동작(UB)** | 컴파일러는 "일어나지 않는다"고 가정하고 최적화한다. `x + 1 > x`를 항상 참으로 접을 수 있다 |
 | **축소 변환**(truncation) | 큰 타입을 작은 타입에 넣으면 상위 비트가 버려진다 | `size_t`를 `int`나 `uint16_t` 매개변수에 넘기는 순간 길이가 바뀐다 |
@@ -249,7 +249,7 @@ int main(void) {
    # ==5093==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x502000000014 ...
    # WRITE of size 4 at 0x502000000014 thread T0
    #     #0 ... in fread
-   #     #1 ... in main records.c:14
+   #     #1 ... in main records.c:13
    # 0x502000000014 is located 0 bytes after 4-byte region [0x502000000010,0x502000000014)
    ```
    "4바이트 영역 바로 뒤에 4바이트 쓰기". 오버플로된 `size`가 그대로 보인다.
@@ -262,10 +262,10 @@ int main(void) {
    Clang 18 이상이면 `#include <stdckdint.h>` 후 `ckd_mul(&size, count, 4u)`로 같은 일을 한다(`-std=c23`).
 5. (심화) 부호 있는 오버플로 검사가 최적화로 사라지는 것을 본다.
    ```c
-   __attribute__((noinline)) int next_is_bigger(int x) { return x + 1 > x; }
+   __attribute__((noinline)) int next_is_bigger(int x) { int r = x + 1; return r > x; }
    int main(void) { printf("%d\n", next_is_bigger(INT_MAX)); return 0; }
    ```
-   `gcc -O2`는 `1`을, `gcc -O2 -fwrapv`는 `0`을 출력한다. `gcc -O2 -S`로 어셈블리를 보면 비교 없이 `movl $1, %eax; ret`만 남아 있다. `-fsanitize=signed-integer-overflow`를 붙이면 `runtime error: signed integer overflow`가 보고된다.
+   `gcc -O2`는 `1`을, `gcc -O2 -fwrapv`는 `0`을 출력한다. `gcc -O2 -S`로 어셈블리를 보면 비교 없이 `movl $1, %eax; ret`만 남아 있다. `-fsanitize=signed-integer-overflow`를 붙이면 `runtime error: signed integer overflow: 2147483647 + 1 cannot be represented in type 'int'`가 보고된다. 덧셈과 비교를 한 식으로(`return x + 1 > x;`) 쓰면 gcc가 프런트엔드에서 미리 `1`로 접어 버려 `-O0`에서도, UBSan을 켜도 보고되지 않는다(gcc 13.3에서 확인). 방어 코드가 UB를 밟으면 "검사했다"는 흔적조차 남지 않는다는 뜻이다.
 
 ## 5. 익스플로잇 검증
 
@@ -363,3 +363,4 @@ int main(void) {
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 본문 작성. 컴파일러 경고·UBSan·ASan 출력, `ckd_mul`/`__builtin_mul_overflow` 로컬 검증, CVE 6건 확인 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CVE 6건 cvelistV5 대조(모두 실존, 버전·패치 링크 일치). records.c(ASan·UBSan·무새니타이저·수정판), `ckd_mul`(clang 18 `-std=c23`), `-Wconversion` 계열 경고, `-fwrapv` 실험을 재실행. 통상 산술 변환 표의 예시(`len > sizeof buf`는 통과가 아니라 거부) 정정, ASan 줄 번호 정정, 5단계 예제를 UBSan이 실제로 보고하는 형태(`int r = x + 1; return r > x;`)로 교체(한 식으로 쓰면 gcc가 접어 버려 보고 안 됨) | 검증팀 |

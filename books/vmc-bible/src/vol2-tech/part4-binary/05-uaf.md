@@ -195,18 +195,18 @@ for f in $(git ls-files '*.c'); do
 ```
 ==1588==ERROR: AddressSanitizer: heap-use-after-free on address 0x503000000050 at pc 0x5634938fa36f ...
 READ of size 4 at 0x503000000050 thread T0
-    #0 0x5634938fa36e in main uaf.c:14
+    #0 0x5634938fa36e in main uaf.c:15
 0x503000000050 is located 16 bytes inside of 20-byte region [0x503000000040,0x503000000054)
 freed by thread T0 here:
     #0 0x7f270d6fc4d8 in free ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:52
-    #1 0x5634938fa30f in main uaf.c:11
+    #1 0x5634938fa30f in main uaf.c:12
 previously allocated by thread T0 here:
     #0 0x7f270d6fd9c7 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
-    #1 0x5634938fa29e in main uaf.c:8
-SUMMARY: AddressSanitizer: heap-use-after-free uaf.c:14 in main
+    #1 0x5634938fa29e in main uaf.c:9
+SUMMARY: AddressSanitizer: heap-use-after-free uaf.c:15 in main
 ```
 
-읽는 법은 세 줄이다. **어디서 썼는가**(`READ of size 4 ... uaf.c:14`), **어디서 해제했는가**(`freed by ... uaf.c:11`), **어디서 할당했는가**(`previously allocated ... uaf.c:8`). 세 스택을 나란히 놓으면 소유권이 어디서 꼬였는지 대부분 보인다. 접근 크기(`size 4`)와 오프셋(`16 bytes inside of 20-byte region`)으로 어떤 필드인지도 알 수 있다.
+읽는 법은 세 줄이다. **어디서 썼는가**(`READ of size 4 ... uaf.c:15`), **어디서 해제했는가**(`freed by ... uaf.c:12`), **어디서 할당했는가**(`previously allocated ... uaf.c:9`). 세 스택을 나란히 놓으면 소유권이 어디서 꼬였는지 대부분 보인다. 접근 크기(`size 4`)와 오프셋(`16 bytes inside of 20-byte region`)으로 어떤 필드인지도 알 수 있다.
 
 ASan의 격리 구역은 유한하므로 해제 후 한참 뒤에 쓰는 UAF는 놓칠 수 있다(`ASAN_OPTIONS=quarantine_size_mb=`로 키운다).
 
@@ -259,7 +259,7 @@ int main(void) {
    gcc -O0 -g -fsanitize=address uaf.c -o uaf && ./uaf
    ```
 3. `free(s)` 뒤에 `s = NULL;`을 넣고 다시 빌드한다. 이번에는 NULL 역참조로 **크래시**한다. 조용한 오동작이 시끄러운 크래시로 바뀐 것이고, 이것이 "null after free"의 가치다.
-4. `struct session`에 `void (*on_close)(void);` 필드를 추가하고 마지막 줄에서 `s->on_close()`를 호출해 본다. `memset`한 값 `0x4141414141414141`로 점프하다 SIGSEGV가 난다. gdb로 `info registers rip`를 보면 제어 흐름 탈취가 무엇인지 보인다.
+4. `struct session`에 `void (*on_close)(void);` 필드를 추가하고 마지막 줄에서 `s->on_close()`를 호출해 본다. `memset`한 값 `0x4141414141414141`로 점프하다 SIGSEGV가 난다. x86-64에서는 이 값이 비정규(non-canonical) 주소라 `rip`이 바뀌기 전 `call *%rax` 명령 자체에서 멈추므로, gdb에서 `x/i $rip`와 `info registers rax`를 함께 보면 "공격자 값으로 점프하려던 순간"이 그대로 보인다.
 
 ### 4.3 더 해 보기
 
@@ -361,3 +361,4 @@ MiraclePtr의 동작 원리는 Chromium 문서 [raw_ptr.md](https://github.com/c
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 본문 작성. ASan 출력·실습 코드 로컬 검증, CVE 6건 확인 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CVE 6건 cvelistV5 대조(모두 실존, 제품·버전·참조 링크 일치). uaf.c를 ASan 유무·`s = NULL`·함수 포인터 변형으로 재실행. ASan 보고서의 소스 줄 번호를 실측값(15/12/9)으로 정정, 4단계의 gdb 설명(비정규 주소라 `call` 명령에서 멈춤) 보완 | 검증팀 |

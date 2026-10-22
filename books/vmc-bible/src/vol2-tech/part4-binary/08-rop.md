@@ -266,3 +266,4 @@ ROP 자체를 "고치는" 패치는 없다. 막는 것은 두 층이다.
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 8절 작성. ROPgadget·ropper·pwntools 출력 로컬 검증 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증 완료, 수정 없음. vuln.c를 본문 플래그로 빌드해 ROPgadget 7.7·ropper 1.13.13·pwntools 4.15 `ROP` 출력(가젯 주소 4개, `rop.dump()` 4줄, 코어 덤프 오프셋 72)이 본문과 바이트 단위로 일치함을 확인. `ROP`·`SigreturnFrame`·`fmtstr_payload` API 존재 여부 inspect로 확인 | 검증팀 |

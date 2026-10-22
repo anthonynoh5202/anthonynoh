@@ -80,9 +80,11 @@ void greet(void) {
 // ❌ 취약: strncpy는 NUL을 보장하지 않는다. 다음 strlen/printf가 버퍼를 넘어 읽는다
 strncpy(dst, src, sizeof dst);
 
-// ❌ 취약: 길이 검사가 있지만 부호 문제. len이 음수면 통과하고 size_t로 변환되어 거대해진다 (06장)
+// ❌ 취약: 길이 검사가 있지만 부호 문제. len이 음수면 "len > 64"가 거짓이라 통과하고,
+//          memcpy의 size_t 인자로 변환되며 거대해진다 (06장)
 int len = read_len();
-if (len < sizeof buf) memcpy(buf, src, len);
+if (len > 64) return;
+memcpy(buf, src, len);
 
 // ❌ 취약: off-by-one. '<='로 64번째 인덱스까지 쓴다
 for (i = 0; i <= 64; i++) buf[i] = src[i];
@@ -142,7 +144,7 @@ python3 -c "print('A'*1000)" | ./target
 ```
 (gdb) run < input
 Program received signal SIGSEGV, Segmentation fault.
-0x0000000000401212 in greet () at vuln.c:14      ← ret 명령 주소
+0x0000000000401212 in greet () at vuln.c:15      ← ret 명령 주소 (greet의 닫는 중괄호 줄)
 (gdb) x/gx $rsp
 0x7fffffffc618: 0x4141414141414141                 ← ret이 꺼내려던 값
 ```
@@ -197,15 +199,15 @@ pwn cyclic 200 > pattern.txt
 gdb -q ./vuln
 (gdb) run < pattern.txt
 Program received signal SIGSEGV, Segmentation fault.
-0x0000000000401212 in greet () at vuln.c:14
+0x0000000000401212 in greet () at vuln.c:15
 (gdb) x/gx $rsp
 0x7fffffffc618: 0x6161617461616173
 ```
 
-`ret`이 꺼내려던 8바이트가 패턴의 어디인지 찾는다. **8바이트 값이므로 `-n 8`을 꼭 붙인다.**
+`ret`이 꺼내려던 8바이트가 패턴의 어디인지 찾는다. 패턴은 4바이트 단위(`-n 4`, 기본값)로 만들었으므로 **조회도 기본값으로** 한다. 8바이트 값을 그대로 줘도 pwntools가 앞 4바이트(`0x61616173` = `saaa`)만 쓴다. `-n 8`을 붙이면 8바이트 단위로 만든 **다른** 패턴에서 찾기 때문에 엉뚱한 값(63272452)이 나온다.
 
 ```bash
-pwn cyclic -l 0x6161617461616173 -n 8
+pwn cyclic -l 0x6161617461616173
 # 72
 ```
 
@@ -305,7 +307,7 @@ uid=1000(user) gid=1000(user) ...
 | `-fstack-protector-strong` | `*** stack smashing detected ***: terminated` (SIGABRT) | 2단계 전. 카나리 값을 누출해야 진행 |
 | `-z execstack` 제거 (NX 켜짐) | 4.3은 성공, 4.4는 점프 직후 SIGSEGV | 4단계. 셸코드 대신 ROP([08장](08-rop.md)) |
 | `-no-pie` 제거 (PIE 켜짐) | `win` 주소가 `0x11a9`처럼 오프셋만 남음 | 3단계. 코드 주소 누출 필요 |
-| `-O2 -D_FORTIFY_SOURCE=2` + 크기 아는 `strcpy` | `*** buffer overflow detected ***` | 1단계에서 종료. 단, 길이를 모르는 `read`는 못 잡는다 |
+| `-O2 -D_FORTIFY_SOURCE=2` (또는 3) | `*** buffer overflow detected ***: terminated` (SIGABRT) | 1단계에서 종료. 이 실습의 `read(0, name, 256)`도 목적지 `name`의 크기를 컴파일 시점에 알기 때문에 `__read_chk`가 잡는다. 목적지 크기를 모르는 복사(포인터 인자, 힙 버퍼)는 못 잡는다 |
 
 이 표가 보고서의 "영향도" 근거다. 실제 제품 바이너리는 `checksec`으로 완화 상태를 먼저 확인하고, 그 상태에서 어느 단계까지 가능한지를 쓴다. [8부 2장](../part8-reporting/02-severity.md).
 
@@ -333,7 +335,7 @@ uid=1000(user) gid=1000(user) ...
 | 완화 | 우회 | 필요한 것 |
 |---|---|---|
 | 스택 카나리 | 카나리 **누출** 후 같은 값으로 덮기. 포맷 스트링([03장](03-format-string.md))이나 범위 밖 읽기로 누출 | 정보 누출 취약점 하나 더 |
-| 스택 카나리 | `fork()` 서버는 자식이 카나리를 공유 → 1바이트씩 브루트포스 (최대 8×256회) | 크래시해도 다시 받아 주는 서버 |
+| 스택 카나리 | `fork()` 서버는 자식이 카나리를 공유 → 1바이트씩 브루트포스 (최하위 바이트는 항상 0이므로 7바이트, 최대 7×256 = 1,792회) | 크래시해도 다시 받아 주는 서버 |
 | 스택 카나리 | 반환 주소 대신 **같은 프레임 안의 함수 포인터나 인덱스**를 덮기 | 카나리 앞에 있는 쓸 만한 변수 |
 | NX | ROP: 기존 코드 조각을 이어 붙임. `ret2libc`, `ret2plt` | 가젯 주소 (PIE 꺼져 있거나 누출) |
 | ASLR/PIE | 주소 누출 후 오프셋 계산. 누출이 없으면 **부분 덮어쓰기**(반환 주소 하위 1~2바이트만) | 누출 또는 12비트 브루트포스 |
@@ -346,14 +348,14 @@ CFI(Control Flow Integrity), CET shadow stack, ARM PAC은 반환 주소 덮어�
 
 | CVE | 제품 | 핵심 | 패치 |
 |---|---|---|---|
-| [CVE-2019-18634](https://nvd.nist.gov/vuln/detail/CVE-2019-18634) | sudo < 1.8.26 | `pwfeedback` 옵션이 켜져 있을 때 `tgetpass.c`의 `getln()`에서 스택 오버플로. 로컬 사용자 → root | [sudo 권고문](https://sudo.ws/alerts/pwfeedback.html) |
-| [CVE-2013-2028](https://nvd.nist.gov/vuln/detail/CVE-2013-2028) | nginx 1.3.9~1.4.0 | chunked 요청의 청크 크기를 부호 있는 정수로 다뤄 음수가 통과 → `ngx_http_parse_chunked` 스택 오버플로. 원격, 인증 불필요 | [nginx 권고](https://nginx.org/en/security_advisories.html) |
-| [CVE-2017-13089](https://nvd.nist.gov/vuln/detail/CVE-2017-13089) | GNU wget < 1.19.2 | chunked 응답의 청크 길이를 `strtol`로 읽고 음수 검사를 안 함 → `skip_short_body()` 스택 오버플로. 악성 서버가 클라이언트 공격 | 권고문 기준 |
-| [CVE-2002-0649](https://nvd.nist.gov/vuln/detail/CVE-2002-0649) | MS SQL Server 2000 Resolution Service | UDP 1434 단일 패킷으로 스택 오버플로. 2003년 SQL Slammer 웜이 이용 | [MS02-039](https://learn.microsoft.com/en-us/security-updates/securitybulletins/2002/ms02-039) |
+| [CVE-2019-18634](https://nvd.nist.gov/vuln/detail/CVE-2019-18634) | sudo < 1.8.26 | `pwfeedback` 옵션이 켜져 있을 때 `tgetpass.c`의 `getln()`에서 스택 오버플로. 로컬 사용자 → root | [sudo 권고문](https://www.sudo.ws/alerts/pwfeedback.html) |
+| [CVE-2013-2028](https://nvd.nist.gov/vuln/detail/CVE-2013-2028) | nginx 1.3.9~1.4.0 | chunked 요청의 청크 크기를 부호 있는 정수로 다뤄 음수가 통과 → `ngx_http_parse_chunked` 스택 오버플로. 원격, 인증 불필요 | [nginx 권고](https://nginx.org/en/security_advisories.html) · [패치](http://nginx.org/download/patch.2013.chunked.txt) |
+| [CVE-2017-13089](https://nvd.nist.gov/vuln/detail/CVE-2017-13089) | GNU wget < 1.19.2 | chunked 응답의 청크 길이를 `strtol`로 읽고 음수 검사를 안 함 → `skip_short_body()`가 음수 길이를 `fd_read()`의 `int` 인자로 넘겨 스택 오버플로. 악성 서버가 클라이언트 공격 | [wget 커밋 d892291f](http://git.savannah.gnu.org/cgit/wget.git/commit/?id=d892291fb8ace4c3b734ea5125770989c215df3f) |
+| [CVE-2002-0649](https://nvd.nist.gov/vuln/detail/CVE-2002-0649) | MS SQL Server 2000 / MSDE 2000 Resolution Service | UDP 1434 단일 패킷으로 스택 오버플로. 2003년 SQL Slammer 웜이 이용 | [MS02-039](https://docs.microsoft.com/en-us/security-updates/securitybulletins/2002/ms02-039) |
 
 **sudo (CVE-2019-18634)에서 배울 것**: 권고문 기준, 비밀번호 입력 시 `*`를 표시하는 `pwfeedback` 모드에서 입력이 터미널이 아닐 때 `getln()`의 버퍼 경계 처리가 어긋나 스택 버퍼를 넘어 썼다. 1.8.26에서 고쳐졌고, 옵션이 꺼져 있으면(상류 기본값) 영향이 없다. **기본값이 아닌 옵션 하나가 setuid 바이너리의 공격 표면을 연다**는 점과, 배포판(Linux Mint, elementary OS)이 기본값을 바꿔 두면 영향 범위가 달라진다는 점이 교훈이다.
 
-**nginx (CVE-2013-2028)에서 배울 것**: 패치는 `ngx_http_parse_chunked`에 `ctx->size`와 `ctx->length`가 음수면 즉시 오류로 처리하는 검사를 추가했다. 오버플로의 **원인은 정수 부호 오류**이고 결과가 스택 오버플로였다. 2절의 "길이 검사가 있지만 부호 문제" 패턴 그대로다. wget(CVE-2017-13089)도 같은 구조다. [06장](06-integer-overflow.md)이 이 장 바로 뒤에 있는 이유다.
+**nginx (CVE-2013-2028)에서 배울 것**: 패치는 `ngx_http_parse_chunked`에 `if (ctx->size < 0 || ctx->length < 0) goto invalid;` 검사를 추가했다(nginx 1.4.1 `src/http/ngx_http_parse.c` 기준). 오버플로의 **원인은 정수 부호 오류**이고 결과가 스택 오버플로였다. 2절의 "길이 검사가 있지만 부호 문제" 패턴 그대로다. wget(CVE-2017-13089)도 같은 구조다. [06장](06-integer-overflow.md)이 이 장 바로 뒤에 있는 이유다.
 
 **SQL Slammer (CVE-2002-0649)에서 배울 것**: 📎 CAIDA 분석에 따르면 376바이트 UDP 패킷 하나로 전파됐고, 패치(MS02-039)는 웜 출현 6개월 전에 나와 있었다. [Moore et al., "Inside the Slammer Worm", IEEE S&P 2003](https://www.caida.org/catalog/papers/2003_sapphire/). [1부 1장](../part1-foundations/01-what-is-vulnerability.md)의 "N-day" 그 자체다.
 
@@ -391,3 +393,4 @@ CFI(Control Flow Integrity), CET shadow stack, ARM PAC은 반환 주소 덮어�
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. 실습 코드·pwntools 스크립트·완화별 결과는 Ubuntu 24.04 / gcc 13.3 / glibc 2.39에서 실측 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CVE 4건 cvelistV5 대조(모두 실존), 권고·패치 링크를 레코드 URL로 교체. 실습 전체(ret2win·셸코드·cyclic·FORTIFY) 재실행. `pwn cyclic -l`의 `-n 8` 오류 수정(72가 아닌 값이 나옴), FORTIFY가 `read()`도 잡는다는 점 수정(`__read_chk`), 부호 문제 예제(`len < sizeof buf`는 실제로는 거부됨) 수정, gdb 줄 번호·카나리 브루트포스 횟수 정정 | 검증팀 |

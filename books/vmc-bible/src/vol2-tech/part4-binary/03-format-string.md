@@ -167,7 +167,7 @@ int main(void) {
 
 ```bash
 gcc -g -O0 -no-pie -o fmt fmt.c
-# fmt.c:14:12: warning: format not a string literal and no format arguments [-Wformat-security]
+# fmt.c:15:12: warning: format not a string literal and no format arguments [-Wformat-security]
 checksec --file=./fmt           # RELRO: Partial RELRO, PIE: No PIE
 ```
 
@@ -253,7 +253,7 @@ checksec --file=./fmt_relro     # RELRO: Full RELRO
 | 코드 | 포맷 문자열은 **항상 리터럴**. 입력은 `%s` 인자로 | 근본 제거 |
 | 코드 | 자체 로그·출력 함수에 `__attribute__((format(printf, N, M)))` | 컴파일러 검사 범위에 포함 |
 | 컴파일러 | `-Wformat=2 -Werror=format-security` | 빌드 단계에서 차단. 비용 0 |
-| 컴파일러 | `-D_FORTIFY_SOURCE=2` 이상 | `%n`이 **쓰기 가능 메모리의 포맷**에 있으면 glibc가 실행을 중단한다 (`*** %n in writable segment detected ***`) |
+| 컴파일러 | `-D_FORTIFY_SOURCE=2` 이상 | `%n`이 **쓰기 가능 메모리의 포맷**에 있으면 glibc가 실행을 중단한다 (`*** %n in writable segment detected ***`). `%6$n`처럼 위치 지정자를 섞으면 `*** invalid %N$ use detected ***`로 중단된다 |
 | 링커 | `-Wl,-z,relro,-z,now` (Full RELRO) | GOT 덮어쓰기 차단 |
 | 인프라 | PIE + ASLR | 쓸 주소를 알기 어렵게. 단 포맷 스트링 자체가 주소를 누출하므로 단독으로는 약하다 |
 | 탐지 | 입력에 `%n`, `%hn`, `%N$` 패턴 로그 알림. 비정상 긴 출력(`%Nc`) | 공격 시도 포착 |
@@ -264,7 +264,7 @@ checksec --file=./fmt_relro     # RELRO: Full RELRO
 
 | 방어 | 우회 |
 |---|---|
-| Full RELRO | GOT 대신 스택의 반환 주소, `.fini_array`(Full RELRO면 역시 읽기 전용), 힙·`.bss`의 함수 포인터, `atexit` 등록 포인터 |
+| Full RELRO | GOT 대신 스택의 반환 주소, 힙·`.bss`의 함수 포인터, `atexit` 등록 포인터. `.fini_array`는 Partial RELRO에서도 이미 읽기 전용이라 표적이 못 된다([07장 6절](07-mitigations.md)) |
 | `_FORTIFY_SOURCE`의 `%n` 차단 | 검사는 포맷 문자열이 **쓰기 가능 메모리**에 있을 때만 적용된다. 읽기(`%s`, `%p`)는 막지 않으므로 누출 용도는 그대로 |
 | PIE + ASLR | 같은 취약점으로 먼저 주소를 읽고(스택의 반환 주소 → 코드 기준, GOT → libc 기준) 두 번째 입력에서 쓴다. 한 번의 입력으로 끝내야 하면 부분 덮어쓰기 |
 | 입력 길이 제한 | `%N$`로 패딩 없이 정확한 인자만 지정. `%hhn` 대신 `%hn`으로 쓰기 횟수 절반 |
@@ -277,10 +277,10 @@ checksec --file=./fmt_relro     # RELRO: Full RELRO
 
 | CVE | 제품 | 핵심 | 패치 |
 |---|---|---|---|
-| [CVE-2012-0809](https://nvd.nist.gov/vuln/detail/CVE-2012-0809) | sudo 1.8.0~1.8.3p1 | 디버그 출력에서 **프로그램 이름**(`argv[0]`, 심볼릭 링크로 조작 가능)을 포맷으로 사용. 로컬 → root | [sudo 권고](https://sudo.ws/alerts/sudo_debug.html) |
-| [CVE-2015-8617](https://nvd.nist.gov/vuln/detail/CVE-2015-8617) | PHP 7.0.0 | 존재하지 않는 클래스 이름을 에러 메시지의 포맷으로 사용. 클래스 이름에 `%`를 넣은 스크립트로 트리거 | [PHP 버그 #71105](https://bugs.php.net/bug.php?id=71105) |
-| [CVE-2022-1215](https://nvd.nist.gov/vuln/detail/CVE-2022-1215) | libinput < 1.19.4 | **USB 장치 이름**을 로그 포맷으로 사용. 장치 이름에 `%`를 넣은 기기를 꽂으면 Xorg 권한으로 실행 | [libinput 이슈 #752](https://gitlab.freedesktop.org/libinput/libinput/-/issues/752) |
-| [CVE-2012-3569](https://nvd.nist.gov/vuln/detail/CVE-2012-3569) | VMware OVF Tool 2.1 | OVF 파일의 XML 속성값을 포맷으로 사용. 파일을 여는 것만으로 코드 실행 | VMSA-2012-0015 · [MSVR13-002](https://technet.microsoft.com/en-us/library/security/MSVR13-002) |
+| [CVE-2012-0809](https://nvd.nist.gov/vuln/detail/CVE-2012-0809) | sudo 1.8.0~1.8.3p1 | 디버그 출력(`sudo_debug`)에서 **프로그램 이름**(`argv[0]`, 심볼릭 링크로 조작 가능)을 포맷으로 사용. 로컬 → root | [sudo 권고](http://www.sudo.ws/sudo/alerts/sudo_debug.html) |
+| [CVE-2015-8617](https://nvd.nist.gov/vuln/detail/CVE-2015-8617) | PHP 7.0.0 (7.0.1에서 수정) | `zend_throw_or_error`가 존재하지 않는 클래스 이름을 에러 메시지의 포맷으로 사용. 클래스 이름에 `%`를 넣은 스크립트로 트리거 | [PHP 버그 #71105](https://bugs.php.net/bug.php?id=71105) · [커밋 b101a6bb](https://github.com/php/php-src/commit/b101a6bbd4f2181c360bd38e7683df4a03cba83e) |
+| [CVE-2022-1215](https://nvd.nist.gov/vuln/detail/CVE-2022-1215) | libinput 1.10 이상 (1.19.4·1.20.1에서 수정) | **USB 장치 이름**을 로그 포맷으로 사용. 장치 이름에 `%`를 넣은 기기를 꽂으면 libinput을 쓰는 Xorg·컴포지터 권한으로 실행 | [oss-security 공지](https://seclists.org/oss-sec/2022/q2/47) |
+| [CVE-2012-3569](https://nvd.nist.gov/vuln/detail/CVE-2012-3569) | VMware OVF Tool 2.1 (Windows) | OVF 파일의 XML 속성값을 포맷으로 사용. 파일을 여는 것만으로 코드 실행 | [VMSA-2012-0015](http://www.vmware.com/security/advisories/VMSA-2012-0015.html) · [MSVR13-002](http://technet.microsoft.com/en-us/security/msvr/msvr13-002) |
 
 **sudo (CVE-2012-0809)에서 배울 것**: 권고문 기준, 수정은 프로그램 이름을 포맷 인자가 아니라 `%s`의 **인자로** 넘기는 것이었다. 한 줄 패치다. 교훈은 "입력"의 범위다. `argv[0]`은 실행하는 사람이 정한다. 로그·디버그 코드는 리뷰에서 자주 건너뛰지만, setuid 바이너리에서는 그 코드가 root로 돈다.
 
@@ -321,3 +321,4 @@ checksec --file=./fmt_relro     # RELRO: Full RELRO
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. 실습 출력과 pwntools 스크립트는 Ubuntu 24.04 / gcc 13.3 / glibc 2.39에서 실측 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CVE 4건 cvelistV5 대조(모두 실존), sudo·MSVR·VMSA·libinput 링크를 레코드 URL로 교체, libinput 영향 버전 정정. `read_rodata.py`·`got_overwrite.py`를 Partial/Full RELRO 빌드에서 재실행(Full RELRO는 SIGSEGV 확인). 경고 줄 번호 정정, `.fini_array`가 Partial RELRO에서도 읽기 전용임을 명시, FORTIFY의 `%N$n` 메시지 추가 | 검증팀 |
