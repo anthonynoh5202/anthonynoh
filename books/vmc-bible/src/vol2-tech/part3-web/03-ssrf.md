@@ -110,6 +110,8 @@ def safe_fetch(url: str, hops: int = 3) -> requests.Response:
         r = requests.get(url, timeout=5, allow_redirects=False)
         if r.is_redirect:
             url = r.headers["Location"]          # 다음 홉도 같은 검사를 받는다
+            # 상대 경로 Location('/next')은 처리하지 않는다. 실제 코드에서는
+            # urljoin(r.url, ...)으로 절대 URL로 만든 뒤 같은 검사를 거친다
             continue
         return r
     raise ValueError("too many redirects")
@@ -206,7 +208,7 @@ python3 -m http.server 8081 --bind 127.0.0.1 --directory /tmp/internal
 pip install flask requests && flask --app app run --port 5000
 ```
 
-브라우저에서 `http://127.0.0.1:5000/preview?url=http://127.0.0.1:8081/secret.txt` 를 열면 외부에서 접근할 수 없어야 할 파일이 보인다. 이어서 `url=http://2130706433:8081/secret.txt`(10진수 IP)와 `url=http://127.0.0.1.nip.io:8081/secret.txt`(공용 DNS)로도 되는지 확인한다. 마지막으로 `safe_fetch`로 바꾸고 셋 다 막히는지 본다. **고치는 것까지가 실습이다.**
+브라우저에서 `http://127.0.0.1:5000/preview?url=http://127.0.0.1:8081/secret.txt` 를 열면 외부에서 접근할 수 없어야 할 파일이 보인다. 이어서 `url=http://2130706433:8081/secret.txt`(10진수 IP)와 `url=http://127.0.0.1.nip.io:8081/secret.txt`(공용 DNS)로도 되는지 확인한다. nip.io는 외부 DNS 조회가 되어야 풀리므로, 외부 DNS가 막힌 망에서는 이 셋째 입력만 실패한다(실습 앱의 문제가 아니다). 마지막으로 `safe_fetch`로 바꾸고 셋 다 막히는지 본다. **고치는 것까지가 실습이다.**
 
 ## 5. 익스플로잇 검증
 
@@ -340,7 +342,7 @@ http://allowed.example.com%2F@127.0.0.1/   # 인코딩된 / 의 처리 차이
 - Brian Krebs, [*Capital One Data Theft Impacts 106M People*](https://krebsonsecurity.com/2019/07/capital-one-data-theft-impacts-106m-people/), 2019 · 사건 경위
 - [PortSwigger: SSRF](https://portswigger.net/web-security/ssrf) · 무료 실습 랩
 - [Smokescreen](https://github.com/stripe/smokescreen) · Stripe의 SSRF 방지용 egress 프록시 (오픈소스)
-- [5부 2장 클라우드와 컨테이너](../part5-extended/02-cloud.md) · 메타데이터·IAM 역할의 큰 그림
+- [확장 2장 클라우드와 컨테이너](../part5-extended/02-cloud.md) · 메타데이터·IAM 역할의 큰 그림
 
 ## 변경 이력
 
@@ -348,4 +350,5 @@ http://allowed.example.com%2F@127.0.0.1/   # 인코딩된 / 의 처리 차이
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 본문 작성. 클라우드 메타데이터·IMDSv2, 파서 불일치·DNS 리바인딩, Capital One 사례, CVE 5건 | @anthonynoh5202 |
-| 2026-10-22 | 기술 검증: CVE 6건 레코드 대조(전부 실존). Ivanti 행의 미확인 Rapid7 링크·세부 서술을 공식 권고로 교체, GitLab 이슈 번호와 Jira 영향 버전을 레코드 기준으로 수정. safe_fetch·is_public_ip 실행 확인 | 검증팀 |
+| 2026-10-22 | 기술 검증: CVE 5건 레코드 대조(전부 실존). Ivanti 행의 미확인 Rapid7 링크·세부 서술을 공식 권고로 교체, GitLab 이슈 번호와 Jira 영향 버전을 레코드 기준으로 수정. safe_fetch·is_public_ip 실행 확인 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 4절 `127.0.0.1.nip.io`에 외부 DNS 필요 주석, `safe_fetch`가 상대 Location을 처리하지 않는 점 주석, 변경 이력의 CVE 건수를 표(5건)와 일치. 장 참조 표기 정리 | @anthonynoh5202 |

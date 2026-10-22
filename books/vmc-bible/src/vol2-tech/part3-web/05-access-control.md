@@ -52,7 +52,7 @@ SQL 인젝션은 "따옴표를 넣으면 에러"처럼 **응답 자체**에 신�
 # ❌ 취약: Django, 로그인만 확인하고 소유자는 안 본다
 @login_required
 def order_detail(request, pk):
-    order = Order.objects.get(pk=pk)
+    order = get_object_or_404(Order, pk=pk)      # 없는 pk는 404. 남의 pk는 그대로 나온다
     return JsonResponse(order.to_dict())
 ```
 
@@ -236,7 +236,7 @@ def order(oid):
 | 4 | 역할을 바꾸거나 관리자 기능을 쓸 수 있는가 | 시스템 장악. Critical |
 | 5 | 인증 없이도 되는가 | 인터넷 전체가 공격자. 한 단계 상향 |
 
-2단계가 왜 중요한지는 사례가 말해 준다. First American Financial(2019)은 문서 링크의 ID를 바꾸면 남의 문서가 보였고, 순차 ID 덕에 약 8억 8,500만 건이 노출된 것으로 추정됐다 📎 ([KrebsOnSecurity, 2019](https://krebsonsecurity.com/2019/05/first-american-financial-corp-leaked-hundreds-of-millions-of-title-insurance-records/)). 보고서에는 "ID를 바꾸면 보인다"에 그치지 말고 **ID 공간의 크기와 열거 속도**를 적는다. 영향도 산정은 [8부 2장](../part8-reporting/02-severity.md)을 따른다.
+2단계가 왜 중요한지는 사례가 말해 준다. First American Financial(2019)은 문서 링크의 ID를 바꾸면 남의 문서가 보였고, 순차 ID 덕에 약 8억 8,500만 건이 노출된 것으로 추정됐다 📎 ([KrebsOnSecurity, 2019](https://krebsonsecurity.com/2019/05/first-american-financial-corp-leaked-hundreds-of-millions-of-title-insurance-records/)). 보고서에는 "ID를 바꾸면 보인다"에 그치지 말고 **ID 공간의 크기와 열거 속도**를 적는다. 영향도 산정은 [보고 2장](../part8-reporting/02-severity.md)을 따른다.
 
 ## 6. 방어
 
@@ -329,7 +329,7 @@ CVE가 없는 공개 사건도 이 장에서는 중요하다. 접근 제어 결�
 - [Autorize](https://github.com/PortSwigger/autorize) · 두 계정 교차 테스트 자동화 (Burp 확장)
 - [PortSwigger: Access control vulnerabilities](https://portswigger.net/web-security/access-control) · 무료 실습 랩
 - Brian Krebs, [*First American Financial Corp. Leaked Hundreds of Millions of Title Insurance Records*](https://krebsonsecurity.com/2019/05/first-american-financial-corp-leaked-hundreds-of-millions-of-title-insurance-records/), 2019
-- [6부 1장 Burp Suite와 웹 프록시](../part6-tools/01-burp-proxy.md) · Repeater·Intruder·확장 설치
+- [도구 1장 Burp Suite와 웹 프록시](../part6-tools/01-burp-proxy.md) · Repeater·Intruder·확장 설치
 
 ## 변경 이력
 
@@ -338,3 +338,4 @@ CVE가 없는 공개 사건도 이 장에서는 중요하다. 접근 제어 결�
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 본문 작성. IDOR·수직 상승·대량 할당, 두 계정 교차 테스트, CVE 4건 + 공개 사건 3건 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 4건 레코드 대조(전부 실존). Django 대량 할당 예제의 request.json(Flask식)을 request.body로 수정, Next.js 패치 설명을 커밋 기준(난수 subrequest ID)으로 정정, Ultimate Member 링크를 레코드의 WPScan 분석으로 교체. Flask IDOR 예제 실행 확인 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 2절 ❌ 예제의 `Order.objects.get(pk=pk)`를 `get_object_or_404`로 바꿔 ✅ 예제와의 차이가 소유자 조건 하나뿐임을 분명히 함. 장 참조 표기 정리 | @anthonynoh5202 |

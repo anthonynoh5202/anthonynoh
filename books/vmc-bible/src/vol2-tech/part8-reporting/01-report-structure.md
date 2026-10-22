@@ -68,7 +68,7 @@ flowchart LR
 - **입증한 것**: 실제로 읽은 데이터, 실제로 로그인한 계정, 실제로 실행한 명령. 증거(응답 본문, 스크린샷 대신 텍스트 출력)를 붙인다.
 - **추정하는 것**: 더 갈 수 있지만 허가 범위 밖이라 멈춘 지점. "이론상 가능"이 아니라 "다음 단계는 X이고, 그 조건은 Y다"로 쓴다.
 
-[3부 1장 5절](../part3-web/01-sql-injection.md)의 익스플로잇 검증 단계표가 이 구분의 기준이다.
+[웹 1장 5절](../part3-web/01-sql-injection.md)의 익스플로잇 검증 단계표가 이 구분의 기준이다.
 
 ### 3.4 수정 제안 (Remediation)
 
@@ -114,11 +114,11 @@ curl -s -X POST http://127.0.0.1:8080/login \
 | 증거 | 한 줄 결과 | 전체 요청·응답, 스크립트 |
 | 금지 | 약어, 페이로드 | 추정, 과장 |
 
-경영진 요약에서 가장 흔한 실수는 기술 용어를 줄이는 대신 **영향을 추상화**하는 것이다. "데이터 유출 위험"보다 "주민등록번호 뒷자리를 포함한 회원 테이블 전체"가 결정을 빠르게 만든다. 📎 개인정보 유출 시 신고 의무와 기한은 [1편 12장](../../vol1-center/03-partners/12-legal.md)에서 확인한다.
+경영진 요약에서 가장 흔한 실수는 기술 용어를 줄이는 대신 **영향을 추상화**하는 것이다. "데이터 유출 위험"보다 "주민등록번호 뒷자리를 포함한 회원 테이블 전체"가 결정을 빠르게 만든다. 개인정보 유출 가능성이 있으면 개인정보보호법상 신고 의무 검토 🔎 법무.
 
 ## 6. 완전한 보고서 예시
 
-[3부 1장 실습](../part3-web/01-sql-injection.md)의 `labs/web-sqli`를 대상으로 한 가상 보고서다. 실습 환경이므로 페이로드와 데이터를 그대로 싣는다. 실제 서비스 보고서에서는 데이터 값을 가리고 페이로드는 재현에 필요한 최소만 남긴다.
+[웹 1장 실습](../part3-web/01-sql-injection.md)의 `labs/web-sqli`를 대상으로 한 가상 보고서다. 실습 환경이므로 페이로드와 데이터를 그대로 싣는다. 실제 서비스 보고서에서는 데이터 값을 가리고 페이로드는 재현에 필요한 최소만 남긴다.
 
 ```markdown
 # [Critical] web-sqli `/login`, `/search`, `/item` 에서 인증 없이 전체 사용자 DB 읽기 및 관리자 로그인 (SQL 인젝션)
@@ -178,7 +178,7 @@ CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N — 9.1 (Critical)
 
 ## 참고
 - CWE-89 (SQL Injection), CWE-256 (평문 비밀번호 저장)
-- CVSS 3.1 산정 근거: 8부 2장 참조. A:N 은 가용성 영향을 입증하지 못했기 때문이다.
+- CVSS 3.1 산정 근거: 보고 2장 참조. A:N 은 가용성 영향을 입증하지 못했기 때문이다.
 - 분석 자료: solve_blind.py, 요청·응답 전문 (첨부)
 ```
 
@@ -197,7 +197,7 @@ CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N — 9.1 (Critical)
 
 ## 8. 센터 양식에 적용하기
 
-센터의 조치 요청서는 상대(개발사, 사용 기관, 중소기업)에 따라 형식이 다르다. 이 장의 다섯 요소를 그 양식에 어떻게 넣는지, 그리고 "고쳐지게 만드는" 문안은 [3편 1부 3장 조치 단계](../../vol3-practice/01-workflow-tech/03-remediation.md)에서 다룬다. 공지문으로 바꾸는 법은 [3편 1부 4장](../../vol3-practice/01-workflow-tech/04-advisory.md)이다.
+센터의 조치 요청서는 상대(개발사, 사용 기관, 중소기업)에 따라 형식이 다르다. 이 장의 다섯 요소를 그 양식에 어떻게 넣는지, 그리고 "고쳐지게 만드는" 문안은 [제3편 1부 3장 조치 단계](../../vol3-practice/01-workflow-tech/03-remediation.md)에서 다룬다. 공지문으로 바꾸는 법은 [제3편 1부 4장](../../vol3-practice/01-workflow-tech/04-advisory.md)이다.
 
 ## 체크리스트
 
@@ -218,7 +218,7 @@ CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N — 9.1 (Critical)
 - [CERT/CC, The CERT Guide to Coordinated Vulnerability Disclosure (Householder 외, 2017)](https://vuls.cert.org/confluence/display/CVD) · 보고서가 공개 조율 과정에서 어떻게 쓰이는가
 - [OWASP Vulnerability Disclosure Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Vulnerability_Disclosure_Cheat_Sheet.html) · 신고자와 벤더 양쪽 관점의 체크리스트
 - [HackerOne Docs: Submitting Reports](https://docs.hackerone.com/hackers/submitting-reports.html) · 플랫폼이 요구하는 최소 요소
-- [3편 1부 3장 조치 단계: 고쳐지게 만드는 보고서](../../vol3-practice/01-workflow-tech/03-remediation.md) · 센터 양식 적용
+- [제3편 1부 3장 조치 단계: 고쳐지게 만드는 보고서](../../vol3-practice/01-workflow-tech/03-remediation.md) · 센터 양식 적용
 
 ## 변경 이력
 
@@ -227,3 +227,4 @@ CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N — 9.1 (Critical)
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. 제목 공식, 다섯 요소, 스크립트 재현, 독자별 버전, web-sqli 보고서 예시 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증 완료, 수정 없음 (labs/web-sqli를 실제로 띄워 재현 절차 1~3과 solve_blind.py의 기대 출력, CVSS 9.1 재계산 확인) | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 5절의 "신고 의무와 기한은 제1편 12장" 참조(해당 내용 없음)를 지우고 "개인정보보호법상 신고 의무 검토 🔎 법무"로 교체. 장 참조 표기 정리 | @anthonynoh5202 |

@@ -157,7 +157,7 @@ grep -rnE "\|\s*safe\b|mark_safe\(|Markup\(|autoescape\s+off|<%-" --include='*.p
 semgrep --config p/xss .
 ```
 
-**CodeQL**: 소스(요청 파라미터, `location`)에서 싱크(HTML 출력, `innerHTML`)까지 흐름을 추적한다. 기본 쿼리 `js/xss`, `py/reflective-xss`, `java/xss`. [6부 5장](../part6-tools/05-sast-semgrep-codeql.md)에서 실행법을 다룬다.
+**CodeQL**: 소스(요청 파라미터, `location`)에서 싱크(HTML 출력, `innerHTML`)까지 흐름을 추적한다. 기본 쿼리 `js/xss`, `py/reflective-xss`, `java/xss`. [도구 5장](../part6-tools/05-sast-semgrep-codeql.md)에서 실행법을 다룬다.
 
 **리뷰할 때 보는 순서**
 
@@ -188,7 +188,7 @@ zx9q"'<>/\
 
 `alert(1)` 대신 `alert(document.domain)`을 쓴다. 어느 출처(origin)에서 실행됐는지가 화면에 나오므로, 샌드박스 도메인에서 뜬 것을 본 사이트 XSS로 착각하지 않는다.
 
-**3단계: DOM 기반은 따로 본다.** 서버 응답에 마커가 없어도 끝이 아니다. 브라우저 개발자 도구에서 `location.hash`, `location.search`, `window.name`을 읽는 코드를 찾고, 그 값이 어느 싱크로 가는지 따라간다. Burp Suite의 **DOM Invader**가 소스→싱크 흐름을 자동으로 표시해 준다([6부 1장](../part6-tools/01-burp-proxy.md)).
+**3단계: DOM 기반은 따로 본다.** 서버 응답에 마커가 없어도 끝이 아니다. 브라우저 개발자 도구에서 `location.hash`, `location.search`, `window.name`을 읽는 코드를 찾고, 그 값이 어느 싱크로 가는지 따라간다. Burp Suite의 **DOM Invader**가 소스→싱크 흐름을 자동으로 표시해 준다([도구 1장](../part6-tools/01-burp-proxy.md)).
 
 **자동화와 수동의 분담**: 스캐너(Burp Scanner, ZAP)는 Reflected를 넓게 찾는다. Stored는 "입력한 곳"과 "출력되는 곳"이 다르고 시간차가 있어 스캐너가 놓치기 쉽다. 입력 지점마다 고유 마커를 넣고, 관리자 페이지·이메일·PDF 내보내기 같은 **다른 사용자가 보는 모든 화면**을 사람이 확인해야 한다.
 
@@ -228,7 +228,7 @@ pip install flask && flask --app app run
 | 4 | 관리자 문맥에서 사용자 권한 변경·설정 변경·파일 업로드가 된다 | 시스템 장악. Critical |
 | 5 | `document.cookie`에 세션이 보인다 (`HttpOnly` 없음) | 3단계를 더 쉽게 만든다. 단독으로 심각도를 올리진 않는다 |
 
-3단계 증명은 외부로 데이터를 보낼 필요가 없다. 같은 출처에 `fetch`를 보내고 응답을 `console.log`로 보여 주는 것으로 충분하다. 보고서에는 "쿠키를 훔쳤다"가 아니라 "피해자 권한으로 X를 수행했다"고 쓴다. 영향도 산정 기준은 [8부 2장](../part8-reporting/02-severity.md)을 따른다.
+3단계 증명은 외부로 데이터를 보낼 필요가 없다. 같은 출처에 `fetch`를 보내고 응답을 `console.log`로 보여 주는 것으로 충분하다. 보고서에는 "쿠키를 훔쳤다"가 아니라 "피해자 권한으로 X를 수행했다"고 쓴다. 영향도 산정 기준은 [보고 2장](../part8-reporting/02-severity.md)을 따른다.
 
 ## 6. 방어
 
@@ -297,14 +297,14 @@ Google 연구진이 2016년에 실제 배포된 정책 26,011개를 분석한 �
 | CVE | 제품 | 핵심 | 패치 |
 |---|---|---|---|
 | [CVE-2024-4367](https://nvd.nist.gov/vuln/detail/CVE-2024-4367) | Mozilla PDF.js (Firefox < 126) | PDF 폰트의 `FontMatrix` 값에 타입 검사가 없어, 글리프 렌더링 코드가 생성하는 JS `Function` 본문에 공격자 문자열이 들어감. PDF를 여는 것만으로 스크립트 실행 | [pdf.js v4.2.67 릴리스](https://github.com/mozilla/pdf.js/releases/tag/v4.2.67) |
-| [CVE-2020-11023](https://nvd.nist.gov/vuln/detail/CVE-2020-11023) | jQuery < 3.5.0 | `.html()`·`.append()`에 넘긴 HTML을 `htmlPrefilter`가 정규식으로 고쳐 쓰는 과정에서 `<option>` 등을 이용해 살균된 입력이 다시 실행 가능 마크업으로 변함. 2025년 1월 CISA KEV 등재 | [jQuery 블로그](https://blog.jquery.com/2020/04/10/jquery-3-5-0-released/) |
+| [CVE-2020-11023](https://nvd.nist.gov/vuln/detail/CVE-2020-11023) | jQuery 1.0.3 이상 3.5.0 미만 | `<option>` 요소가 든 HTML을 `.html()`·`.append()` 등에 넘기면, 살균한 뒤라도 스크립트가 실행될 수 있다(레코드 기준). 짝이 되는 [CVE-2020-11022](https://nvd.nist.gov/vuln/detail/CVE-2020-11022)(1.12.0 이상 3.5.0 미만)는 같은 메서드들의 `htmlPrefilter`가 `<tag/>` 꼴을 정규식으로 `<tag></tag>`로 고쳐 쓰는 과정의 결함이다. 둘 다 3.5.0에서 수정. 11023은 2025년 1월 CISA KEV 등재 | [GHSA-jpcq-cgw6-v4j6](https://github.com/jquery/jquery/security/advisories/GHSA-jpcq-cgw6-v4j6) · [jQuery 3.5.0 블로그](https://blog.jquery.com/2020/04/10/jquery-3-5-0-released/) |
 | [CVE-2022-27926](https://nvd.nist.gov/vuln/detail/CVE-2022-27926) | Zimbra Collaboration 9.0 | `/public/launchNewWindow.jsp`의 Reflected XSS. Winter Vivern(TA473)이 유럽 정부·군 기관의 웹메일 자격 증명 수집에 악용 | [Zimbra 권고](https://wiki.zimbra.com/wiki/Zimbra_Security_Advisories) |
 | [CVE-2023-43770](https://nvd.nist.gov/vuln/detail/CVE-2023-43770) | Roundcube < 1.6.3 | text/plain 메일의 링크를 HTML로 바꾸는 `rcube_string_replacer`에서 Stored XSS. 메일을 열기만 하면 실행. 2024년 2월 CISA KEV 등재 | [1.6.3 릴리스](https://github.com/roundcube/roundcubemail/releases/tag/1.6.3) |
 | [CVE-2024-37383](https://nvd.nist.gov/vuln/detail/CVE-2024-37383) | Roundcube < 1.5.7, 1.6.x < 1.6.7 | SVG `<animate attributeName="href">`를 걸러내는 검사가 값 끝의 공백(`"href "`)을 처리하지 못해 Stored XSS. 피싱 메일로 정부 기관 공격에 악용 | [1.6.7 릴리스](https://github.com/roundcube/roundcubemail/releases/tag/1.6.7) |
 
 **PDF.js (CVE-2024-4367) 에서 배울 것**: XSS는 "웹 폼"에서만 나오지 않는다. 데이터를 코드로 컴파일하는 모든 경로가 싱크다. 패치는 `FontMatrix` 값이 숫자 배열인지 검사하도록 바꿨다(권고문·분석 기준). PDF.js를 내장한 수많은 웹·Electron 앱이 같이 영향을 받았다는 점에서 공급망 문제이기도 하다.
 
-**jQuery (CVE-2020-11023) 에서 배울 것**: 살균 후에 문자열을 **다시 가공하는 코드**가 있으면 살균은 무효가 된다. 패치는 3.5.0에서 `htmlPrefilter`의 자동 닫는 태그 변환을 제거했다. 5년 뒤 KEV에 오른 것은 오래된 jQuery를 안 바꾸는 사이트가 그만큼 많다는 뜻이다.
+**jQuery (CVE-2020-11022·11023) 에서 배울 것**: 살균 후에 문자열을 **다시 가공하는 코드**가 있으면 살균은 무효가 된다. 3.5.0은 두 건을 같이 고쳤다. 11022 쪽은 `htmlPrefilter`의 자동 닫는 태그 변환을 없앴고(이제 `htmlPrefilter`는 입력을 그대로 돌려준다), 11023 쪽은 `<option>`을 담는 HTML의 처리 경로를 고쳤다. 두 CVE를 구분해 적어야 하는 이유는 영향 버전이 다르기 때문이다(11022는 1.12.0부터, 11023은 1.0.3부터). 2025년에 11023이 KEV에 오른 것은 오래된 jQuery를 안 바꾸는 사이트가 그만큼 많다는 뜻이다.
 
 **Roundcube 두 건에서 배울 것**: 둘 다 "살균하는 코드가 있었는데 한 경우를 놓친" 사례다. 2024년 건은 `attributeName="href"`를 걸러내되 `attributeName="href "`(끝에 공백)는 통과시켰다. 패치는 속성 값을 `trim`한 뒤 비교하도록 바꿨다(`rcube_washtml.php` 패치 커밋 기준). 정규식 기반 살균이 왜 위험한지 보여 주는 교과서적 예다. 두 건 모두 국가 배후 그룹이 웹메일 자격 증명 수집에 썼고, Stored XSS 하나가 조직 전체의 이메일로 이어졌다.
 
@@ -348,3 +348,4 @@ Google 연구진이 2016년에 실제 배포된 정책 26,011개를 분석한 �
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 본문 작성. 문맥별 인코딩, CSP 설계·우회, 프레임워크 구멍, CVE 5건 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 5건 레코드 대조(전부 실존). Roundcube CVE-2024-37383 결함·패치 설명을 패치 커밋(속성 값 trim) 기준으로 정정, Django 템플릿을 Jinja2로 묶은 서술 수정. Flask 예제 2종 실행 확인 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 8절 jQuery 항목을 레코드로 재확인해 CVE-2020-11022(htmlPrefilter)와 11023(`<option>` 처리)을 구분, 영향 버전·권고 링크 정정. 장 참조 표기 정리 | @anthonynoh5202 |

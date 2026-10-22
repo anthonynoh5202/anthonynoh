@@ -7,7 +7,7 @@
 > **한눈에 보기**
 > 사람이 생각 못 한 입력을 기계가 초당 수천 번 넣는다. 커버리지 피드백이 퍼징을 '무작위 던지기'에서 '탐색'으로 바꿨다.
 > 퍼저는 크래시를 찾을 뿐이고, 크래시를 **취약점**으로 만드는 것은 하네스 설계와 새니타이저, 그리고 분류(triage)다.
-> 이 장은 AFL++로 첫 퍼징을 돌리고, 하네스를 쓰고, 크래시를 분류해 [4부의 취약점 장](00-overview.md)으로 넘기는 흐름을 다룬다. 도구별 세부 옵션은 [6부 4장](../part6-tools/04-fuzzers.md)에 있다.
+> 이 장은 AFL++로 첫 퍼징을 돌리고, 하네스를 쓰고, 크래시를 분류해 [이 부의 취약점 장](00-overview.md)으로 넘기는 흐름을 다룬다. 도구별 세부 옵션은 [도구 4장](../part6-tools/04-fuzzers.md)에 있다.
 
 ## 1. 원리: 커버리지 피드백
 
@@ -115,7 +115,7 @@ Google의 [What makes a good fuzz target](https://github.com/google/fuzzing/blob
 | 입력 크기 상한을 둔다 (`-max_len`, `if (len > N) return`) | 거대 입력은 느리고 실제 공격 면과 다를 수 있다 | 시간 낭비 |
 | **시드 코퍼스**와 **사전**이 있다 | 유효한 입력 구조에서 출발 | 첫 검사를 못 넘김 |
 
-그리고 가장 중요한 것은 **공격 표면과 같은 입구**를 쓰는 것이다. 네트워크에서 오는 패킷을 파싱하는 함수를 퍼징해야지, 그 뒤의 내부 유틸리티를 퍼징하면 "도달 불가능한 버그"만 쌓인다. [1부 3장 공격 표면](../part1-foundations/03-attack-surface.md)의 분석이 하네스 설계의 입력이다.
+그리고 가장 중요한 것은 **공격 표면과 같은 입구**를 쓰는 것이다. 네트워크에서 오는 패킷을 파싱하는 함수를 퍼징해야지, 그 뒤의 내부 유틸리티를 퍼징하면 "도달 불가능한 버그"만 쌓인다. [기초 3장 공격 표면](../part1-foundations/03-attack-surface.md)의 분석이 하네스 설계의 입력이다.
 
 ### 3.2 AFL++ 퍼시스턴트 모드
 
@@ -212,7 +212,7 @@ mkdir corpus && cp seeds/* corpus/
 | 새니타이저 보고 | 유형 | 장 |
 |---|---|---|
 | `heap-buffer-overflow` WRITE | 힙 오버플로 | [4장](04-heap.md) |
-| `heap-buffer-overflow` READ, `global-buffer-overflow` READ | 경계 밖 읽기 (정보 누출) | [4장](04-heap.md), [7부 2장](../part7-walkthroughs/02-cve-2014-0160-heartbleed.md) |
+| `heap-buffer-overflow` READ, `global-buffer-overflow` READ | 경계 밖 읽기 (정보 누출) | [4장](04-heap.md), [워크스루 2장](../part7-walkthroughs/02-cve-2014-0160-heartbleed.md) |
 | `stack-buffer-overflow` | 스택 오버플로 | [2장](02-stack-overflow.md) |
 | `heap-use-after-free`, `double-free` | UAF | [5장](05-uaf.md) |
 | `signed integer overflow`, 할당 크기 이상 | 정수 오버플로 | [6장](06-integer-overflow.md) |
@@ -248,7 +248,7 @@ afl-fuzz -d -i in -o out -N tcp://127.0.0.1/8554 -x rtsp.dict -P RTSP -D 10000 -
 # -N 서버 주소  -P 프로토콜(RTSP, FTP, DNS, SMTP, SSH, TLS 등)  -D 서버 초기화 대기(µs)  -E 상태 인식 모드  -K 종료 시 SIGTERM
 ```
 
-**boofuzz**는 Sulley의 후속으로, 파이썬으로 프로토콜 메시지 구조를 선언하면 각 필드를 체계적으로 변이해 보내는 **생성 기반** 퍼저다. 커버리지 피드백은 없지만 계측할 수 없는 장비(네트워크 장비, IoT 펌웨어)에 쓸 수 있고, 대상이 죽었는지 감시하고 재시작하는 기능이 있다. [5부 3장 IoT](../part5-extended/03-iot-firmware.md)에서 다시 다룬다.
+**boofuzz**는 Sulley의 후속으로, 파이썬으로 프로토콜 메시지 구조를 선언하면 각 필드를 체계적으로 변이해 보내는 **생성 기반** 퍼저다. 커버리지 피드백은 없지만 계측할 수 없는 장비(네트워크 장비, IoT 펌웨어)에 쓸 수 있고, 대상이 죽었는지 감시하고 재시작하는 기능이 있다. [확장 3장 IoT](../part5-extended/03-iot-firmware.md)에서 다시 다룬다.
 
 상태가 있는 대상의 하네스는 "상태를 만드는 메시지 몇 개를 고정으로 보낸 뒤 마지막 메시지만 변이"하는 식으로 단순화하는 것이 먼저다. 그래도 안 되면 AFLNet 같은 전용 도구로 간다.
 
@@ -260,7 +260,7 @@ afl-fuzz -d -i in -o out -N tcp://127.0.0.1/8554 -x rtsp.dict -P RTSP -D 10000 -
 
 ## 8. 실습 🧪
 
-[6장 4절](06-integer-overflow.md)의 `records.c`(레코드 수 + 레코드들을 읽는 파서)를 대상으로 한다. 표준 입력을 읽으므로 하네스 없이 바로 퍼징된다. AFL++ Docker 이미지 안에서 진행한다.
+[6장 4절](06-integer-overflow.md)의 `records.c`(레코드 수 + 레코드들을 읽는 파서)를 대상으로 한다. 표준 입력을 읽으므로 하네스 없이 바로 퍼징된다. AFL++는 **로컬 apt 패키지**(`sudo apt install afl++`, Ubuntu 24.04는 4.09c)나 **2절의 Docker 이미지** 중 하나로 준비한다. 00장의 "별도 Docker 환경이 없다"는 규칙은 컴파일·디버깅 실습에 대한 것이고, 퍼저는 어느 쪽이든 된다. Docker를 쓰면 `records.c`가 있는 디렉터리를 `/src`로 마운트하고 그 안에서 아래를 그대로 실행한다.
 
 1. 계측 + ASan 빌드.
    ```bash
@@ -315,7 +315,7 @@ afl-fuzz -d -i in -o out -N tcp://127.0.0.1/8554 -x rtsp.dict -P RTSP -D 10000 -
 - [What makes a good fuzz target (Google)](https://github.com/google/fuzzing/blob/master/docs/good-fuzz-target.md) · 하네스 설계 원칙
 - [OSS-Fuzz](https://github.com/google/oss-fuzz) · 프로젝트 구조와 기존 하네스 재사용
 - Van-Thuan Pham, Marcel Böhme, Abhik Roychoudhury, "AFLNet: A Greybox Fuzzer for Network Protocols", ICST 2020 · 상태 기반 프로토콜 퍼징의 원 논문
-- [6부 4장 퍼저: AFL++ · libFuzzer · boofuzz](../part6-tools/04-fuzzers.md) · 도구별 옵션 레퍼런스
+- [도구 4장 퍼저: AFL++ · libFuzzer · boofuzz](../part6-tools/04-fuzzers.md) · 도구별 옵션 레퍼런스
 
 ## 변경 이력
 
@@ -324,3 +324,4 @@ afl-fuzz -d -i in -o out -N tcp://127.0.0.1/8554 -x rtsp.dict -P RTSP -D 10000 -
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 8절·실습 작성. 명령·매크로·옵션을 AFL++ 5.03c 문서와 libFuzzer 문서 기준으로 확인 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: AFL++ README(릴리스 5.03c, Docker 명령)·fuzzing_in_depth(MSan 86/LSan 23 종료 코드)·README.persistent_mode(매크로 순서)·AFLNet README(명령줄 옵션)·OSS-Fuzz README(2025-05 수치)를 원문으로 대조해 일치 확인. AFL++ 미설치 환경이라 8절 캠페인은 미실행 → "수 분 안에"라는 시간 추정을 완화 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 8절 실습 환경을 "로컬 apt afl++ 또는 Docker 이미지 중 택일"로 바꿔 00장과의 충돌 해소. 장 참조 표기 정리 | @anthonynoh5202 |

@@ -1,5 +1,5 @@
 """
-취약점 분석 바이블 — 실습: SQL 인젝션 (3부 1장)
+《취약점, 발견에서 조치까지》 실습: SQL 인젝션 (제2편 웹 1장)
 
 이 앱은 일부러 취약하게 만들어져 있다. 127.0.0.1 밖으로 노출하지 마라.
 '# ❌' 표시된 함수 세 개를 파라미터화된 쿼리로 고치는 것까지가 실습이다.
@@ -57,7 +57,7 @@ nav a{margin-right:1rem}form{margin:1rem 0}input{padding:.3rem}pre{background:#f
 <h1>🧪 web-sqli</h1>
 <nav><a href="/">로그인</a><a href="/search">검색</a><a href="/item?id=1">아이템</a></nav>
 <hr>{{ body|safe }}
-<hr><small>취약점 분석 바이블 · 3부 1장 · 격리된 로컬에서만 실행하세요</small>
+<hr><small>취약점, 발견에서 조치까지 · 제2편 웹 1장 · 격리된 로컬에서만 실행하세요</small>
 </body></html>
 """
 

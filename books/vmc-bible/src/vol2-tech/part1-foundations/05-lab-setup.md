@@ -33,7 +33,7 @@ ls
 ```
 labs/
   README.md          실습 목록과 공통 규칙
-  web-sqli/          3부 1장 SQL 인젝션
+  web-sqli/          웹 1장 SQL 인젝션
     docker-compose.yml
     app/             취약한 앱 소스 (고치는 것까지가 실습)
     solve_blind.py   참고 풀이
@@ -47,7 +47,22 @@ cd labs/web-sqli
 docker compose up --build
 ```
 
-터미널에 `Running on http://0.0.0.0:8080` 이 보이면 브라우저에서 `http://localhost:8080` 을 연다.
+터미널에 다음이 보이면 브라우저에서 `http://localhost:8080` 을 연다(Flask 3의 실제 출력).
+
+```
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8080
+```
+
+Docker를 쓸 수 없으면 앱을 직접 띄워도 된다. 앱은 Flask와 표준 라이브러리의 sqlite3만 쓴다.
+
+```bash
+cd labs/web-sqli/app
+python3 -m venv .venv && . .venv/bin/activate
+pip install flask && python app.py        # 같은 'Running on ...' 출력. DB는 /tmp/lab.db
+```
+
+이 경우 포트가 `0.0.0.0:8080`에 열리므로 5절의 격리 규칙(공용 네트워크에서 띄우지 않기)을 더 엄격히 지킨다. 코드를 고친 뒤 반영하려면 Docker는 `docker compose up --build`로 다시 빌드하고, 직접 띄운 경우는 프로세스를 다시 시작한다.
 
 끝낼 때:
 
@@ -82,7 +97,7 @@ Kali Linux가 없어도 된다. 이 책에서 쓰는 도구는 대부분 개별 
 | 웹 프록시 | Burp Suite Community 또는 ZAP | 각 공식 사이트 |
 | HTTP 클라이언트 | curl, httpie | 패키지 매니저 |
 | SQLi 자동화 | sqlmap | `pip install sqlmap` 또는 git clone |
-| 바이너리 | gdb + pwndbg, pwntools, checksec | 4부 1장에서 설치 |
+| 바이너리 | gdb + pwndbg, pwntools, checksec | [6장](06-analysis-workstation.md)의 설치 스크립트로 설치. 빌드 플래그와 checksec 읽는 법은 [바이너리 부 개요](../part4-binary/00-overview.md) |
 | 디컴파일러 | Ghidra | [공식 릴리스](https://github.com/NationalSecurityAgency/ghidra/releases) |
 | 정적 분석 | semgrep | `pip install semgrep` |
 
@@ -116,3 +131,4 @@ Kali Linux가 없어도 된다. 이 책에서 쓰는 도구는 대부분 개별 
 |---|---|---|
 | 2026-10-21 | 초안 작성 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: `docker compose up`에는 `--platform` 옵션이 없어 `DOCKER_DEFAULT_PLATFORM` 환경변수로 정정 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 3절 기동 문구를 Flask 3 실제 출력(`Running on all addresses (0.0.0.0)`)으로, Docker 없이 `pip install flask && python app.py`로 띄우는 대안과 재빌드 안내 추가, 바이너리 도구 설치 참조를 6장으로 정정 | @anthonynoh5202 |

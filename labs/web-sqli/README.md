@@ -1,6 +1,6 @@
 # web-sqli: SQL 인젝션 실습
 
-책: [3부 1장 SQL 인젝션](../../books/vmc-bible/src/vol2-tech/part3-web/01-sql-injection.md)
+책: [제2편 웹 1장 SQL 인젝션](../../books/vmc-bible/src/vol2-tech/part3-web/01-sql-injection.md)
 
 ```bash
 docker compose up --build

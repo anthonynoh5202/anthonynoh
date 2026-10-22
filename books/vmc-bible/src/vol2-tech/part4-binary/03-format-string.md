@@ -96,7 +96,7 @@ gcc -Wformat -Wformat-security -c foo.c
 gcc -Werror=format-security -c foo.c        # 경고를 오류로. CI에서 이것을 쓴다
 ```
 
-`-Wformat-security`는 "포맷이 리터럴이 아니고 인자가 하나도 없는" 호출을 잡는다. 인자가 하나라도 있으면(`printf(fmt, x)`) 놓치므로 `-Wformat=2`(`-Wformat-nonliteral` 포함)를 더한다. 자체 로그 함수에는 `__attribute__((format(printf, 1, 2)))`를 달아야 검사 대상이 된다. Ubuntu, Debian의 gcc는 `-Wformat -Werror=format-security`를 기본으로 켠다.
+`-Wformat-security`는 "포맷이 리터럴이 아니고 인자가 하나도 없는" 호출을 잡는다. 인자가 하나라도 있으면(`printf(fmt, x)`) 놓치므로 `-Wformat=2`(`-Wformat-nonliteral` 포함)를 더한다. 자체 로그 함수에는 `__attribute__((format(printf, 1, 2)))`를 달아야 검사 대상이 된다. Ubuntu·Debian의 gcc는 `-Wformat -Wformat-security`를 **경고**로 기본 활성화한다(실측: 플래그 없이 `gcc -c foo.c`만 해도 위 경고가 나온다. 4절의 `fmt.c` 빌드 출력이 그것이다). 경고를 **오류**로 올리는 `-Werror=format-security`는 컴파일러 기본값이 아니라 배포판 **패키지 빌드**의 `dpkg-buildflags --get CFLAGS`에 들어 있다. 자기 프로젝트의 CI에는 직접 넣어야 한다.
 
 **grep**은 포맷 함수 호출에서 첫 문자열 인자가 따옴표로 시작하지 않는 것을 찾는다.
 
@@ -284,7 +284,7 @@ checksec --file=./fmt_relro     # RELRO: Full RELRO
 
 **sudo (CVE-2012-0809)에서 배울 것**: 권고문 기준, 수정은 프로그램 이름을 포맷 인자가 아니라 `%s`의 **인자로** 넘기는 것이었다. 한 줄 패치다. 교훈은 "입력"의 범위다. `argv[0]`은 실행하는 사람이 정한다. 로그·디버그 코드는 리뷰에서 자주 건너뛰지만, setuid 바이너리에서는 그 코드가 root로 돈다.
 
-**libinput (CVE-2022-1215)에서 배울 것**: 패치 "evdev: strip the device name of format directives"는 장치 이름의 `%`를 다른 문자로 치환하고, 로그 호출을 리터럴 포맷으로 바꿨다. 입력이 **하드웨어 설명자**에서 온다는 점이 특이하다. 신뢰 경계는 네트워크에만 있지 않다. [1부 3장](../part1-foundations/03-attack-surface.md).
+**libinput (CVE-2022-1215)에서 배울 것**: 패치 "evdev: strip the device name of format directives"는 장치 이름의 `%`를 다른 문자로 치환하고, 로그 호출을 리터럴 포맷으로 바꿨다. 입력이 **하드웨어 설명자**에서 온다는 점이 특이하다. 신뢰 경계는 네트워크에만 있지 않다. [기초 3장](../part1-foundations/03-attack-surface.md).
 
 **PHP (CVE-2015-8617)에서 배울 것**: 권고문 기준, 클래스 이름을 포맷 인자로 넘기도록 바꿨다. PHP 스크립트는 "신뢰된 코드"로 보이지만 공유 호스팅에서는 스크립트 작성자가 곧 공격자다. 인터프리터의 메모리 취약점은 샌드박스 탈출이다.
 
@@ -322,3 +322,4 @@ checksec --file=./fmt_relro     # RELRO: Full RELRO
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. 실습 출력과 pwntools 스크립트는 Ubuntu 24.04 / gcc 13.3 / glibc 2.39에서 실측 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 4건 cvelistV5 대조(모두 실존), sudo·MSVR·VMSA·libinput 링크를 레코드 URL로 교체, libinput 영향 버전 정정. `read_rodata.py`·`got_overwrite.py`를 Partial/Full RELRO 빌드에서 재실행(Full RELRO는 SIGSEGV 확인). 경고 줄 번호 정정, `.fini_array`가 Partial RELRO에서도 읽기 전용임을 명시, FORTIFY의 `%N$n` 메시지 추가 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 3.1절 "Ubuntu gcc는 -Werror=format-security 기본"을 실측(기본은 -Wformat-security 경고, -Werror는 dpkg-buildflags)으로 정정. 장 참조 표기 정리 | @anthonynoh5202 |

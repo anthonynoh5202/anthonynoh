@@ -7,7 +7,7 @@
 > **한눈에 보기**
 > 메모리 안전하지 않은 언어(C/C++)에서 '경계'와 '수명'을 잘못 다루면 공격자가 메모리를 직접 쓴다.
 > 4부는 그 메모리를 이해하는 데서 시작한다. 웹 취약점이 "입력이 코드로 해석되는" 문제라면, 바이너리 취약점은 "입력이 메모리 구조를 깨뜨리는" 문제다.
-> 이 장은 4부 전체에서 쓰는 도구, 어셈블리 최소 지식, 실습 빌드 규칙을 정한다.
+> 이 장은 이 부 전체에서 쓰는 도구, 어셈블리 최소 지식, 실습 빌드 규칙을 정한다.
 
 ## 1. 왜 아직도 메모리 취약점인가
 
@@ -20,9 +20,9 @@ C와 C++는 메모리를 프로그래머가 직접 관리한다. 배열의 길�
 
 | 이유 | 설명 | 이 책에서 |
 |---|---|---|
-| 영향도 판단 | "크래시"와 "코드 실행"의 차이를 가려야 심각도를 매긴다 | [8부 2장](../part8-reporting/02-severity.md) |
-| 패치 검증 | 패치가 증상만 막았는지, 원인을 제거했는지 diff로 읽어야 한다 | [7부 워크스루](../part7-walkthroughs/00-overview.md) |
-| 재현 | 벤더 권고문만으로는 재현이 안 된다. 디버거에서 직접 봐야 한다 | 4부 전체 |
+| 영향도 판단 | "크래시"와 "코드 실행"의 차이를 가려야 심각도를 매긴다 | [보고 2장](../part8-reporting/02-severity.md) |
+| 패치 검증 | 패치가 증상만 막았는지, 원인을 제거했는지 diff로 읽어야 한다 | [워크스루 부](../part7-walkthroughs/00-overview.md) |
+| 재현 | 벤더 권고문만으로는 재현이 안 된다. 디버거에서 직접 봐야 한다 | 이 부 전체 |
 
 ### 4부의 지도
 
@@ -44,7 +44,7 @@ flowchart LR
 <figcaption>그림 1. 4부의 의존 관계. 01장은 모든 장의 선수 과목이다. 02장(스택)과 04장(힙)이 두 축이고, 07~08장은 "완화가 켜진 세상"에서 02~06장이 어떻게 달라지는지를 다룬다.</figcaption>
 </figure>
 
-근본 원인으로 묶으면 두 가지다. [1부 1장](../part1-foundations/01-what-is-vulnerability.md)에서 말한 "경계와 수명"이다.
+근본 원인으로 묶으면 두 가지다. [기초 1장](../part1-foundations/01-what-is-vulnerability.md)에서 말한 "경계와 수명"이다.
 
 | 근본 원인 | 취약점 유형 | CWE | 장 |
 |---|---|---|---|
@@ -54,7 +54,7 @@ flowchart LR
 
 ## 2. 분석 도구 세트
 
-"언제 쓰는가"가 먼저다. 네 도구를 다음 순서로 쓴다. 설치와 세부 사용법은 [6부 2장](../part6-tools/02-ghidra-ida.md)과 [6부 3장](../part6-tools/03-debuggers.md)에 있다.
+"언제 쓰는가"가 먼저다. 네 도구를 다음 순서로 쓴다. 설치와 세부 사용법은 [도구 2장](../part6-tools/02-ghidra-ida.md)과 [도구 3장](../part6-tools/03-debuggers.md)에 있다.
 
 | 순서 | 도구 | 언제 | 핵심 명령 |
 |---|---|---|---|
@@ -80,7 +80,10 @@ $ checksec --file=./vuln
     NX:         NX unknown - GNU_STACK missing
     PIE:        No PIE (0x400000)  # 코드 주소 고정 → 주소 누출 불필요
     Stack:      Executable         # 스택에서 셸코드 실행 가능
+    RWX:        Has RWX segments   # 읽기·쓰기·실행이 모두 되는 세그먼트가 있다 (-z execstack의 결과)
 ```
+
+pwntools 4.15의 checksec는 이 뒤에 `SHSTK`, `IBT`(CET 관련), `Stripped`, `Debuginfo` 줄도 찍는다. 이 부의 실습에서는 위 일곱 줄만 보면 된다.
 
 > 🟡 pwndbg가 없어도 이 책의 gdb 명령은 모두 동작한다. pwndbg는 같은 정보를 색과 주석을 붙여 보여줄 뿐이다. 처음에는 **순정 gdb로 한 번** 해 보고 pwndbg를 얹는 것이 구조 이해에 낫다.
 
@@ -146,7 +149,7 @@ gdb 기본은 AT&T 문법(`mov %rsp,%rbp`), Ghidra와 대부분의 문서는 Int
 
 ## 5. 실습 빌드 규칙
 
-4부의 모든 실습은 **로컬에서 직접 컴파일**한다. 별도 Docker 환경이 없다. 완화를 끈 플래그가 핵심이다.
+이 부의 모든 실습은 **로컬에서 직접 컴파일**한다. 별도 Docker 환경이 없다(퍼저만은 예외로, 9장에서 apt 패키지와 Docker 이미지 중 택일한다). 완화를 끈 플래그가 핵심이다.
 
 ```bash
 gcc -g -O0 -fno-stack-protector -z execstack -no-pie -o vuln vuln.c
@@ -169,13 +172,13 @@ setarch $(uname -m) -R ./vuln        # 이 프로세스만 ASLR 해제
 
 각 장은 이 플래그로 시작해서, 하나씩 다시 켜며 무엇이 막히는지 확인한다. 그 "다시 켜기"가 [07장](07-mitigations.md)이다.
 
-> ⚠️ 실습 바이너리는 **자기 컴퓨터, 자기 프로세스**에서만 돌린다. 실제 서비스나 타인의 시스템을 대상으로 한 페이로드는 이 책에 싣지 않는다. [1부 4장 윤리와 법적 범위](../part1-foundations/04-ethics-and-law.md).
+> ⚠️ 실습 바이너리는 **자기 컴퓨터, 자기 프로세스**에서만 돌린다. 실제 서비스나 타인의 시스템을 대상으로 한 페이로드는 이 책에 싣지 않는다. [기초 4장 윤리와 법적 범위](../part1-foundations/04-ethics-and-law.md).
 
 ## 체크리스트
 
 이 장을 읽고 나면 다음을 할 수 있어야 한다.
 
-- [ ] `checksec` 출력 다섯 줄을 보고 "어떤 공격이 가능한가"를 말할 수 있는가?
+- [ ] `checksec` 출력의 각 줄을 보고 "어떤 공격이 가능한가"를 말할 수 있는가?
 - [ ] `call`과 `ret`이 스택에 무엇을 넣고 빼는지 설명할 수 있는가?
 - [ ] 함수 호출 직전 `rdi`, `rsi`, `rdx`에 무엇이 들어 있는지 gdb에서 확인할 수 있는가?
 - [ ] 위 gcc 플래그 다섯 개가 각각 어떤 완화를 끄는지 아는가?
@@ -185,7 +188,7 @@ setarch $(uname -m) -R ./vuln        # 이 프로세스만 ASLR 해제
 
 - [System V AMD64 ABI](https://gitlab.com/x86-psABIs/x86-64-ABI) · 호출 규약의 1차 출처
 - [Intel 64 and IA-32 Architectures Software Developer Manuals](https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html) · 명령어 의미의 1차 출처. 2권(명령어 집합)만 참고
-- [pwntools 공식 문서](https://docs.pwntools.com/en/stable/) · 4부 전체에서 쓰는 API
+- [pwntools 공식 문서](https://docs.pwntools.com/en/stable/) · 이 부 전체에서 쓰는 API
 - [pwndbg](https://github.com/pwndbg/pwndbg) · gdb 플러그인. `README`의 기능 목록만 봐도 무엇이 가능한지 안다
 - [Ghidra](https://ghidra-sre.org/) · NSA 공개 디컴파일러. 무료
 - [GCC: Instrumentation Options](https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html) · `-fstack-protector`, `-fsanitize` 등 플래그의 공식 설명
@@ -199,3 +202,4 @@ setarch $(uname -m) -R ./vuln        # 이 프로세스만 ASLR 해제
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성: 도구 세트, 어셈블리 최소 지식, 호출 규약 표, 실습 빌드 규칙 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증 완료, 수정 없음. 빌드 플래그로 컴파일한 바이너리의 `checksec --file=` 출력(pwntools 4.15)이 본문과 일치, `-Wstringop-overflow` 경고·`setarch -R`·gdb ASLR 동작 확인, 레지스터·호출 규약·스택 명령 설명 검토 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: checksec 예시에 실측 `RWX: Has RWX segments` 줄과 pwntools 4.15의 추가 줄 설명, 9장 퍼저의 Docker 예외 명시, 장 참조 표기 정리 | @anthonynoh5202 |

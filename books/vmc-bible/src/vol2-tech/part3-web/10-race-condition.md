@@ -52,7 +52,7 @@ James Kettle의 2023년 연구는 경쟁 조건을 "쿠폰 두 번 쓰기" 너�
 | **단일 엔드포인트**(single-endpoint) | 같은 엔드포인트에 다른 값으로 동시 요청 | 이메일 변경 두 번 → 검증 토큰이 다른 주소로 |
 | **부분 생성**(partial construction) | 객체가 만들어지는 중간 상태를 쓴다 | 가입 직후 API 키가 아직 `null`인 순간에 `null` 키로 인증 |
 | **시간 민감**(time-sensitive) | 타임스탬프 기반 토큰이 같은 순간에 같은 값 | 두 계정의 비밀번호 재설정 토큰이 동일 |
-| **파일 시스템 TOCTOU** | 권한 확인 후 열기 전에 심볼릭 링크 교체 | setuid 프로그램, 임시 파일. [4부](../part4-binary/00-overview.md)의 영역 |
+| **파일 시스템 TOCTOU** | 권한 확인 후 열기 전에 심볼릭 링크 교체 | setuid 프로그램, 임시 파일. [바이너리 부](../part4-binary/00-overview.md)의 영역 |
 
 ### 로직 취약점을 찾는 사고법
 
@@ -291,6 +291,11 @@ ts = [threading.Thread(target=go) for _ in range(20)]
 |---|---|---|---|
 | [CVE-2026-31824](https://nvd.nist.gov/vuln/detail/CVE-2026-31824) | Sylius (전자상거래 프레임워크) | 프로모션 사용 한도 검사와 사용 횟수 증가가 분리된 TOCTOU. 동시 주문 완료 요청으로 1회용 쿠폰 반복 사용. 1절 "한도 초과"의 교과서 사례 | [GitHub 권고 GHSA-7mp4-25j8-hp5q](https://github.com/Sylius/Sylius/security/advisories/GHSA-7mp4-25j8-hp5q) |
 | [CVE-2022-4037](https://nvd.nist.gov/vuln/detail/CVE-2022-4037) | GitLab CE/EE (15.5.7 / 15.6.4 / 15.7.2 미만) | 이메일 검증 흐름의 경쟁 조건으로 검증된 이메일을 위조. GitLab을 OAuth 공급자로 쓰는 서드파티 계정 탈취로 이어짐(CVSS 6.4). Kettle의 2023년 연구가 다룬 단일 엔드포인트 유형의 사례 | [GitLab 이슈](https://gitlab.com/gitlab-org/gitlab/-/issues/382957) |
+
+**경쟁 조건의 비웹 사례.** 같은 원리가 네트워크 데몬과 커널에서 어떻게 나타나는지 비교하기 위한 두 건이다. 웹 로직 취약점의 사례는 아니다.
+
+| CVE | 제품 | 핵심 | 패치 |
+|---|---|---|---|
 | [CVE-2024-6387](https://nvd.nist.gov/vuln/detail/CVE-2024-6387) | OpenSSH 8.5p1~9.7p1 (glibc Linux) | "regreSSHion". `LoginGraceTime` 만료 시 SIGALRM 핸들러가 비동기 신호 안전하지 않은 `syslog()`를 호출. 신호 핸들러 경쟁으로 인증 전 RCE. 2006년 수정된 CVE-2006-5051의 회귀 | [OpenSSH 9.8 릴리스 노트](https://www.openssh.com/txt/release-9.8) |
 | [CVE-2016-5195](https://nvd.nist.gov/vuln/detail/CVE-2016-5195) | Linux 커널 (4.8.3 미만) | "Dirty COW". `mm/gup.c`의 copy-on-write 처리 경쟁으로 읽기 전용 매핑에 쓰기. 로컬 권한 상승 | [커널 커밋 19be0eaf](https://git.kernel.org/linus/19be0eaffa3ac7d8eb6784ad9bdbc7d67ed8e619) |
 
@@ -298,7 +303,7 @@ ts = [threading.Thread(target=go) for _ in range(20)]
 
 **GitLab (CVE-2022-4037) 에서 배울 것**: 권고문 기준으로, 경쟁 조건으로 검증되지 않은 주소가 "검증됨"으로 확정될 수 있었고, GitLab을 OAuth 공급자로 쓰는 서드파티 서비스의 계정 탈취로 이어졌다. "쿠폰 두 번"이 아니라 **계정 보안의 핵심 흐름**에서 경쟁 조건이 터진다는 것, 그리고 1절의 단일 엔드포인트 유형이 실제로 어떻게 나타나는지 보여 준다.
 
-**OpenSSH (CVE-2024-6387) 에서 배울 것**: 웹이 아니지만 같은 원리다. 신호 핸들러는 "언제든 끼어드는 다른 요청"이고, 그 안에서 `malloc`을 건드리는 함수를 부르면 힙 상태의 하위 상태가 노출된다. 패치는 핸들러에서 안전하지 않은 호출을 제거했다. 2020년의 리팩터링이 2006년의 수정을 되돌린 **회귀**라는 점에서, [8부 3장 패치 검증](../part8-reporting/03-patch-verification.md)의 "회귀 테스트가 없는 보안 수정은 언젠가 사라진다"는 논지의 사례다.
+**OpenSSH (CVE-2024-6387) 에서 배울 것**: 웹이 아니지만 같은 원리다. 신호 핸들러는 "언제든 끼어드는 다른 요청"이고, 그 안에서 `malloc`을 건드리는 함수를 부르면 힙 상태의 하위 상태가 노출된다. 패치는 핸들러에서 안전하지 않은 호출을 제거했다. 2020년의 리팩터링이 2006년의 수정을 되돌린 **회귀**라는 점에서, [보고 3장 패치 검증](../part8-reporting/03-patch-verification.md)의 "회귀 테스트가 없는 보안 수정은 언젠가 사라진다"는 논지의 사례다.
 
 ## 9. 체크리스트
 
@@ -339,3 +344,4 @@ ts = [threading.Thread(target=go) for _ in range(20)]
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 전체 작성. 유형 표, 로직 취약점 사고법, 원자적 연산 패턴, 단일 패킷 공격 해설, 로컬 재현 코드, CVE 4건 추가 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 5건 레코드 대조(전부 실존; CVE-2022-4037은 GitLab 경쟁 조건으로 실존 확인, 영향·버전·링크를 레코드 기준으로 수정). Sylius 권고 링크 구체화, OWASP BLA 링크를 프로젝트 페이지로 완화. race_demo.py 실행(취약 1~5회/20요청, 조건부 UPDATE 수정본 항상 1회) 확인 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 8절 CVE-2026-31824를 cvelistV5 레코드로 재확인(실존, Sylius GHSA-7mp4-25j8-hp5q). OpenSSH·Dirty COW를 "경쟁 조건의 비웹 사례" 표로 분리. 장 참조 표기 정리 | @anthonynoh5202 |

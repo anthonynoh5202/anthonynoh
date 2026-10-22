@@ -103,31 +103,51 @@ if sort_column not in ALLOWED:
 **grep으로 시작한다.** 쿼리 문자열 안에 변수 보간이 있는지 본다.
 
 ```bash
-# Python
+# Python (1) execute()에 직접 포매팅한 경우
 grep -rnE "(execute|raw|executescript)\s*\(\s*f?[\"'].*(\{|%s|\+)" --include='*.py' .
+# Python (2) 쿼리를 변수에 담아 두는 경우: query = f"SELECT ... {x}" / "..." % x / "..." + x
+grep -rnE "=\s*f?[\"'].*\b(SELECT|INSERT|UPDATE|DELETE)\b.*(\{|%s|\+)" --include='*.py' .
 # Java
 grep -rnE "(executeQuery|execute|prepareStatement)\s*\(.*\+" --include='*.java' .
 # PHP
 grep -rnE "(mysqli_query|->query|pg_query)\s*\(.*\\\$" --include='*.php' .
 ```
 
-**Semgrep 룰** (공식 레지스트리에 이미 있다):
+(1)만으로는 4절의 실습 앱 `labs/web-sqli/app/app.py`를 **0건** 잡는다. 그 앱은 쿼리를 `query = f"..."`에 담은 뒤 `execute(query)`를 부르기 때문이다. (2)가 세 함수를 모두 잡는다(실측 3건. `solve_blind.py`의 풀이 코드 1건은 오탐). grep은 "싱크에 리터럴이 아닌 것이 들어간다"를 보는 것이지 흐름을 따라가지 못한다는 점을 보여 주는 예다.
+
+**Semgrep 룰** (공식 레지스트리에 이미 있다. 룰을 semgrep.dev에서 내려받으므로 **네트워크가 필요**하다):
 
 ```bash
 semgrep --config p/sql-injection .
 ```
 
-직접 쓰면 이런 형태다.
+직접 쓰면 **taint 모드**로 쓴다. 패턴 하나(`$DB.execute(f"...")`)로는 위 grep (1)과 같은 이유로 `app.py`를 못 잡는다. 소스(요청 값)에서 싱크(실행 함수의 쿼리 인자)까지 흐름을 따라가야 한다.
 
 ```yaml
+# sqli-taint.yaml
 rules:
-  - id: python-sqli-fstring
+  - id: python-sqli-request-to-execute
     languages: [python]
     severity: ERROR
-    message: SQL 쿼리에 f-string 사용. 파라미터화된 쿼리로 바꾸세요.
-    patterns:
-      - pattern: $DB.execute(f"...", ...)
+    message: 요청 값(request.form/args)이 SQL 실행 함수까지 흐른다. 파라미터화된 쿼리로 바꾸세요.
+    mode: taint
+    pattern-sources:
+      - pattern: request.form.get(...)
+      - pattern: request.args.get(...)
+      - pattern: request.form[...]
+      - pattern: request.args[...]
+    pattern-sinks:
+      - patterns:
+          - pattern: $DB.execute($Q, ...)
+          - focus-metavariable: $Q
 ```
+
+```bash
+semgrep --config sqli-taint.yaml --metrics=off labs/web-sqli/app/app.py
+# app.py:91, :110, :123 — 세 execute() 모두 (semgrep 1.182 실측)
+```
+
+싱크를 `$Q`(쿼리 인자)로 좁혔으므로, 쿼리가 리터럴이고 값이 두 번째 인자로 바인딩되는 `execute("... ?", (username,))`은 잡지 않는다. 룰 문법은 [도구 5장](../part6-tools/05-sast-semgrep-codeql.md).
 
 **CodeQL**은 소스(요청 파라미터)에서 싱크(쿼리 실행)까지 흐름을 추적한다. 기본 쿼리 `py/sql-injection`, `java/sql-injection`을 쓴다.
 
@@ -249,7 +269,7 @@ sequenceDiagram
 
 ### 4.4 고치기
 
-`labs/web-sqli/app/app.py`의 `❌` 표시된 함수를 파라미터화된 쿼리로 바꾸고, 4.1~4.3이 모두 실패하는지 확인한다. **고치는 것까지가 실습이다.**
+`labs/web-sqli/app/app.py`의 `❌` 표시된 함수를 파라미터화된 쿼리로 바꾸고, 4.1~4.3이 모두 실패하는지 확인한다. **고치는 것까지가 실습이다.** 고친 코드는 컨테이너를 다시 빌드해야 반영된다(`docker compose up --build`). 재빌드와 초기화 절차는 [기초 5장](../part1-foundations/05-lab-setup.md)에 있다.
 
 ## 5. 익스플로잇 검증
 
@@ -301,12 +321,21 @@ Second-order 인젝션은 **방어 위치를 잘못 잡은** 경우다. 회원�
 | CVE | 제품 | 핵심 | 패치 |
 |---|---|---|---|
 | [CVE-2023-34362](https://nvd.nist.gov/vuln/detail/CVE-2023-34362) | Progress MOVEit Transfer | 인증 없는 SQLi → 웹셸 배포. Cl0p 랜섬웨어 그룹이 수백 조직 대량 공격 | 벤더 권고 [링크](https://community.progress.com/s/article/MOVEit-Transfer-Critical-Vulnerability-31May2023) |
-| [CVE-2024-3400](https://nvd.nist.gov/vuln/detail/CVE-2024-3400) | Palo Alto PAN-OS GlobalProtect | 명령 인젝션 (SQLi 아님). SQLi와 같은 "입력이 명령에 섞이는" 원리의 자매 사례로 비교용 | [권고](https://security.paloaltonetworks.com/CVE-2024-3400) |
-| [CVE-2019-9193](https://nvd.nist.gov/vuln/detail/CVE-2019-9193) | PostgreSQL `COPY TO/FROM PROGRAM` | SQLi가 명령 실행으로 이어지는 경로. 벤더는 "기능"이라 반박. 5절 4단계의 대표 사례 | [PostgreSQL 입장](https://www.postgresql.org/about/news/cve-2019-9193-not-a-security-vulnerability-1935/) |
+| [CVE-2014-3704](https://nvd.nist.gov/vuln/detail/CVE-2014-3704) | Drupal 7.x < 7.32 | "Drupalgeddon". DB 추상화 API의 `expandArguments()`가 배열 키를 검증 없이 prepared statement에 넣어, **파라미터화된 쿼리 위에서** 인증 전 SQLi | [SA-CORE-2014-005](https://www.drupal.org/SA-CORE-2014-005) |
+| [CVE-2023-48788](https://nvd.nist.gov/vuln/detail/CVE-2023-48788) | Fortinet FortiClient EMS 7.0.1~7.0.10, 7.2.0~7.2.2 | 특수 제작한 패킷으로 인증 없는 SQLi(CWE-89) → 코드·명령 실행 | [FG-IR-24-007](https://fortiguard.com/psirt/FG-IR-24-007) |
 | [CVE-2017-8917](https://nvd.nist.gov/vuln/detail/CVE-2017-8917) | Joomla! 3.7.0 | `ORDER BY` 위치의 인젝션. 2절 "바인딩 불가 위치"의 실제 예 | [Joomla 보안 공지 20170501](https://developer.joomla.org/security-centre/692-20170501-core-sql-injection.html) |
-| [CVE-2012-2122](https://nvd.nist.gov/vuln/detail/CVE-2012-2122) | MySQL / MariaDB | 인젝션은 아니지만 인증 우회. `memcmp` 반환값 캐스팅 오류로 1/256 확률로 로그인. "DB 자체의 취약점"도 있음을 보여줌 | [분석](https://seclists.org/oss-sec/2012/q2/493) |
 
-**MOVEit (CVE-2023-34362) 에서 배울 것**: 패치 diff는 공개되지 않았지만, 분석 보고서에 따르면 인증 전 단계의 세션 처리에서 사용자 제어 값이 SQL 문자열에 들어갔다. 취약점 자체는 교과서적인 SQLi였고, 심각도를 Critical로 만든 것은 (1) 인증 불필요 (2) 인터넷 노출 (3) 파일 전송 제품이라 데이터가 바로 거기 있음, 세 가지 **맥락**이었다. [8부 2장 영향도 산정](../part8-reporting/02-severity.md)의 핵심 논지다.
+다음 세 건은 SQLi가 **아니지만** 이 장과 붙여 읽을 만한 비교용 사례다.
+
+| CVE | 제품 | 왜 비교용인가 |
+|---|---|---|
+| [CVE-2024-3400](https://nvd.nist.gov/vuln/detail/CVE-2024-3400) | Palo Alto PAN-OS GlobalProtect | OS 명령 인젝션. "입력이 명령에 섞인다"는 원리는 같고 섞이는 언어만 다르다 |
+| [CVE-2019-9193](https://nvd.nist.gov/vuln/detail/CVE-2019-9193) | PostgreSQL `COPY TO/FROM PROGRAM` | SQLi가 **있을 때** 명령 실행으로 이어지는 경로. 벤더는 "권한 있는 사용자의 기능"이라며 취약점이 아니라고 반박. 5절 4단계가 어디까지 가는지 보여 준다 ([PostgreSQL 입장](https://www.postgresql.org/about/news/cve-2019-9193-not-a-security-vulnerability-1935/)) |
+| [CVE-2012-2122](https://nvd.nist.gov/vuln/detail/CVE-2012-2122) | MySQL / MariaDB | 인젝션이 아니라 DB 자체의 인증 우회. `memcmp` 반환값 캐스팅 오류로 1/256 확률로 로그인 ([분석](https://seclists.org/oss-sec/2012/q2/493)) |
+
+**MOVEit (CVE-2023-34362) 에서 배울 것**: 패치 diff는 공개되지 않았지만, 분석 보고서에 따르면 인증 전 단계의 세션 처리에서 사용자 제어 값이 SQL 문자열에 들어갔다. 취약점 자체는 교과서적인 SQLi였고, 심각도를 Critical로 만든 것은 (1) 인증 불필요 (2) 인터넷 노출 (3) 파일 전송 제품이라 데이터가 바로 거기 있음, 세 가지 **맥락**이었다. [보고 2장 영향도 산정](../part8-reporting/02-severity.md)의 핵심 논지다.
+
+**Drupal (CVE-2014-3704) 에서 배울 것**: 레코드 기준으로 결함은 `expandArguments()`가 prepared statement를 **잘못 구성**한 것이다. 쿼리의 `IN (:name)` 자리를 배열로 확장할 때 배열의 **키**를 플레이스홀더 이름에 그대로 이어 붙였고, 그 키가 공격자 입력이었다. 파라미터화된 쿼리를 쓰고 있었는데도 터졌다. "플레이스홀더를 만드는 코드" 자체가 문자열 조립이면 바인딩은 아무것도 보장하지 않는다.
 
 **Joomla (CVE-2017-8917) 에서 배울 것**: 패치는 `ORDER BY` 컬럼명을 허용 목록으로 검사하도록 바꿨다. 파라미터 바인딩이 불가능한 위치에서 유일하게 작동하는 방어다.
 
@@ -344,3 +373,4 @@ Second-order 인젝션은 **방어 위치를 잘못 잡은** 경우다. 회원�
 | 2026-10-21 | 초안 작성. 기준 장으로 지정 | @anthonynoh5202 |
 | 2026-10-21 | 다이어그램 2개(Mermaid), 실습 스크린샷 4장 추가 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 6건을 cvelistV5 레코드로 대조(전부 실존·설명 일치). Joomla 행의 미확인 커밋 링크를 CVE 레코드의 공식 보안 공지로 교체 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 3.1절 grep에 변수 할당형(`query = f"SELECT`) 패턴 추가, Semgrep 룰을 taint 모드로 교체(app.py 3건 실측), `p/sql-injection`의 네트워크 필요 명시. 8절에서 SQLi가 아닌 세 건을 비교용 표로 분리하고 CVE-2014-3704·CVE-2023-48788을 레코드 확인 후 추가. 4.4에 컨테이너 재빌드 안내. 장 참조 표기 정리 | @anthonynoh5202 |

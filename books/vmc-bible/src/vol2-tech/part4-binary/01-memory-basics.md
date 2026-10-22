@@ -5,7 +5,7 @@
 | 🟢 | 🔄 개정중 | 2026-10-22 |
 
 > **한눈에 보기**
-> 스택 프레임, 힙 청크, 호출 규약을 모르면 어떤 메모리 취약점도 이해할 수 없다. 이 장은 4부 전체의 선수 과목이다.
+> 스택 프레임, 힙 청크, 호출 규약을 모르면 어떤 메모리 취약점도 이해할 수 없다. 이 장은 이 부 전체의 선수 과목이다.
 > 모든 그림은 gdb에서 직접 찍은 값이다. 읽기만 하지 말고 5절의 절차대로 자기 컴퓨터에서 같은 값을 꺼내 보는 것이 이 장의 목표다.
 
 ## 1. 프로세스 메모리 레이아웃
@@ -48,44 +48,48 @@ PIE를 켜면 `0x400000`이 `0x5555...`처럼 무작위 주소로 바뀌고, ASL
 
 ## 2. 스택 프레임과 반환 주소
 
-함수가 호출될 때마다 스택에 **프레임**(frame)이 하나 쌓인다. 아래 코드를 `-O0`으로 컴파일하고 `greet` 안에서 멈춘 상태다.
+함수가 호출될 때마다 스택에 **프레임**(frame)이 하나 쌓인다. 아래 파일을 5절의 플래그(`gcc -g -O0 -fno-stack-protector -z execstack -no-pie -o vuln vuln.c`)로 컴파일하고 `greet` 안에서 멈춘 상태다. 파일 전체를 그대로 저장해야 아래 `break 8`의 줄 번호가 맞는다.
 
 ```c
+/* vuln.c */
+#include <stdio.h>
+#include <unistd.h>
+
 void greet(void) {
     char name[64];
     read(0, name, 256);
-    printf("hello, %s\n", name);
+    printf("hello, %s\n", name);      /* 8번째 줄. 아래에서 break 8 */
 }
+
 int main(void) { greet(); return 0; }
 ```
 
 ```
 $ gdb -q ./vuln
 (gdb) disas greet
-   0x4011b4 <+4>:    push   %rbp              ; 호출자의 rbp 저장
-   0x4011b5 <+5>:    mov    %rsp,%rbp         ; 새 프레임 기준점
-   0x4011b8 <+8>:    sub    $0x40,%rsp        ; 지역 변수 64바이트 확보
+   0x40115a <+4>:    push   %rbp              ; 호출자의 rbp 저장
+   0x40115b <+5>:    mov    %rsp,%rbp         ; 새 프레임 기준점
+   0x40115e <+8>:    sub    $0x40,%rsp        ; 지역 변수 64바이트 확보
+   0x401162 <+12>:   lea    -0x40(%rbp),%rax  ; name = rbp - 0x40
    ...
-   0x4011df <+47>:   lea    -0x40(%rbp),%rax  ; name = rbp - 0x40
-   ...
-   0x401211 <+97>:   leave                    ; rsp = rbp; pop rbp
-   0x401212 <+98>:   ret                      ; pop rip
+   0x401194 <+62>:   leave                    ; rsp = rbp; pop rbp
+   0x401195 <+63>:   ret                      ; pop rip
 ```
 
-`info frame`과 `x/8gx $rsp`로 실제 값을 본다.
+`info frame`과 `x/8gx $rsp`로 실제 값을 본다. 줄 번호 대신 `break greet`로 함수 입구에 멈춘 뒤 `next`를 두 번 눌러도 같은 지점이다.
 
 ```
-(gdb) break 13          # printf 줄
+(gdb) break 8           # printf 줄
 (gdb) run
 (gdb) info frame
-Stack level 0, frame at 0x7fffffffc620:
- rip = 0x4011f5 in greet (vuln.c:13); saved rip = 0x401220
+Stack level 0, frame at 0x7fffffffc600:
+ rip = 0x401178 in greet (vuln.c:8); saved rip = 0x4011a3
  Saved registers:
-  rbp at 0x7fffffffc610, rip at 0x7fffffffc618
+  rbp at 0x7fffffffc5f0, rip at 0x7fffffffc5f8
 (gdb) p &name
-$1 = (char (*)[64]) 0x7fffffffc5d0
+$1 = (char (*)[64]) 0x7fffffffc5b0
 (gdb) x/2gx $rbp
-0x7fffffffc610: 0x00007fffffffc620  0x0000000000401220
+0x7fffffffc5f0: 0x00007fffffffc600  0x00000000004011a3
                 ^ 저장된 rbp          ^ 반환 주소 (main 안의 call 다음 명령)
 ```
 
@@ -95,16 +99,16 @@ $1 = (char (*)[64]) 0x7fffffffc5d0
  높은 주소
  ┌──────────────────────────┐
  │  main의 프레임            │
- ├──────────────────────────┤  0x7fffffffc620  ← greet 호출 전 rsp
- │  반환 주소 0x401220       │  0x7fffffffc618  ← rbp + 8  (call이 push)
+ ├──────────────────────────┤  0x7fffffffc600  ← greet 호출 전 rsp
+ │  반환 주소 0x4011a3       │  0x7fffffffc5f8  ← rbp + 8  (call이 push)
  ├──────────────────────────┤
- │  저장된 rbp 0x7fffffffc620│  0x7fffffffc610  ← rbp      (push %rbp)
+ │  저장된 rbp 0x7fffffffc600│  0x7fffffffc5f0  ← rbp      (push %rbp)
  ├──────────────────────────┤
- │  name[56..63]            │  0x7fffffffc608
- │  name[48..55]            │  0x7fffffffc600
+ │  name[56..63]            │  0x7fffffffc5e8
+ │  name[48..55]            │  0x7fffffffc5e0
  │  ...                     │
- │  name[8..15]             │  0x7fffffffc5d8
- │  name[0..7]              │  0x7fffffffc5d0  ← rbp - 0x40 = rsp
+ │  name[8..15]             │  0x7fffffffc5b8
+ │  name[0..7]              │  0x7fffffffc5b0  ← rbp - 0x40 = rsp
  └──────────────────────────┘
  낮은 주소                       ▲ read()는 여기서 시작해 위로 쓴다
 ```
@@ -232,7 +236,7 @@ gdb -q ./vuln
 | 단계 | 명령 | 보는 것 |
 |---|---|---|
 | 1 | `disas greet` | 프롤로그(`sub $0x40,%rsp`)에서 프레임 크기, 지역 변수 위치(`-0x40(%rbp)`) |
-| 2 | `break 13` 또는 `break *0x4011f5` | 소스 줄 또는 주소에 중단점 |
+| 2 | `break 8`, `break greet` 또는 `break *0x401178` | 소스 줄, 함수, 주소에 중단점 |
 | 3 | `run` (`run < input.txt`로 입력 지정) | 중단점까지 실행 |
 | 4 | `info frame` | 저장된 rbp·rip의 **주소** |
 | 5 | `x/8gx $rsp` | rsp부터 8바이트(g)씩 16진수(x) 8개. 스택 내용 그대로 |
@@ -246,7 +250,7 @@ gdb -q ./vuln
 
 > 🟡 gdb 안과 밖의 스택 주소는 다르다. gdb는 환경 변수 `LINES`, `COLUMNS`를 추가하고, 실행 경로가 절대 경로로 바뀐다. 셸코드 주소를 gdb에서 읽어 밖에서 쓸 때는 `set exec-wrapper env -i`와 `env -i`로 환경을 맞추거나, NOP 슬레드로 오차를 흡수한다. [02장 4절](02-stack-overflow.md)에서 실제로 겪는다.
 
-pwndbg를 얹으면 중단점마다 레지스터·스택·디스어셈블리를 한 화면에 보여 주고, `heap`, `bins`, `vis_heap_chunks` 명령으로 4절의 청크 구조를 색으로 구분해 보여 준다. 명령 이름은 [6부 3장](../part6-tools/03-debuggers.md)에 정리되어 있다.
+pwndbg를 얹으면 중단점마다 레지스터·스택·디스어셈블리를 한 화면에 보여 주고, `heap`, `bins`, `vis-heap-chunks`(별칭 `vis`) 명령으로 4절의 청크 구조를 색으로 구분해 보여 준다. 명령 이름은 [도구 3장](../part6-tools/03-debuggers.md)에 정리되어 있다.
 
 ## 체크리스트
 
@@ -275,3 +279,4 @@ pwndbg를 얹으면 중단점마다 레지스터·스택·디스어셈블리를 
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성: 메모리 레이아웃, 스택 프레임, SysV 호출 규약, malloc 청크, gdb 절차. 모든 출력은 glibc 2.39 / gcc 13 환경에서 실측 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증 완료, 수정 없음. 2~4절의 C 코드를 본문 플래그로 빌드해 gdb에서 재실행: 프롤로그(`sub $0x40,%rsp`), `info frame`, `add3` 디스어셈블리·레지스터, 청크 덤프(`0x21`, safe-linking 적용 `next`, `key`)가 본문 값과 일치. safe-linking(2.32)·tcache `key`(2.29/2.34)는 glibc `malloc.c` 소스로 대조 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 2절 vuln.c를 파일 전체로 싣고 gdb 중단점·주소·스택 그림을 그 파일의 실측값(`break 8`, 반환 주소 0x4011a3)으로 교체, pwndbg 명령 `vis-heap-chunks`, 장 참조 표기 정리 | @anthonynoh5202 |

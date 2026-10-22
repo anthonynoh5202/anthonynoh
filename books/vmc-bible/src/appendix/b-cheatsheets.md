@@ -116,8 +116,9 @@ semgrep scan --config rules/ --json -o out.json .         # 직접 쓴 룰, JSON
 semgrep scan --config rules/ --sarif -o out.sarif .       # SARIF (GitHub Code Scanning 업로드용)
 semgrep scan -e '$DB.execute(f"...")' -l python .         # 룰 파일 없이 패턴 하나
 semgrep scan --exclude tests --include 'src/**' --config p/python .
-semgrep validate rules/                                   # 룰 문법 검사 (경로는 위치 인자)
-semgrep test rules/                                       # 룰 테스트 (# ruleid: 주석 기반)
+semgrep --validate --config rules/                        # 룰 문법 검사 (semgrep.dev 접속 필요)
+semgrep --test rules/                                     # 룰 테스트 (# ruleid: 주석 기반)
+#   1.182: 하위 명령 `semgrep validate rules/`, `semgrep test rules/`도 같은 일을 한다 (EXPERIMENTAL)
 semgrep ci --config rules/ --baseline-commit origin/main  # 변경분만
 
 # CodeQL
@@ -132,7 +133,7 @@ codeql database analyze db codeql/python-queries:codeql-suites/python-security-e
 codeql query run my.ql --database=db                      # 쿼리 하나만
 ```
 
-Semgrep 룰 한 장의 뼈대는 [8부 3장 5절](../vol2-tech/part8-reporting/03-patch-verification.md)에 있다.
+Semgrep 룰 한 장의 뼈대는 [제2편 보고 3장 5절](../vol2-tech/part8-reporting/03-patch-verification.md)에 있다.
 
 ## 5. HTTP 요청 조작 체크리스트
 
@@ -207,7 +208,7 @@ pwntools `checksec` 출력 기준이다. 같은 이름의 셸 스크립트(check
 | 환경 | CR / IR / AR | 보안 요구 수준 | X · L · M · H |
 | 환경 | MAV MAC MPR MUI MS MC MI MA | 수정된 기본 메트릭 | 기본과 같음 + X |
 
-등급: None 0.0 · Low 0.1–3.9 · Medium 4.0–6.9 · High 7.0–8.9 · Critical 9.0–10.0. 벡터는 `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N` 형식. 4.0은 S가 없고 VC/VI/VA·SC/SI/SA, AT, UI N/P/A가 있다([8부 2장](../vol2-tech/part8-reporting/02-severity.md)).
+등급: None 0.0 · Low 0.1–3.9 · Medium 4.0–6.9 · High 7.0–8.9 · Critical 9.0–10.0. 벡터는 `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N` 형식. 4.0은 S가 없고 VC/VI/VA·SC/SI/SA, AT, UI N/P/A가 있다([제2편 보고 2장](../vol2-tech/part8-reporting/02-severity.md)).
 
 ## 8. 유형별 첫 탐지 입력
 
@@ -215,20 +216,20 @@ pwntools `checksec` 출력 기준이다. 같은 이름의 셸 스크립트(check
 
 | 유형 | 첫 입력 | 보는 것 | 다음 단계 |
 |---|---|---|---|
-| SQLi | `'` → `' AND '1'='1` / `' AND '1'='2` | 500·DB 오류 / 두 응답의 차이 | 시간 지연, UNION. [3부 1장](../vol2-tech/part3-web/01-sql-injection.md) |
-| XSS | `<u>x</u>` → `"><svg onload=alert(1)>` | 태그가 렌더링되는가 / 어떤 문맥(속성·JS·URL)인가 | 문맥별 페이로드. [3부 2장](../vol2-tech/part3-web/02-xss.md) |
-| SSRF | `http://127.0.0.1:80/` · `http://127.0.0.1:22/` | 응답 내용·시간·오류 메시지 차이 | 내부 주소 대역, 메타데이터 주소. [3부 3장](../vol2-tech/part3-web/03-ssrf.md) |
-| IDOR | 내 `id=1001` → `id=1000` | 남의 데이터가 오는가. 200 vs 403 | 순차/UUID, 쓰기 동작. [3부 5장](../vol2-tech/part3-web/05-access-control.md) |
-| 경로 조작 | `../../../../etc/passwd` · `..%2f` | `root:x:0:0` | 인코딩 변형, 널 바이트. [3부 6장](../vol2-tech/part3-web/06-file-upload-path-traversal.md) |
+| SQLi | `'` → `' AND '1'='1` / `' AND '1'='2` | 500·DB 오류 / 두 응답의 차이 | 시간 지연, UNION. [제2편 웹 1장](../vol2-tech/part3-web/01-sql-injection.md) |
+| XSS | `<u>x</u>` → `"><svg onload=alert(1)>` | 태그가 렌더링되는가 / 어떤 문맥(속성·JS·URL)인가 | 문맥별 페이로드. [제2편 웹 2장](../vol2-tech/part3-web/02-xss.md) |
+| SSRF | `http://127.0.0.1:80/` · `http://127.0.0.1:22/` | 응답 내용·시간·오류 메시지 차이 | 내부 주소 대역, 메타데이터 주소. [제2편 웹 3장](../vol2-tech/part3-web/03-ssrf.md) |
+| IDOR | 내 `id=1001` → `id=1000` | 남의 데이터가 오는가. 200 vs 403 | 순차/UUID, 쓰기 동작. [제2편 웹 5장](../vol2-tech/part3-web/05-access-control.md) |
+| 경로 조작 | `../../../../etc/passwd` · `..%2f` | `root:x:0:0` | 인코딩 변형, 널 바이트. [제2편 웹 6장](../vol2-tech/part3-web/06-file-upload-path-traversal.md) |
 | 파일 업로드 | `.php` → `.phtml` · `.php.png` · Content-Type만 이미지 | 저장 경로가 응답에 보이는가, 실행되는가 | 폴리글롯, 경로 조작 결합 |
-| XXE | `<!DOCTYPE a [<!ENTITY x "t">]><r>&x;</r>` | `t`가 응답에 나오는가 | `SYSTEM "file:///etc/passwd"`. [3부 8장](../vol2-tech/part3-web/08-xxe.md) |
-| SSTI | `{{7*7}}` · `${7*7}` · `<%= 7*7 %>` | `49`가 나오는가 | 엔진 식별 트리. [3부 9장](../vol2-tech/part3-web/09-ssti.md) |
+| XXE | `<!DOCTYPE a [<!ENTITY x "t">]><r>&x;</r>` | `t`가 응답에 나오는가 | `SYSTEM "file:///etc/passwd"`. [제2편 웹 8장](../vol2-tech/part3-web/08-xxe.md) |
+| SSTI | `{{7*7}}` · `${7*7}` · `<%= 7*7 %>` | `49`가 나오는가 | 엔진 식별 트리. [제2편 웹 9장](../vol2-tech/part3-web/09-ssti.md) |
 | 명령 인젝션 | `;id` · `\| id` · `` `id` `` · `$(sleep 5)` | `uid=` 출력 / 5초 지연 | 블라인드면 시간·DNS |
-| 역직렬화 | `rO0AB`(Java) · `O:4:`(PHP) · `gASV`(Python pickle) 로 시작하는 값 찾기 | 입력이 직렬화 객체인가 | 가젯 체인. [3부 7장](../vol2-tech/part3-web/07-deserialization.md) |
-| 경쟁 조건 | 같은 요청 20개 동시 전송 (Burp Repeater 그룹, `parallel`) | 쿠폰·잔액이 두 번 적용되는가 | 창 넓히기. [3부 10장](../vol2-tech/part3-web/10-race-condition.md) |
-| 스택 오버플로 | `python3 -c 'print("A"*2000)'` | SIGSEGV, RSP/RIP에 `0x4141...` | `cyclic`으로 오프셋. [4부 2장](../vol2-tech/part4-binary/02-stack-overflow.md) |
-| 포맷 스트링 | `%x.%x.%x.%x` · `%s` | 스택 값이 찍히는가 / 크래시 | `%n` 쓰기. [4부 3장](../vol2-tech/part4-binary/03-format-string.md) |
-| 정수 오버플로 | `-1` · `2147483648` · `4294967295` · `0` | 길이·개수 검사 우회, 큰 할당, 크래시 | [4부 6장](../vol2-tech/part4-binary/06-integer-overflow.md) |
+| 역직렬화 | `rO0AB`(Java) · `O:4:`(PHP) · `gASV`(Python pickle) 로 시작하는 값 찾기 | 입력이 직렬화 객체인가 | 가젯 체인. [제2편 웹 7장](../vol2-tech/part3-web/07-deserialization.md) |
+| 경쟁 조건 | 같은 요청 20개 동시 전송 (Burp Repeater 그룹, `parallel`) | 쿠폰·잔액이 두 번 적용되는가 | 창 넓히기. [제2편 웹 10장](../vol2-tech/part3-web/10-race-condition.md) |
+| 스택 오버플로 | `python3 -c 'print("A"*2000)'` | SIGSEGV, RSP/RIP에 `0x4141...` | `cyclic`으로 오프셋. [제2편 바이너리 2장](../vol2-tech/part4-binary/02-stack-overflow.md) |
+| 포맷 스트링 | `%x.%x.%x.%x` · `%s` | 스택 값이 찍히는가 / 크래시 | `%n` 쓰기. [제2편 바이너리 3장](../vol2-tech/part4-binary/03-format-string.md) |
+| 정수 오버플로 | `-1` · `2147483648` · `4294967295` · `0` | 길이·개수 검사 우회, 큰 할당, 크래시 | [제2편 바이너리 6장](../vol2-tech/part4-binary/06-integer-overflow.md) |
 
 ## 체크리스트
 
@@ -258,3 +259,4 @@ pwntools `checksec` 출력 기준이다. 같은 이름의 셸 스크립트(check
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. Compose, gdb/pwndbg, pwntools, Semgrep/CodeQL, HTTP, checksec, CVSS, 첫 탐지 입력 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: pwntools 4.15 API(context 기본 i386, recvuntil/recvline 시그니처, cyclic_find=40, flat, Gadget[0], pwn template/libcdb/shellcraft 옵션)·checksec 출력, gdb 15.1 명령, semgrep 1.182 validate/test/ci 옵션, docker compose 플래그를 실제 실행으로 대조. pwndbg 힙 명령 이름을 현행 문서의 하이픈 표기로 수정 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: Semgrep `validate`/`test`를 도구 부 5장과 같은 플래그 형식으로 통일(하위 명령은 주석으로). 장 참조에 편 표기 추가 | @anthonynoh5202 |

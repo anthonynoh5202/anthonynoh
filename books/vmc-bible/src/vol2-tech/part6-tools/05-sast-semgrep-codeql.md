@@ -6,7 +6,7 @@
 
 > **한눈에 보기**
 > Semgrep은 '패턴을 빨리', CodeQL은 '데이터 흐름을 깊게'. 둘 다 룰을 직접 쓸 수 있어야 진짜 가치가 나온다.
-> 정적 분석의 **방법**(소스·싱크·새니타이저 모델, 리뷰 전략)은 [2부 4장](../part2-methodology/04-static-analysis.md)이 다룬다. 이 장은 **도구**다. 설치, 룰 문법, 쿼리 구조, CI 통합, 오탐 관리.
+> 정적 분석의 **방법**(소스·싱크·새니타이저 모델, 리뷰 전략)은 [방법론 4장](../part2-methodology/04-static-analysis.md)이 다룬다. 이 장은 **도구**다. 설치, 룰 문법, 쿼리 구조, CI 통합, 오탐 관리.
 > 룰 하나를 쓰고 테스트까지 돌려 보면 두 도구의 차이가 몸으로 이해된다.
 
 ## 1. 언제 어느 것을 쓰는가
@@ -87,11 +87,11 @@ def ping():
 ```
 
 ```bash
-semgrep --validate --config rules/        # 문법 검사 (semgrep.dev의 룰 린트에 접속한다)
-semgrep --test rules/                     # ruleid/ok 주석과 대조
+semgrep --validate --config rules/        # 문법 검사 (semgrep.dev의 룰 린트에 접속한다. 오프라인에서는 실패)
+semgrep --test rules/                     # ruleid/ok 주석과 대조. 룰 파일과 같은 이름의 테스트 파일을 짝짓는다
 ```
 
-`--test`는 `ruleid:` 다음 줄에서 매치가 나고 `ok:` 다음 줄에서는 안 나는지 확인한다. [3부 1장](../part3-web/01-sql-injection.md)의 실습 앱 `labs/web-sqli/app/app.py`에 SQL 문자열 포매팅 룰을 같은 방식으로 써 보는 것이 좋은 연습이다.
+`--test`는 `ruleid:` 다음 줄에서 매치가 나고 `ok:` 다음 줄에서는 안 나는지 확인한다. semgrep 1.182에는 같은 일을 하는 하위 명령 `semgrep validate rules/`, `semgrep test rules/`도 있다(도움말에 EXPERIMENTAL로 표시). 이 책은 플래그 형식(`--validate`, `--test`)으로 통일한다. [웹 1장](../part3-web/01-sql-injection.md)의 실습 앱 `labs/web-sqli/app/app.py`에 SQL 문자열 포매팅 룰을 같은 방식으로 써 보는 것이 좋은 연습이다.
 
 ## 3. CodeQL
 
@@ -258,3 +258,4 @@ jobs:
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | Semgrep 룰 문법·taint 룰·테스트, CodeQL CLI·QL 구조·taint 설정 모듈, CI 통합, 오탐 관리 작성 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: Semgrep 룰·테스트 파일을 semgrep 1.182에서 `--test` 통과·SARIF 1건 확인, CodeQL 쿼리 2개를 CodeQL CLI 2.27로 컴파일·실행 확인, CommandInjectionQuery.qll·codeql-action v4·README 한계 서술 대조, `--validate` 네트워크 필요 주석 추가 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: `--validate`·`--test` 표기를 부록 B와 통일하고 하위 명령 형식(`semgrep validate/test`, EXPERIMENTAL)과의 관계를 명시. 장 참조 표기 정리 | @anthonynoh5202 |

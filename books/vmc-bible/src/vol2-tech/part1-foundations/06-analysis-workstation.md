@@ -83,7 +83,7 @@ flowchart TB
 
 ## 4. 도구 지도: 영역별 세트
 
-도구는 "언제 쓰는가"로 고른다([제2편 도구 1장](../part6-tools/00-when-to-use-what.md)). 여기서는 설치 단위로 묶는다. ★는 첫날 반드시, ☆는 해당 영역을 맡을 때.
+도구는 "언제 쓰는가"로 고른다([도구 부 "언제 무엇을 쓰는가"](../part6-tools/00-when-to-use-what.md)). 여기서는 설치 단위로 묶는다. ★는 첫날 반드시, ☆는 해당 영역을 맡을 때.
 
 ### 4.1 기본 (base) ★
 
@@ -97,7 +97,7 @@ flowchart TB
 
 | 도구 | 용도 | 설치 | 장 |
 |---|---|---|---|
-| **Burp Suite Community** | 프록시·반복·침입 | [공식 다운로드](https://portswigger.net/burp/communitydownload) (GUI) | [도구 2장](../part6-tools/01-burp-proxy.md) |
+| **Burp Suite Community** | 프록시·반복·침입 | [공식 다운로드](https://portswigger.net/burp/communitydownload) (GUI) | [도구 부 Burp 장](../part6-tools/01-burp-proxy.md) |
 | mitmproxy | 스크립트 가능한 프록시 | `pipx install mitmproxy` | 〃 |
 | OWASP ZAP | 무료 스캐너·프록시 | [공식](https://www.zaproxy.org/download/) 또는 Docker `ghcr.io/zaproxy/zaproxy:stable` | 〃 |
 | sqlmap, ffuf, nikto, whatweb, nmap | 자동화 탐지·열거 | apt | [웹 1장](../part3-web/01-sql-injection.md) 등 |
@@ -108,10 +108,10 @@ flowchart TB
 | 도구 | 용도 | 설치 | 장 |
 |---|---|---|---|
 | gcc, clang, gdb, gdb-multiarch | 컴파일·디버깅 | apt | [바이너리 1장](../part4-binary/01-memory-basics.md) |
-| **pwndbg** | gdb 확장 | 공식 저장소 `setup.sh` | [도구 4장](../part6-tools/03-debuggers.md) |
+| **pwndbg** | gdb 확장 | 공식 저장소 `setup.sh` | [도구 부 디버거 장](../part6-tools/03-debuggers.md) |
 | **pwntools**, ropper, ROPgadget | 익스플로잇 작성·가젯 | 전용 venv에 pip | [바이너리 8장](../part4-binary/08-rop.md) |
 | checksec | 완화 기법 확인 | pwntools에 포함 (`pwn checksec`) | [바이너리 7장](../part4-binary/07-mitigations.md) |
-| **Ghidra** | 디컴파일 | GitHub 릴리스 zip + JDK | [도구 3장](../part6-tools/02-ghidra-ida.md) |
+| **Ghidra** | 디컴파일 | GitHub 릴리스 zip + JDK | [도구 부 Ghidra·IDA 장](../part6-tools/02-ghidra-ida.md) |
 | radare2 | CLI 디스어셈블러 | apt | 〃 |
 | AFL++ | 퍼징 | apt `afl++` | [바이너리 9장](../part4-binary/09-fuzzing.md) |
 | strace, ltrace, patchelf, QEMU user | 동적 관찰, 다른 아키텍처 실행 | apt | [방법론 5장](../part2-methodology/05-dynamic-analysis.md) |
@@ -120,7 +120,7 @@ flowchart TB
 
 | 도구 | 용도 | 설치 | 장 |
 |---|---|---|---|
-| **Semgrep** | 패턴·오염 분석 | `pipx install semgrep` | [도구 6장](../part6-tools/05-sast-semgrep-codeql.md) |
+| **Semgrep** | 패턴·오염 분석 | `pipx install semgrep` | [도구 부 정적 분석기 장](../part6-tools/05-sast-semgrep-codeql.md) |
 | CodeQL CLI | 데이터 흐름 분석 | GitHub 릴리스 번들 (약 1GB) | 〃 |
 
 ### 4.5 모바일 (mobile) ☆
@@ -230,7 +230,7 @@ pipx install mitmproxy
 # Burp Suite Community: https://portswigger.net/burp/communitydownload (GUI 설치 파일)
 ```
 
-Burp를 설치한 뒤 브라우저에 Burp CA 인증서를 넣는다([도구 2장](../part6-tools/01-burp-proxy.md)). 분석 VM의 브라우저에만 넣고, 호스트 브라우저에는 넣지 않는다.
+Burp를 설치한 뒤 브라우저에 Burp CA 인증서를 넣는다([도구 부 Burp 장](../part6-tools/01-burp-proxy.md)). 분석 VM의 브라우저에만 넣고, 호스트 브라우저에는 넣지 않는다.
 
 ### 6.4 정적 분석
 
@@ -316,7 +316,7 @@ Windows 바이너리와 문서(Office, PDF) 취약점을 다룰 때 필요하다
 | Ghidra / IDA Free | 디컴파일 | 공식 |
 | Windows Defender 제외 설정 | 샘플 폴더가 삭제되지 않게 | 분석 VM에서만 |
 
-Windows VM도 네트워크 차단과 스냅샷 원칙은 같다. [도구 4장 WinDbg](../part6-tools/03-debuggers.md)
+Windows VM도 네트워크 차단과 스냅샷 원칙은 같다. [도구 부 디버거 장의 WinDbg](../part6-tools/03-debuggers.md)
 
 ## 10. 컨테이너만으로 시작하기
 
@@ -353,3 +353,4 @@ gdb+pwndbg, pwntools, AFL++, radare2가 들어 있다. 단, ptrace 권한을 준
 |---|---|---|
 | 2026-10-22 | 초안 작성. 설치 스크립트와 binary-base 컨테이너 추가 | @anthonynoh5202 |
 | 2026-10-22 | 설치 스크립트를 Ubuntu 24.04에서 전 모듈 실제 실행해 검증. GitHub 릴리스 도구(nuclei, httpx, jadx, Trivy, CodeQL 번들, Ghidra 12.1)의 다운로드·설치·실행까지 확인. GitHub API가 막힌 망을 위한 대체 해석 경로(git 태그 기반) 추가 | @anthonynoh5202 |
+| 2026-10-22 | 독자 테스트 반영: 도구 부 참조가 파일 번호와 1씩 어긋나 있던 것을 장 이름 표기("도구 부 Burp 장" 등)로 교체 | @anthonynoh5202 |

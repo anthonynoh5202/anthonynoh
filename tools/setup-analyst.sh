@@ -90,7 +90,9 @@ gh_latest_asset() {  # gh_latest_asset <owner/repo> <자산 정규식>  → 다�
 # ---------------------------------------------------------------- check
 if [[ $CHECK_ONLY -eq 1 ]]; then
   export PATH="$BIN_DIR:$HOME_DIR/tools/bin:$PATH"
-  chk() { if command -v "$1" >/dev/null 2>&1; then ok "$1  $("$@" 2>&1 | head -1 | cut -c1-70)"; else warn "$1 없음"; fi; }
+  # 각 도구의 버전 출력은 20초로 제한한다. semgrep은 --version에서도 semgrep.dev에 새 버전을 물어보므로
+  # 오프라인에서는 타임아웃까지 멈춘다 → SEMGREP_ENABLE_VERSION_CHECK=0 으로 끈다.
+  chk() { if command -v "$1" >/dev/null 2>&1; then ok "$1  $(SEMGREP_ENABLE_VERSION_CHECK=0 SEMGREP_SEND_METRICS=off timeout 20 "$@" 2>&1 | head -1 | cut -c1-70)"; else warn "$1 없음"; fi; }
   log "기본";   chk git --version; chk docker --version; chk python3 --version; chk pipx --version; chk jq --version
   log "웹";     chk mitmproxy --version; chk sqlmap --version; chk ffuf -V; chk nmap --version
   for t in nuclei httpx; do [[ -x "$TOOLS_DIR/bin/$t" ]] && ok "$t  $("$TOOLS_DIR/bin/$t" -version 2>&1 | grep -m1 -i version | cut -c1-60)" || warn "$t 없음 ($TOOLS_DIR/bin/$t)"; done
