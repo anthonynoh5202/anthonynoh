@@ -37,7 +37,7 @@
 | 용어 | 뜻 | 장 |
 |---|---|---|
 | **가젯 체인** (gadget chain) | 역직렬화 시 기존 클래스의 메서드를 연쇄 호출해 임의 코드 실행에 이르는 경로 | [역직렬화](../vol2-tech/part3-web/07-deserialization.md) |
-| **경쟁 조건** (race condition) | 확인과 사용 사이에 상태가 바뀌어 생기는 취약점 | [경쟁 조건](../vol2-tech/part3-web/10-race-condition.md) |
+| **경쟁 조건** (race condition) | 둘 이상의 동작이 겹쳐 실행될 때 순서·타이밍에 따라 결과가 달라져 생기는 취약점. 확인과 사용 사이에 상태가 바뀌는 TOCTOU가 대표적 | [경쟁 조건](../vol2-tech/part3-web/10-race-condition.md) |
 | **공격 표면** (attack surface) | 외부 입력이 들어오는 모든 지점 | [공격 표면](../vol2-tech/part1-foundations/03-attack-surface.md) |
 | **신뢰 경계** (trust boundary) | 신뢰 수준이 달라지는 지점. 취약점은 거의 항상 여기서 생긴다 | [취약점이란](../vol2-tech/part1-foundations/01-what-is-vulnerability.md) |
 | **블라인드 인젝션** (blind injection) | 결과가 직접 보이지 않고 참/거짓이나 시간 차이로만 알 수 있는 인젝션 | [SQL 인젝션](../vol2-tech/part3-web/01-sql-injection.md) |
@@ -48,10 +48,16 @@
 | **파라미터화된 쿼리** (parameterized query) | 쿼리와 입력을 분리해 전달하는 방식. SQL 인젝션의 근본 방어 | [SQL 인젝션](../vol2-tech/part3-web/01-sql-injection.md) |
 | **ASLR** | Address Space Layout Randomization. 메모리 주소 무작위화 | [완화 기법](../vol2-tech/part4-binary/07-mitigations.md) |
 | **IDOR** | Insecure Direct Object Reference. ID만 바꿔 남의 자원에 접근 | [접근 제어](../vol2-tech/part3-web/05-access-control.md) |
-| **N-day** | 패치가 나왔지만 적용되지 않은 취약점. 실제 침해의 대부분 | [취약점이란](../vol2-tech/part1-foundations/01-what-is-vulnerability.md) |
+| **N-day** | 패치가 나왔지만 적용되지 않은 취약점 | [취약점이란](../vol2-tech/part1-foundations/01-what-is-vulnerability.md) |
 | **ROP** | Return-Oriented Programming. 기존 코드 조각을 이어 붙여 실행 | [ROP](../vol2-tech/part4-binary/08-rop.md) |
 | **SAST** | Static Application Security Testing. 정적 분석 (Semgrep, CodeQL) | [정적 분석기](../vol2-tech/part6-tools/05-sast-semgrep-codeql.md) |
 | **SSRF** | Server-Side Request Forgery. 서버가 공격자 지정 URL로 요청 | [SSRF](../vol2-tech/part3-web/03-ssrf.md) |
 | **UAF** | Use-After-Free. 해제된 메모리를 계속 사용 | [UAF](../vol2-tech/part4-binary/05-uaf.md) |
 | **XSS** | Cross-Site Scripting. 입력이 브라우저에서 스크립트로 실행 | [XSS](../vol2-tech/part3-web/02-xss.md) |
 | **0-day** | 벤더가 모르거나 패치가 없는 취약점 | [취약점이란](../vol2-tech/part1-foundations/01-what-is-vulnerability.md) |
+
+## 변경 이력
+
+| 날짜 | 변경 | 기여자 |
+|---|---|---|
+| 2026-10-22 | 기술 검증: 경쟁 조건 정의를 TOCTOU 포함 일반 정의로 보정, N-day 항목의 출처 없는 수치성 서술 삭제, 링크 대상 파일 존재 확인 | 검증팀 |

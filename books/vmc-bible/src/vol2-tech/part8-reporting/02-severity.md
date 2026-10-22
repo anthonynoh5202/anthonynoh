@@ -45,7 +45,7 @@ Base = Impact ≤ 0 → 0
        S:C → Roundup( min(1.08 × (Impact + Exploitability), 10) )
 ```
 
-Roundup은 소수 첫째 자리로 **올림**이다. 등급은 None 0.0, Low 0.1~3.9, Medium 4.0~6.9, High 7.0~8.9, Critical 9.0~10.0. 📎 [CVSS v3.1 Specification §7](https://www.first.org/cvss/v3.1/specification-document)
+Roundup은 소수 첫째 자리로 **올림**이다. 등급은 None 0.0, Low 0.1~3.9, Medium 4.0~6.9, High 7.0~8.9, Critical 9.0~10.0. 📎 [CVSS v3.1 Specification §5(등급)·§7(공식)](https://www.first.org/cvss/v3.1/specification-document)
 
 ## 3. 실습: 실제 CVE 두 개 풀이
 
@@ -184,7 +184,7 @@ flowchart LR
 
 | 플랫폼 | 척도 | 특징 |
 |---|---|---|
-| HackerOne | None / Low / Medium / High / Critical | CVSS 3.1과 4.0 표준 계산기를 제공한다. 3.0은 자체 변형 구현이라 first.org 계산기와 점수가 다를 수 있다. 자산별로 **최대 심각도 상한**을 둘 수 있다. 📎 [HackerOne Docs: Severity](https://docs.hackerone.com/organizations/severity.html) |
+| HackerOne | None / Low / Medium / High / Critical | CVSS 계산기로 점수를 매기고 등급으로 번역한다. 자산별로 **최대 심각도 상한**을 둘 수 있다. 📎 [HackerOne Docs: Severity](https://docs.hackerone.com/organizations/severity.html) |
 | Bugcrowd | VRT(Vulnerability Rating Taxonomy) P1 Critical ~ P5 Informational | CVSS 대신 **유형별 기본 등급표**다. 예: SQL 인젝션 P1, IDOR는 변형에 따라 P1(반복 가능한 ID로 민감 정보 변경·열람)~P5, 반사형 XSS는 Non-Self P3 / Self P5, 보안 헤더 누락은 대부분 P5. 공개 JSON으로 배포되며 2026-07 판이 최신. 📎 [Bugcrowd VRT](https://bugcrowd.com/vrt), [GitHub](https://github.com/bugcrowd/vulnerability-rating-taxonomy) |
 | KISA 신고포상제 | 위험도 · 파급도 · 발굴 난이도 | 위험도가 CVSS에 가깝고, 파급도(국내 사용 규모·분야)와 난이도는 CVSS 밖의 축이다. [1편 5장 4절](../../vol1-center/02-programs/05-bug-bounty.md) |
 
@@ -222,3 +222,4 @@ VRT의 교훈은 **같은 유형도 변형에 따라 다섯 단계가 갈린다*
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. 3.1 풀이 2건, 환경 메트릭 예시, 4.0 변화, 연쇄, 플랫폼 기준 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CVSS 3.1 공식을 재구현해 7.5·7.8·10.0·9.1·9.8·6.1·9.6, 시간 7.2, 환경 4.7·9.3 모두 재계산 일치. Heartbleed·sudo 벡터를 CVE 레코드와 대조. Bugcrowd VRT(2026-07-08, SQLi P1, IDOR P1~P5, XSS P3/P5) JSON으로 확인. 확인 못 한 HackerOne 3.0 계산기 서술 삭제, 명세 절 번호 보정 | 검증팀 |

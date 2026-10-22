@@ -59,7 +59,7 @@ docker compose config                # 최종 compose 설정 확인
 | `checksec` · `piebase` · `libcinfo` | 보호 기법 / PIE 베이스 / libc 정보 |
 | `got` · `plt` · `retaddr` · `canary` | GOT·PLT 표 / 스택의 리턴 주소들 / 카나리 값 |
 | `cyclic 200` · `cyclic -l 0x6161616b` | 패턴 생성 / 크래시 값으로 오프셋 찾기 |
-| `heap` · `bins` · `tcachebins` · `fastbins` · `vis_heap_chunks` · `malloc_chunk ADDR` | glibc 힙 (최신 문서는 `vis-heap-chunks`처럼 하이픈 표기도 받는다) |
+| `heap` · `bins` · `tcachebins` · `fastbins` · `vis-heap-chunks` · `malloc-chunk ADDR` | glibc 힙 (현행 문서의 명령 이름은 하이픈 표기. 구 버전은 `vis_heap_chunks`처럼 밑줄) |
 | `nearpc` · `procinfo` · `dumpargs` · `distance A B` | 현재 코드 근처 / 프로세스 정보 / 호출 인자 / 주소 간 거리 |
 
 ## 3. pwntools 스니펫
@@ -257,3 +257,4 @@ pwntools `checksec` 출력 기준이다. 같은 이름의 셸 스크립트(check
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. Compose, gdb/pwndbg, pwntools, Semgrep/CodeQL, HTTP, checksec, CVSS, 첫 탐지 입력 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: pwntools 4.15 API(context 기본 i386, recvuntil/recvline 시그니처, cyclic_find=40, flat, Gadget[0], pwn template/libcdb/shellcraft 옵션)·checksec 출력, gdb 15.1 명령, semgrep 1.182 validate/test/ci 옵션, docker compose 플래그를 실제 실행으로 대조. pwndbg 힙 명령 이름을 현행 문서의 하이픈 표기로 수정 | 검증팀 |

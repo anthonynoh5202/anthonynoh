@@ -226,3 +226,4 @@ CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N — 9.1 (Critical)
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. 제목 공식, 다섯 요소, 스크립트 재현, 독자별 버전, web-sqli 보고서 예시 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증 완료, 수정 없음 (labs/web-sqli를 실제로 띄워 재현 절차 1~3과 solve_blind.py의 기대 출력, CVSS 9.1 재계산 확인) | 검증팀 |

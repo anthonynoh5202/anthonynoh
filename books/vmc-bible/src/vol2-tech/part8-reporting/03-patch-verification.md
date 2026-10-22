@@ -16,7 +16,7 @@
 | ② 원인 제거 | 같은 입력 경로의 **다른 페이로드**도 실패하는가 | 패치 diff 읽기, 우회 시도 |
 | ③ 유형 제거 | 코드베이스의 **다른 지점**에 같은 패턴이 없는가 | 변형 분석(3절) |
 
-대부분의 "고쳤습니다"는 ①에서 멈춘다. Google Project Zero가 2022년 상반기에 실제 공격에 쓰인 0-day 18건을 분석한 결과, **9건이 이미 패치된 취약점의 변형**이었다. 같은 글은 "최소 절반은 더 철저한 패치와 회귀 테스트로 막을 수 있었다"고 썼다. 📎 [Project Zero, "2022 0-day In-the-Wild Exploitation…so far" (Maddie Stone, 2022-06)](https://googleprojectzero.blogspot.com/2022/06/2022-0-day-in-wild-exploitationso-far.html), [Risky Biz 요약](https://www.risky.biz/risky-biz-news-half-of-2022s-zero/)
+대부분의 "고쳤습니다"는 ①에서 멈춘다. Google Project Zero가 2022년 상반기에 실제 공격에 쓰인 0-day 18건을 분석한 결과, **9건이 이미 패치된 취약점의 변형**이었다. 같은 글은 "최소 절반은 더 철저한 패치와 회귀 테스트로 막을 수 있었다"고 썼다. 📎 [Project Zero, "2022 0-day In-the-Wild Exploitation…so far" (Maddie Stone, 2022-06)](https://googleprojectzero.blogspot.com/2022/06/2022-0-day-in-wild-exploitationso-far.html)
 
 센터 입장에서 패치 검증은 [3편 1부 3장 4절](../../vol3-practice/01-workflow-tech/03-remediation.md)의 업무이고, 이 장은 그 기술적 내용이다.
 
@@ -241,3 +241,4 @@ semgrep ci --config rules/              # CI: 변경된 파일만, 기준 커밋
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. 증상 vs 원인, 변형 분석, 회귀 테스트, 탐지 룰, 사후 분석 템플릿 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: 회귀 테스트 3건을 labs/web-sqli에서 실행(취약 app.py 3건 실패, 파라미터화 후 3건 통과), Semgrep 룰로 91·110·123행 3건 검출 확인. 확인 못 한 Risky Biz 링크 삭제 | 검증팀 |
