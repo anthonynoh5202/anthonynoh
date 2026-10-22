@@ -123,9 +123,11 @@ xif.setProperty("javax.xml.stream.isSupportingExternalEntities", false);
 ### Python
 
 ```python
-# ❌ 취약: lxml은 기본적으로 개체를 해석한다
+# ❌ 취약: lxml 5.0 미만은 기본 파서가 외부 개체를 해석한다. 5.0부터는 기본값이
+#    resolve_entities='internal'로 바뀌어 외부 개체를 읽지 않지만, True로 켜면 모든 버전에서 열린다
 from lxml import etree
-root = etree.fromstring(request.data)
+root = etree.fromstring(request.data)                                            # lxml < 5.0
+root = etree.fromstring(request.data, etree.XMLParser(resolve_entities=True))   # 모든 버전
 ```
 
 ```python
@@ -230,7 +232,8 @@ doc = b"""<?xml version="1.0"?>
 <!DOCTYPE t [ <!ENTITY xxe SYSTEM "file:///etc/hostname"> ]>
 <t>&xxe;</t>"""
 
-print("default :", etree.fromstring(doc).text)                                   # ❌ 호스트명이 찍힌다
+loose = etree.XMLParser(resolve_entities=True)       # lxml 5.0 미만은 기본 파서가 이와 같다
+print("loose   :", etree.fromstring(doc, loose).text)                            # ❌ 호스트명이 찍힌다
 safe = etree.XMLParser(resolve_entities=False, no_network=True)
 print("hardened:", etree.fromstring(doc, safe).text)                             # ✅ None
 ```
@@ -304,8 +307,8 @@ pip install lxml && python3 xxe_demo.py
 |---|---|---|---|
 | [CVE-2014-3660](https://nvd.nist.gov/vuln/detail/CVE-2014-3660) | libxml2 (2.9.2 미만) | 개체 치환을 꺼도 개체 확장을 막지 못함. Billion Laughs 변형으로 CPU 소진 | [libxml2 2.9.2](https://gitlab.gnome.org/GNOME/libxml2) |
 | [CVE-2019-12415](https://nvd.nist.gov/vuln/detail/CVE-2019-12415) | Apache POI (4.1.1 미만) | `XSSFExportToXml`이 조작된 XLSX 안의 XML을 안전 설정 없이 파싱. 숨은 XML 입력의 전형 | [POI 보안 공지](https://poi.apache.org/security.html) |
-| [CVE-2019-3773](https://nvd.nist.gov/vuln/detail/CVE-2019-3773) | Spring Web Services (2.4.3 / 3.0.4) | 신뢰할 수 없는 출처의 XML을 받을 때 XXE. SOAP 프레임워크 자체의 결함 | [Spring 권고](https://spring.io/security/cve-2019-3773) |
-| [CVE-2021-23926](https://nvd.nist.gov/vuln/detail/CVE-2021-23926) | Apache XMLBeans (3.0.0 미만) | 내부 파서가 XXE 방어 속성을 설정하지 않음. POI 등 상위 라이브러리에 전파 | [XMLBeans 3.0.0](https://xmlbeans.apache.org/) |
+| [CVE-2019-3773](https://nvd.nist.gov/vuln/detail/CVE-2019-3773) | Spring Web Services (2.4.3·3.0.4 이하) | 신뢰할 수 없는 출처의 XML을 받을 때 XXE. SOAP 프레임워크 자체의 결함 | [Spring 권고](https://spring.io/security/cve-2019-3773) |
+| [CVE-2021-23926](https://nvd.nist.gov/vuln/detail/CVE-2021-23926) | Apache XMLBeans (2.6.0 이하) | 내부 파서가 XXE 방어 속성을 설정하지 않음. POI 등 상위 라이브러리에 전파 | [XMLBeans 3.0.0](https://xmlbeans.apache.org/) |
 
 **libxml2 (CVE-2014-3660) 에서 배울 것**: "개체 치환을 껐으니 안전하다"가 틀렸다. 치환은 꺼졌지만 파서가 개체 크기를 계산하는 과정에서 확장이 일어났다. 공개 분석 기준으로, 패치는 치환 여부와 무관하게 개체 확장 크기를 세어 한도를 넘으면 중단하도록 검사 로직을 보강했다. DTD 처리를 통째로 끄는 것이 개별 옵션 조합보다 안전한 이유다. PHP, Python lxml, Ruby Nokogiri가 모두 libxml2 위에 있으므로 영향 범위가 넓었다.
 
@@ -347,3 +350,4 @@ pip install lxml && python3 xxe_demo.py
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 전체 작성. 언어별 안전 설정 4종, 숨은 XML 입력 표, CVE 4건, lxml 재현 코드 추가 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CVE 4건 레코드 대조(전부 실존; CVE-2019-3773·CVE-2021-23926 영향 버전을 레코드 기준으로 수정). lxml 5.0부터 기본 resolve_entities='internal'로 바뀐 점을 반영해 취약 예제·재현 코드 수정(lxml 6.1·defusedxml 실행 확인). Java JAXP/StAX 설정 문자열 실행 확인 | 검증팀 |

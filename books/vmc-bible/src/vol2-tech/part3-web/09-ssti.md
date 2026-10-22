@@ -167,7 +167,7 @@ grep -rnE "ejs\.render\(|nunjucks\.renderString\(|Handlebars\.compile\(.*req\." 
 
 **Semgrep**: `p/python`, `p/java`, `p/javascript` 레지스트리에 `render_template_string` 조립, Spring 뷰 이름 조립 등 SSTI 룰이 있다. 직접 쓴다면 `flask.render_template_string($A + $B, ...)`, `flask.render_template_string(f"...", ...)` 두 패턴이면 대부분 잡힌다.
 
-**CodeQL**: Python·JavaScript에 템플릿 인젝션 쿼리가 있다. Java는 뷰 이름 조작(`java/spring-view-manipulation` 계열) 쿼리를 쓴다. 정확한 쿼리 ID는 사용하는 CodeQL 팩 버전의 목록에서 확인한다.
+**CodeQL**: Python은 `py/template-injection`, Java는 실험(experimental) 팩의 뷰 이름 조작 쿼리 `java/spring-view-manipulation`을 쓴다. JavaScript 쪽 쿼리 ID는 사용하는 CodeQL 팩 버전의 목록에서 확인한다.
 
 ### 3.2 동적 테스트
 
@@ -281,7 +281,7 @@ Jinja2 페이로드는 거의 모두 같은 뼈대다. **"컨텍스트에 있는
 
 | 방어 | 우회 |
 |---|---|
-| `__` 속성 접근 차단 (Jinja2 샌드박스) | `attr()` 필터 + 문자열 조립: `{{ ''|attr('\x5f\x5fclass\x5f\x5f') }}`, `request.args`에서 문자열을 가져와 조립 |
+| 입력 문자열의 `__` 차단 (WAF·입력 필터) | `attr()` 필터 + 문자열 조립: `{{ ''|attr('\x5f\x5fclass\x5f\x5f') }}`, `request.args`에서 문자열을 가져와 조립. 단 `SandboxedEnvironment`는 `attr` 필터도 같은 속성 검사를 거치므로 이것으로는 샌드박스를 넘지 못한다 |
 | `.`·`[` 차단 | `|attr`, `|join`, 필터 체인으로 속성 접근을 문자열로 표현 |
 | 특정 단어(`os`, `popen`) 차단 | 16진 이스케이프, `+` 연결, `~` 연결(Jinja2), 유니코드 정규화 |
 | FreeMarker `?new` 차단 | `?api` 내장(`api_builtin_enabled`가 켜진 경우), 컨텍스트에 노출된 객체의 리플렉션 |
@@ -296,8 +296,8 @@ Jinja2 페이로드는 거의 모두 같은 뼈대다. **"컨텍스트에 있는
 
 | CVE | 제품 | 핵심 | 패치 |
 |---|---|---|---|
-| [CVE-2019-3396](https://nvd.nist.gov/vuln/detail/CVE-2019-3396) | Atlassian Confluence Server (6.6.12 등 미만) | Widget Connector 매크로의 `_template` 파라미터로 Velocity 템플릿 경로 지정 → 경로 조작 + SSTI → 인증 없는 RCE. 랜섬웨어에 악용 | [Atlassian 권고](https://confluence.atlassian.com/doc/confluence-security-advisory-2019-03-20-966660264.html) |
-| [CVE-2023-22527](https://nvd.nist.gov/vuln/detail/CVE-2023-22527) | Atlassian Confluence Data Center/Server (구 8.x) | 템플릿 엔진이 사용자 입력을 OGNL 표현식으로 평가. 인증 없는 RCE, CISA KEV 등재 | [Atlassian 권고](https://confluence.atlassian.com/security/cve-2023-22527-rce-remote-code-execution-vulnerability-in-confluence-data-center-and-confluence-server-1333990257.html) |
+| [CVE-2019-3396](https://nvd.nist.gov/vuln/detail/CVE-2019-3396) | Atlassian Confluence Server (6.6.12 등 미만) | Widget Connector 매크로의 `_template` 파라미터로 Velocity 템플릿 경로 지정 → 경로 조작 + SSTI → 인증 없는 RCE. 랜섬웨어에 악용 | [Atlassian 이슈 CONFSERVER-57974](https://jira.atlassian.com/browse/CONFSERVER-57974) |
+| [CVE-2023-22527](https://nvd.nist.gov/vuln/detail/CVE-2023-22527) | Atlassian Confluence Data Center/Server (구 8.x) | Velocity 템플릿이 사용자 입력을 OGNL 표현식으로 평가. 인증 없는 RCE, CISA KEV 등재 | [Atlassian 권고](https://confluence.atlassian.com/pages/viewpage.action?pageId=1333335615) |
 | [CVE-2021-25770](https://nvd.nist.gov/vuln/detail/CVE-2021-25770) | JetBrains YouTrack (2020.5.3123 미만) | FreeMarker SSTI → 알려진 샌드박스 탈출로 RCE. Synacktiv가 패치 전후 FreeMarker 2.3.23 → 2.3.30 변화를 분석 | [Synacktiv 분석](https://www.synacktiv.com/publications/exploiting-cve-2021-25770-a-server-side-template-injection-in-youtrack) |
 | [CVE-2022-29078](https://nvd.nist.gov/vuln/detail/CVE-2022-29078) | EJS 3.1.6 (Node.js) | 렌더 옵션 `outputFunctionName`이 입력에서 덮어써져 생성되는 JS 코드에 섞임. 3.1.7에서 수정 | [ejs 3.1.7](https://github.com/mde/ejs/releases/tag/v3.1.7) |
 | [CVE-2016-4977](https://nvd.nist.gov/vuln/detail/CVE-2016-4977) | Spring Security OAuth (2.0.10 미만) | 화이트라벨 승인·오류 뷰에서 `response_type` 값을 SpEL로 평가. 템플릿은 아니지만 "입력이 표현식 언어에 들어가는" 같은 계열 | [Spring 권고](https://spring.io/security/cve-2016-4977) |
@@ -345,3 +345,4 @@ Jinja2 페이로드는 거의 모두 같은 뼈대다. **"컨텍스트에 있는
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 전체 작성. 엔진 식별 결정 트리, 언어별 패턴 4종, Jinja2 탈출 구조 해설, CVE 5건 추가 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CVE 5건 레코드 대조(전부 실존). Jinja2 attr 필터 우회가 SandboxedEnvironment에는 통하지 않음을 실행으로 확인해 7절 표 정정, CodeQL 쿼리 ID를 저장소 기준으로 명시, Atlassian 링크 2건을 레코드 참조로 교체, CVE-2023-22527 템플릿 종류(Velocity) 명시. Flask SSTI 재현 코드 실행 확인 | 검증팀 |

@@ -186,11 +186,11 @@ class Evil:
         return (os.system, ("echo pickle-executed-this",))
 
 payload = pickle.dumps(Evil())
-print(payload[:20])            # b'\x80\x04\x95...' 지문 확인
+print(payload[:20])            # b'\x80\x04\x95...' 지문 확인 (Python 3.14부터는 기본 프로토콜 5 → \x80\x05)
 pickle.loads(payload)          # ← 이 줄에서 echo가 실행된다. 객체는 만들어지지도 않는다
 ```
 
-`pickle.loads`의 반환값은 `os.system`의 반환값(0)이다. `Evil` 인스턴스는 생기지 않는다. 역직렬화가 "객체 복원"이 아니라 "명령 실행"이 될 수 있음을 이 세 줄이 보여 준다. 그다음 `json.loads`로 바꿔 같은 입력이 `JSONDecodeError`로 끝나는지 확인한다.
+`pickle.loads`의 반환값은 `os.system`의 반환값(0)이다. `Evil` 인스턴스는 생기지 않는다. 역직렬화가 "객체 복원"이 아니라 "명령 실행"이 될 수 있음을 이 세 줄이 보여 준다. 그다음 `json.loads`로 바꿔 같은 입력이 예외로 끝나는지 확인한다(bytes 입력은 `UnicodeDecodeError`, 문자열 입력은 `JSONDecodeError`).
 
 ### 4.2 공개 실습 환경
 
@@ -308,3 +308,4 @@ pickle.loads(payload)          # ← 이 줄에서 echo가 실행된다. 객체�
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 전체 작성. 언어별 패턴 4종, CVE 5건, pickle 재현 코드, PortSwigger 랩 목록 추가 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CVE 11건 레코드 대조(전부 실존). pickle 재현 코드 실행 확인 후 지문·json.loads 예외 종류 설명 보정. ObjectInputFilter 문법 Java로 실행 확인 | 검증팀 |

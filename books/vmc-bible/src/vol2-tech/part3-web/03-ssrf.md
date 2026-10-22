@@ -295,10 +295,10 @@ http://allowed.example.com%2F@127.0.0.1/   # 인코딩된 / 의 처리 차이
 | CVE | 제품 | 핵심 | 패치 |
 |---|---|---|---|
 | [CVE-2021-26855](https://nvd.nist.gov/vuln/detail/CVE-2021-26855) | Microsoft Exchange 2013/2016/2019 (ProxyLogon) | 인증 전 SSRF. 프런트엔드가 백엔드로 요청을 전달할 때 공격자가 목적지를 제어, Exchange 서비스 권한으로 백엔드 API에 도달. CVE-2021-27065(파일 쓰기)와 묶여 웹셸 배포 | [MS 권고](https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-26855) |
-| [CVE-2024-21893](https://nvd.nist.gov/vuln/detail/CVE-2024-21893) | Ivanti Connect Secure / Policy Secure | SAML 컴포넌트의 SSRF. SOAP 서명의 `RetrievalMethod`가 임의 URI를 가리키게 해 인증 없이 제한된 리소스 접근. 앞선 두 제로데이의 완화 조치를 우회하는 데 악용 | [분석 (Rapid7)](https://www.rapid7.com/blog/post/ra-cve-2024-21893-analysis/) |
-| [CVE-2021-22214](https://nvd.nist.gov/vuln/detail/CVE-2021-22214) | GitLab CE/EE 10.5 이상 | CI Lint API가 `.gitlab-ci.yml`의 `include: remote:`를 따라가며 내부 URL을 가져옴. 인증 없는 사용자도 가능 | [GitLab 이슈](https://gitlab.com/gitlab-org/gitlab/-/issues/294178) |
+| [CVE-2024-21893](https://nvd.nist.gov/vuln/detail/CVE-2024-21893) | Ivanti Connect Secure / Policy Secure | SAML 컴포넌트의 SSRF. 인증 없이 제한된 리소스에 접근(권고문 기준). 앞선 두 제로데이의 완화 조치를 우회하는 데 악용 | [Ivanti 권고](https://forums.ivanti.com/s/article/CVE-2024-21888-Privilege-Escalation-for-Ivanti-Connect-Secure-and-Ivanti-Policy-Secure) |
+| [CVE-2021-22214](https://nvd.nist.gov/vuln/detail/CVE-2021-22214) | GitLab CE/EE 10.5 이상 | CI Lint API가 `.gitlab-ci.yml`의 `include: remote:`를 따라가며 내부 URL을 가져옴. 인증 없는 사용자도 가능 | [GitLab 이슈](https://gitlab.com/gitlab-org/gitlab/-/issues/322926) |
 | [CVE-2020-13379](https://nvd.nist.gov/vuln/detail/CVE-2020-13379) | Grafana 3.0.1~7.0.1 | 인증 없는 `/avatar/` 엔드포인트가 해시여야 할 값을 그대로 URL에 넣어 프록시로 동작 | [Grafana 권고](https://grafana.com/blog/2020/06/03/grafana-6.7.4-and-7.0.2-released-with-important-security-fix/) |
-| [CVE-2019-8451](https://nvd.nist.gov/vuln/detail/CVE-2019-8451) | Atlassian Jira 7.6~8.4 | `/plugins/servlet/gadgets/makeRequest`의 허용 목록 검사(`JiraWhitelist`) 논리 오류로 인증 전 SSRF. AWS 인스턴스의 메타데이터 노출 위험이 지적됨 | [Atlassian 이슈](https://jira.atlassian.com/browse/JRASERVER-69793) |
+| [CVE-2019-8451](https://nvd.nist.gov/vuln/detail/CVE-2019-8451) | Atlassian Jira 8.4.0 미만 | `/plugins/servlet/gadgets/makeRequest`의 허용 목록 검사(`JiraWhitelist`) 논리 오류로 인증 전 SSRF. AWS 인스턴스의 메타데이터 노출 위험이 지적됨 | [Atlassian 이슈](https://jira.atlassian.com/browse/JRASERVER-69793) |
 
 **ProxyLogon (CVE-2021-26855) 에서 배울 것**: SSRF가 "내부 포트 스캔" 정도로 끝나지 않는 이유다. 프런트엔드·백엔드 구조에서 프런트엔드의 SSRF는 **백엔드가 프런트엔드를 신뢰한다**는 가정을 그대로 가져온다. 패치는 프런트엔드가 백엔드로 전달하는 요청에서 공격자 제어 값이 목적지·인증 컨텍스트에 쓰이지 못하게 바꿨다(권고문 기준). 2021년 3월 공개 직후 전 세계 수만 대의 Exchange 서버가 공격받았다.
 
@@ -348,3 +348,4 @@ http://allowed.example.com%2F@127.0.0.1/   # 인코딩된 / 의 처리 차이
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 본문 작성. 클라우드 메타데이터·IMDSv2, 파서 불일치·DNS 리바인딩, Capital One 사례, CVE 5건 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CVE 6건 레코드 대조(전부 실존). Ivanti 행의 미확인 Rapid7 링크·세부 서술을 공식 권고로 교체, GitLab 이슈 번호와 Jira 영향 버전을 레코드 기준으로 수정. safe_fetch·is_public_ip 실행 확인 | 검증팀 |

@@ -98,8 +98,8 @@ app.post('/admin/users/:id/delete', requireLogin, requireRole('admin'), deleteUs
 ### 대량 할당
 
 ```python
-# ❌ 취약: 요청 JSON을 통째로 모델에 쓴다
-User.objects.filter(pk=request.user.pk).update(**request.json)   # {"role": "admin"} 통과
+# ❌ 취약: Django, 요청 JSON을 통째로 모델에 쓴다
+User.objects.filter(pk=request.user.pk).update(**json.loads(request.body))   # {"role": "admin"} 통과
 ```
 
 ```js
@@ -280,7 +280,7 @@ def order(oid):
 | [CVE-2022-1388](https://nvd.nist.gov/vuln/detail/CVE-2022-1388) | F5 BIG-IP iControl REST | `X-F5-Auth-Token` 헤더가 있으면 프런트(Apache)가 인증을 백엔드에 미루고, `Connection` 헤더로 그 토큰 헤더를 홉에서 제거하면 백엔드는 "로컬에서 온 인증된 요청"으로 처리. 인증 없이 명령 실행 (CVSS 9.8) | [F5 권고 K23605346](https://my.f5.com/manage/s/article/K23605346) |
 | [CVE-2023-35078](https://nvd.nist.gov/vuln/detail/CVE-2023-35078) | Ivanti EPMM (MobileIron Core) | 특정 API 경로가 인증 없이 접근 가능. 개인정보 조회·관리자 계정 생성. 노르웨이 정부 기관 공격에 제로데이로 악용 (CVSS 10.0) | [Ivanti 권고](https://forums.ivanti.com/s/article/CVE-2023-35078-Remote-unauthenticated-API-access-vulnerability) |
 | [CVE-2025-29927](https://nvd.nist.gov/vuln/detail/CVE-2025-29927) | Next.js (셀프 호스팅) | 내부용 헤더 `x-middleware-subrequest`에 특정 값을 넣으면 미들웨어 실행을 건너뜀. 미들웨어에서만 인가를 하던 앱은 전부 우회 (CVSS 9.1) | [권고 GHSA-f82v-jwr5-mffw](https://github.com/vercel/next.js/security/advisories/GHSA-f82v-jwr5-mffw) |
-| [CVE-2023-3460](https://nvd.nist.gov/vuln/detail/CVE-2023-3460) | WordPress Ultimate Member ≤ 2.6.6 | 가입 폼에서 임의 user meta를 설정할 수 있고, 금지 키 목록(`wp_capabilities`)을 슬래시 추가로 우회해 관리자 역할로 가입. 대량 할당 + 차단 목록의 실패 (CVSS 9.8) | [Wordfence 분석](https://www.wordfence.com/blog/2023/06/psa-unpatched-critical-privilege-escalation-vulnerability-in-ultimate-member-plugin-being-actively-exploited/) |
+| [CVE-2023-3460](https://nvd.nist.gov/vuln/detail/CVE-2023-3460) | WordPress Ultimate Member ≤ 2.6.6 | 가입 폼에서 임의 user meta를 설정할 수 있고, 금지 키 목록(`wp_capabilities`)을 슬래시 추가로 우회해 관리자 역할로 가입. 대량 할당 + 차단 목록의 실패 (CVSS 9.8) | [WPScan 분석](https://blog.wpscan.com/hacking-campaign-actively-exploiting-ultimate-member-plugin/) |
 
 CVE가 없는 공개 사건도 이 장에서는 중요하다. 접근 제어 결함은 제품이 아니라 **서비스**에서 많이 나오고, 서비스 결함에는 CVE가 붙지 않는다.
 
@@ -292,9 +292,9 @@ CVE가 없는 공개 사건도 이 장에서는 중요하다. 접근 제어 결�
 
 **F5 (CVE-2022-1388) 에서 배울 것**: 7절의 "검사하는 계층과 실행하는 계층이 다르다"가 그대로다. 프런트가 "토큰이 있으니 백엔드가 검사하겠지", 백엔드가 "토큰이 없고 로컬이니 프런트가 검사했겠지"라고 서로 미뤘다. 패치는 백엔드가 토큰 유무와 무관하게 인증을 수행하도록 바꿨다(권고문 기준).
 
-**Next.js (CVE-2025-29927) 에서 배울 것**: 미들웨어 한 곳에서 인가를 하는 것은 "한 곳에서"의 좋은 예처럼 보인다. 그러나 그 한 곳이 **건너뛸 수 있는 계층**이면 안 된다. 패치는 외부에서 온 `x-middleware-subrequest` 헤더를 제거하고 내부 요청에만 서명된 값을 쓰도록 바꿨다(권고문 기준). 라우트 핸들러·데이터 계층의 검사가 여전히 필요하다.
+**Next.js (CVE-2025-29927) 에서 배울 것**: 미들웨어 한 곳에서 인가를 하는 것은 "한 곳에서"의 좋은 예처럼 보인다. 그러나 그 한 곳이 **건너뛸 수 있는 계층**이면 안 된다. 패치는 외부에서 온 `x-middleware-subrequest` 헤더를 제거하고, 내부 재귀 요청에는 프로세스 기동 시 생성한 난수 ID(`x-middleware-subrequest-id`)를 함께 보내 검증하도록 바꿨다(패치 커밋 기준). 라우트 핸들러·데이터 계층의 검사가 여전히 필요하다.
 
-**Ultimate Member (CVE-2023-3460) 에서 배울 것**: 차단 목록은 뚫린다. 패치는 여러 번에 걸쳐 금지 키 비교를 정규화하고 결국 허용 목록 방향으로 바꿨다(Wordfence 분석 기준). 2.6.7 이전 버전은 "부분 패치"로 다시 우회됐다. 허용 목록으로 처음부터 갔다면 한 번에 끝났을 일이다.
+**Ultimate Member (CVE-2023-3460) 에서 배울 것**: 차단 목록은 뚫린다. 패치는 여러 번에 걸쳐 금지 키 비교를 정규화하고 결국 허용 목록 방향으로 바꿨다(공개 분석 기준). 2.6.7 이전 버전은 "부분 패치"로 다시 우회됐다. 허용 목록으로 처음부터 갔다면 한 번에 끝났을 일이다.
 
 ## 9. 체크리스트
 
@@ -337,3 +337,4 @@ CVE가 없는 공개 사건도 이 장에서는 중요하다. 접근 제어 결�
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 본문 작성. IDOR·수직 상승·대량 할당, 두 계정 교차 테스트, CVE 4건 + 공개 사건 3건 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CVE 4건 레코드 대조(전부 실존). Django 대량 할당 예제의 request.json(Flask식)을 request.body로 수정, Next.js 패치 설명을 커밋 기준(난수 subrequest ID)으로 정정, Ultimate Member 링크를 레코드의 WPScan 분석으로 교체. Flask IDOR 예제 실행 확인 | 검증팀 |

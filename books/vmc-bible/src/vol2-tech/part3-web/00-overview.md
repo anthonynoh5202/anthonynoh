@@ -111,7 +111,7 @@ OWASP Top 10은 가장 널리 쓰이는 웹 위험 분류다. 📎 [OWASP Top 10
 | A09 Security Logging and Monitoring Failures | [8부 3장 탐지 룰](../part8-reporting/03-patch-verification.md) | |
 | A10 Server-Side Request Forgery | [3장](03-ssrf.md) | |
 
-2025년에 공개된 **OWASP Top 10:2025**는 A03을 "Software Supply Chain Failures"로 넓히고, SSRF를 A01에 흡수했으며, A10에 "Mishandling of Exceptional Conditions"(예외 처리 오류, 실패 시 열림)를 새로 넣었다. 📎 [OWASP Top 10:2025 Introduction](https://owasp.org/Top10/2025/0x00_2025-Introduction/) 이 책의 장 구성은 유형 기준이라 두 판 어느 쪽으로도 대응된다. 보고서에 OWASP 항목을 적을 때는 **판(2021/2025)을 명시**한다.
+2025년에 공개된 **OWASP Top 10:2025**는 2021판의 A06 "Vulnerable and Outdated Components"를 "Software Supply Chain Failures"(A03:2025)로 넓히고, SSRF를 A01에 흡수했으며, A10에 "Mishandling of Exceptional Conditions"(예외 처리 오류, 실패 시 열림)를 새로 넣었다. 📎 [OWASP Top 10:2025 Introduction](https://owasp.org/Top10/2025/0x00_2025-Introduction/) 이 책의 장 구성은 유형 기준이라 두 판 어느 쪽으로도 대응된다. 보고서에 OWASP 항목을 적을 때는 **판(2021/2025)을 명시**한다.
 
 ## 4. 프록시 준비
 
@@ -165,3 +165,4 @@ OWASP Top 10은 가장 널리 쓰이는 웹 위험 분류다. 📎 [OWASP Top 10
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. 세 축, HTTP 복습, OWASP 대응표, 프록시 준비 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: OWASP Top 10:2025 항목 대응 서술 수정(공급망 항목은 2021판 A06의 확장) | 검증팀 |

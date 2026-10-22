@@ -216,7 +216,7 @@ curl "http://127.0.0.1:5000/download?file=a.txt"                       # hello
 curl --path-as-is "http://127.0.0.1:5000/download?file=../../etc/passwd" # root:x:0:0:...
 ```
 
-`--path-as-is`는 curl이 `..`를 스스로 정리하지 않게 한다. 브라우저도 주소창에서 `..`를 정리하므로, 경로 조작 테스트는 항상 프록시나 curl로 한다. 그다음 2절의 `safe_path`를 적용하고 같은 요청이 400으로 끝나는지 확인한다. **고치는 것까지가 실습이다.**
+`--path-as-is`는 curl이 URL **경로** 안의 `..`를 스스로 정리하지 않게 한다(위 예처럼 쿼리 문자열에 있으면 원래 정리 대상이 아니지만, 경로 파라미터를 테스트할 때 필요하다). 브라우저도 주소창에서 경로의 `..`를 정리하므로, 경로 조작 테스트는 항상 프록시나 curl로 한다. 그다음 2절의 `safe_path`를 적용하고 같은 요청이 400으로 끝나는지 확인한다. **고치는 것까지가 실습이다.**
 
 ### 4.2 공개 실습 환경
 
@@ -303,7 +303,7 @@ curl --path-as-is "http://127.0.0.1:5000/download?file=../../etc/passwd" # root:
 | [CVE-2023-50164](https://nvd.nist.gov/vuln/detail/CVE-2023-50164) | Apache Struts 2 | 멀티파트 업로드 파라미터 조작으로 저장 경로 변경 → 웹 루트에 파일 쓰기 → RCE | [S2-066](https://cwiki.apache.org/confluence/display/WW/S2-066) |
 | [CVE-2024-53677](https://nvd.nist.gov/vuln/detail/CVE-2024-53677) | Apache Struts 2 (6.4.0 미만) | 구 `FileUploadInterceptor` 경로의 같은 계열 결함. 새 업로드 메커니즘으로 이전해야 해결 | [S2-067](https://cwiki.apache.org/confluence/display/WW/S2-067) |
 | [CVE-2018-1002200](https://nvd.nist.gov/vuln/detail/CVE-2018-1002200) | plexus-archiver (3.6.0 미만) | Zip Slip. 아카이브 항목 이름의 `../`로 임의 위치 쓰기 | [Snyk 공개](https://snyk.io/research/zip-slip-vulnerability) |
-| [CVE-2024-23334](https://nvd.nist.gov/vuln/detail/CVE-2024-23334) | aiohttp (3.9.2 미만) | 정적 파일 서빙에서 `follow_symlinks=True`일 때 기준 디렉터리 검사 누락 | [aiohttp 보안 권고](https://github.com/aio-libs/aiohttp/security/advisories) |
+| [CVE-2024-23334](https://nvd.nist.gov/vuln/detail/CVE-2024-23334) | aiohttp (3.9.2 미만) | 정적 파일 서빙에서 `follow_symlinks=True`일 때 기준 디렉터리 검사 누락 | [aiohttp 권고 GHSA-5h86-8mv2-jq9f](https://github.com/aio-libs/aiohttp/security/advisories/GHSA-5h86-8mv2-jq9f) |
 | [CVE-2006-7243](https://nvd.nist.gov/vuln/detail/CVE-2006-7243) | PHP (5.3.4 미만) | 경로의 널 바이트 허용. `.php\0.jpg`로 확장자 검사 우회 | 5.3.4에서 널 포함 경로를 오류 처리 |
 
 **Apache (CVE-2021-41773 → 42013) 에서 배울 것**: 2.4.49에서 경로 정규화 함수(`ap_normalize_path`)를 새로 짜면서 URL 인코딩된 점(`%2e`)을 점으로 인식하지 못했다. 2.4.50의 수정은 한 겹의 인코딩만 처리해 이중 인코딩에 다시 뚫렸다. **정규화와 검사의 순서**, 그리고 "불완전한 수정은 공격자에게 두 번째 기회"라는 교훈을 한 사례가 모두 보여 준다. 두 번째 CVE가 나오기까지 걸린 시간은 사흘이었다.
@@ -348,3 +348,4 @@ curl --path-as-is "http://127.0.0.1:5000/download?file=../../etc/passwd" # root:
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 전체 작성. CVE 7건, 로컬 재현 코드, PortSwigger 랩 목록 추가 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CVE 7건 레코드 대조(전부 실존, Struts CVE-2023-50164 포함). --path-as-is 설명을 경로/쿼리 구분해 보강, aiohttp 권고 링크를 레코드의 GHSA로 구체화. safe_path·vuln.py 실행 확인 | 검증팀 |

@@ -23,7 +23,7 @@ sequenceDiagram
     D-->>S: argon2id 해시
     Note over S: 상수 시간 비교 → 일치
     Note over S: 세션 ID 새로 발급 (고정 방지)
-    S-->>B: Set-Cookie: sid=…; HttpOnly; Secure; SameSite=Lax
+    S-->>B: Set-Cookie: sid=… (HttpOnly, Secure, SameSite=Lax)
     B->>S: GET /account (Cookie: sid=…)
     Note over S: 세션 조회 → 사용자 확정 → 이후는 인가의 영역
 ```
@@ -92,6 +92,14 @@ if hmac.compare_digest(request.form["token"], stored_reset_token):
     ...
 
 DUMMY_HASH = ph.hash("dummy-password-for-timing")
+
+def _verify(h: str, pw: str) -> bool:        # ph.verify는 불일치 시 예외를 던지므로 bool로 감싼다
+    try:
+        ph.verify(h, pw)
+        return True
+    except exceptions.VerifyMismatchError:
+        return False
+
 user = User.get(username)
 target = user.hash if user else DUMMY_HASH
 ok = _verify(target, password) and user is not None
@@ -141,7 +149,8 @@ JWT는 "서명된 주장(claim)"이다. 취약점은 거의 전부 **검증 코�
 ```python
 # ❌ 취약: 서명 검증 끔. 아무나 payload를 쓴다
 jwt.decode(token, options={"verify_signature": False})
-# ❌ 취약: 허용 알고리즘을 명시하지 않음 (구버전은 토큰의 alg를 그대로 따랐다). Node의 jwt.verify(token, publicKey)도 같다
+# ❌ 취약 (PyJWT 1.x): 허용 알고리즘을 명시하지 않아 토큰의 alg를 그대로 따랐다. 2.x는 이 호출을
+#    DecodeError로 거부한다. Node jsonwebtoken도 algorithms를 생략하면 키 종류에서 추론하므로 명시한다
 jwt.decode(token, key)
 ```
 
@@ -348,3 +357,4 @@ print(jwt.decode(forged, "server-secret", algorithms=["HS256"]))      # ✅ Inva
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 본문 작성. 비밀번호 저장·타이밍·세션·JWT·OAuth·MFA, CVE 6건 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CVE 6건 레코드 대조(전부 실존). 타이밍 예제의 미정의 _verify 헬퍼 추가, PyJWT 2.x에서 algorithms 생략 호출이 거부됨을 반영. argon2·hmac·PyJWT alg:none 예제 실행 확인 | 검증팀 |

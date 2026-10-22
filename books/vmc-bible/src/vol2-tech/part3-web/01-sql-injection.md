@@ -303,7 +303,7 @@ Second-order 인젝션은 **방어 위치를 잘못 잡은** 경우다. 회원�
 | [CVE-2023-34362](https://nvd.nist.gov/vuln/detail/CVE-2023-34362) | Progress MOVEit Transfer | 인증 없는 SQLi → 웹셸 배포. Cl0p 랜섬웨어 그룹이 수백 조직 대량 공격 | 벤더 권고 [링크](https://community.progress.com/s/article/MOVEit-Transfer-Critical-Vulnerability-31May2023) |
 | [CVE-2024-3400](https://nvd.nist.gov/vuln/detail/CVE-2024-3400) | Palo Alto PAN-OS GlobalProtect | 명령 인젝션 (SQLi 아님). SQLi와 같은 "입력이 명령에 섞이는" 원리의 자매 사례로 비교용 | [권고](https://security.paloaltonetworks.com/CVE-2024-3400) |
 | [CVE-2019-9193](https://nvd.nist.gov/vuln/detail/CVE-2019-9193) | PostgreSQL `COPY TO/FROM PROGRAM` | SQLi가 명령 실행으로 이어지는 경로. 벤더는 "기능"이라 반박. 5절 4단계의 대표 사례 | [PostgreSQL 입장](https://www.postgresql.org/about/news/cve-2019-9193-not-a-security-vulnerability-1935/) |
-| [CVE-2017-8917](https://nvd.nist.gov/vuln/detail/CVE-2017-8917) | Joomla! 3.7.0 | `ORDER BY` 위치의 인젝션. 2절 "바인딩 불가 위치"의 실제 예 | [패치 커밋](https://github.com/joomla/joomla-cms/commit/4a39c20) |
+| [CVE-2017-8917](https://nvd.nist.gov/vuln/detail/CVE-2017-8917) | Joomla! 3.7.0 | `ORDER BY` 위치의 인젝션. 2절 "바인딩 불가 위치"의 실제 예 | [Joomla 보안 공지 20170501](https://developer.joomla.org/security-centre/692-20170501-core-sql-injection.html) |
 | [CVE-2012-2122](https://nvd.nist.gov/vuln/detail/CVE-2012-2122) | MySQL / MariaDB | 인젝션은 아니지만 인증 우회. `memcmp` 반환값 캐스팅 오류로 1/256 확률로 로그인. "DB 자체의 취약점"도 있음을 보여줌 | [분석](https://seclists.org/oss-sec/2012/q2/493) |
 
 **MOVEit (CVE-2023-34362) 에서 배울 것**: 패치 diff는 공개되지 않았지만, 분석 보고서에 따르면 인증 전 단계의 세션 처리에서 사용자 제어 값이 SQL 문자열에 들어갔다. 취약점 자체는 교과서적인 SQLi였고, 심각도를 Critical로 만든 것은 (1) 인증 불필요 (2) 인터넷 노출 (3) 파일 전송 제품이라 데이터가 바로 거기 있음, 세 가지 **맥락**이었다. [8부 2장 영향도 산정](../part8-reporting/02-severity.md)의 핵심 논지다.
@@ -343,3 +343,4 @@ Second-order 인젝션은 **방어 위치를 잘못 잡은** 경우다. 회원�
 |---|---|---|
 | 2026-10-21 | 초안 작성. 기준 장으로 지정 | @anthonynoh5202 |
 | 2026-10-21 | 다이어그램 2개(Mermaid), 실습 스크린샷 4장 추가 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CVE 6건을 cvelistV5 레코드로 대조(전부 실존·설명 일치). Joomla 행의 미확인 커밋 링크를 CVE 레코드의 공식 보안 공지로 교체 | 검증팀 |

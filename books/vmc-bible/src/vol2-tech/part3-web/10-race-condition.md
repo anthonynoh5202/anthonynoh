@@ -289,14 +289,14 @@ ts = [threading.Thread(target=go) for _ in range(20)]
 
 | CVE | 제품 | 핵심 | 패치 |
 |---|---|---|---|
-| [CVE-2026-31824](https://nvd.nist.gov/vuln/detail/CVE-2026-31824) | Sylius (전자상거래 프레임워크) | 프로모션 사용 한도 검사와 사용 횟수 증가가 분리된 TOCTOU. 동시 주문 완료 요청으로 1회용 쿠폰 반복 사용. 1절 "한도 초과"의 교과서 사례 | [GitHub 권고](https://github.com/Sylius/Sylius/security/advisories) |
-| [CVE-2022-4037](https://nvd.nist.gov/vuln/detail/CVE-2022-4037) | GitLab | 이메일 검증 흐름의 경쟁 조건으로 검증 우회. Kettle의 2023년 연구에서 다룬 사례 | [GitLab 릴리스 공지](https://about.gitlab.com/releases/categories/releases/) |
+| [CVE-2026-31824](https://nvd.nist.gov/vuln/detail/CVE-2026-31824) | Sylius (전자상거래 프레임워크) | 프로모션 사용 한도 검사와 사용 횟수 증가가 분리된 TOCTOU. 동시 주문 완료 요청으로 1회용 쿠폰 반복 사용. 1절 "한도 초과"의 교과서 사례 | [GitHub 권고 GHSA-7mp4-25j8-hp5q](https://github.com/Sylius/Sylius/security/advisories/GHSA-7mp4-25j8-hp5q) |
+| [CVE-2022-4037](https://nvd.nist.gov/vuln/detail/CVE-2022-4037) | GitLab CE/EE (15.5.7 / 15.6.4 / 15.7.2 미만) | 이메일 검증 흐름의 경쟁 조건으로 검증된 이메일을 위조. GitLab을 OAuth 공급자로 쓰는 서드파티 계정 탈취로 이어짐(CVSS 6.4). Kettle의 2023년 연구가 다룬 단일 엔드포인트 유형의 사례 | [GitLab 이슈](https://gitlab.com/gitlab-org/gitlab/-/issues/382957) |
 | [CVE-2024-6387](https://nvd.nist.gov/vuln/detail/CVE-2024-6387) | OpenSSH 8.5p1~9.7p1 (glibc Linux) | "regreSSHion". `LoginGraceTime` 만료 시 SIGALRM 핸들러가 비동기 신호 안전하지 않은 `syslog()`를 호출. 신호 핸들러 경쟁으로 인증 전 RCE. 2006년 수정된 CVE-2006-5051의 회귀 | [OpenSSH 9.8 릴리스 노트](https://www.openssh.com/txt/release-9.8) |
 | [CVE-2016-5195](https://nvd.nist.gov/vuln/detail/CVE-2016-5195) | Linux 커널 (4.8.3 미만) | "Dirty COW". `mm/gup.c`의 copy-on-write 처리 경쟁으로 읽기 전용 매핑에 쓰기. 로컬 권한 상승 | [커널 커밋 19be0eaf](https://git.kernel.org/linus/19be0eaffa3ac7d8eb6784ad9bdbc7d67ed8e619) |
 
 **Sylius (CVE-2026-31824) 에서 배울 것**: 권고문 기준으로, 사용 한도 검사(읽기)와 사용 횟수 저장(쓰기)이 별개 단계였고 DB 잠금이 없었다. 증가가 원자적 `+1`이 아니라 애플리케이션이 계산한 절대값 저장이었다는 점이 2절 "잔액·수량" 패턴 그대로다. 수정은 원자적 증가와 잠금 적용이다. 인증 없이 되는 금전 취약점이라 CVSS 8.2(High)를 받았다.
 
-**GitLab (CVE-2022-4037) 에서 배울 것**: 권고문 기준으로, 이메일 변경·검증의 두 단계 사이 하위 상태가 노출되어 검증되지 않은 주소가 확정됐다. 수정은 상태 전이를 원자적으로 묶는 방향이다. "쿠폰 두 번"이 아니라 **계정 보안의 핵심 흐름**에서 경쟁 조건이 터진다는 것, 그리고 1절의 단일 엔드포인트 유형이 실제로 어떻게 나타나는지 보여 준다.
+**GitLab (CVE-2022-4037) 에서 배울 것**: 권고문 기준으로, 경쟁 조건으로 검증되지 않은 주소가 "검증됨"으로 확정될 수 있었고, GitLab을 OAuth 공급자로 쓰는 서드파티 서비스의 계정 탈취로 이어졌다. "쿠폰 두 번"이 아니라 **계정 보안의 핵심 흐름**에서 경쟁 조건이 터진다는 것, 그리고 1절의 단일 엔드포인트 유형이 실제로 어떻게 나타나는지 보여 준다.
 
 **OpenSSH (CVE-2024-6387) 에서 배울 것**: 웹이 아니지만 같은 원리다. 신호 핸들러는 "언제든 끼어드는 다른 요청"이고, 그 안에서 `malloc`을 건드리는 함수를 부르면 힙 상태의 하위 상태가 노출된다. 패치는 핸들러에서 안전하지 않은 호출을 제거했다. 2020년의 리팩터링이 2006년의 수정을 되돌린 **회귀**라는 점에서, [8부 3장 패치 검증](../part8-reporting/03-patch-verification.md)의 "회귀 테스트가 없는 보안 수정은 언젠가 사라진다"는 논지의 사례다.
 
@@ -326,7 +326,7 @@ ts = [threading.Thread(target=go) for _ in range(20)]
 - [CWE-362: Race Condition](https://cwe.mitre.org/data/definitions/362.html) · [CWE-367: TOCTOU](https://cwe.mitre.org/data/definitions/367.html) · [CWE-840: Business Logic Errors](https://cwe.mitre.org/data/definitions/840.html)
 - James Kettle, "Smashing the state machine: the true potential of web race conditions" (Black Hat USA / DEF CON 31, 2023) · [PortSwigger 연구 글](https://portswigger.net/research/smashing-the-state-machine) · [발표 슬라이드](https://i.blackhat.com/BH-US-23/Presentations/US-23-Kettle-Smashing-the-state-machine.pdf) · 하위 상태 개념과 단일 패킷 공격의 원 자료
 - [Turbo Intruder](https://github.com/PortSwigger/turbo-intruder) · 단일 패킷 공격 스크립트 예제 포함
-- [OWASP Top 10 for Business Logic Abuse: BLA1:2025 Action Limit Overrun](https://owasp.org/www-project-top-10-for-business-logic-abuse/docs/the-top-10/action-limit-overrun) · 한도 초과의 분류와 사례
+- [OWASP Top 10 for Business Logic Abuse](https://owasp.org/www-project-top-10-for-business-logic-abuse/) · 한도 초과(Action Limit Overrun) 등 로직 남용 유형의 분류와 사례
 - [PostgreSQL 문서: Explicit Locking](https://www.postgresql.org/docs/current/explicit-locking.html) · `FOR UPDATE`의 정확한 의미
 - [Django 문서: `select_for_update`](https://docs.djangoproject.com/en/stable/ref/models/querysets/#select-for-update)
 - Qualys, "regreSSHion: RCE in OpenSSH's server" (2024) · [권고](https://www.qualys.com/2024/07/01/cve-2024-6387/regresshion.txt) · 신호 핸들러 경쟁의 상세 분석
@@ -338,3 +338,4 @@ ts = [threading.Thread(target=go) for _ in range(20)]
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 전체 작성. 유형 표, 로직 취약점 사고법, 원자적 연산 패턴, 단일 패킷 공격 해설, 로컬 재현 코드, CVE 4건 추가 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CVE 5건 레코드 대조(전부 실존; CVE-2022-4037은 GitLab 경쟁 조건으로 실존 확인, 영향·버전·링크를 레코드 기준으로 수정). Sylius 권고 링크 구체화, OWASP BLA 링크를 프로젝트 페이지로 완화. race_demo.py 실행(취약 1~5회/20요청, 조건부 UPDATE 수정본 항상 1회) 확인 | 검증팀 |
