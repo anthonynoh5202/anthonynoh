@@ -12,24 +12,24 @@
 
 | 묶음 | 역량 | 기본 (전원) | 심화 (담당자) | 학습 자료 |
 |---|---|---|---|---|
-| 기술 | 취약점 이해 | 유형·CWE·CVSS 읽기 | 신규 취약점 분석, 변형 탐색 | 제2편 [1부](../../vol2-tech/part1-foundations/01-what-is-vulnerability.md) → [3·4부](../../vol2-tech/part3-web/00-overview.md) |
-| 기술 | 재현 | 제보대로 따라 해 보기 | 환경 구축, 패치 diff 읽기, PoC 최소화 | 제2편 [7부 워크스루](../../vol2-tech/part7-walkthroughs/00-overview.md) |
-| 기술 | 도구 | 프록시, 스캐너 결과 읽기 | 디버거, 퍼저, SAST 룰 작성 | 제2편 [6부](../../vol2-tech/part6-tools/00-when-to-use-what.md) |
-| 기술 | AI 활용 | AI 결과 재검증, 기각 사유 기록 | 프롬프트·워크플로 설계, 유효율 분석 | [2부 9장](../../vol1-center/02-programs/09-ai.md) |
-| 소통 | 보고서 | 재현 절차·영향·조치 세 요소 | 독자별 버전, 공지 문안 | 제2편 [8부](../../vol2-tech/part8-reporting/01-report-structure.md) |
-| 소통 | 상대별 응대 | 신고자·제조사·기관 구분 | 에스컬레이션, 무응답 대응, 공개 조율 | [2부 5장](../../vol1-center/02-programs/05-bug-bounty.md), [3부 11장](../../vol1-center/03-partners/11-external.md) |
-| 소통 | 원내 협업 | 접점 부서와 식별자 공유 | 협의체 운영 | [3부 10장](../../vol1-center/03-partners/10-internal.md) |
-| 제도 | 운영 | 신고포상제·상시 신고조치제 절차 | 평가 기준 설계, 예산 | [2부 5·6장](../../vol1-center/02-programs/05-bug-bounty.md) |
-| 제도 | 법·국제 | 허용 범위 개념, CVE/CNA | 법제화 논거, 국제 사례 | [3부 12장](../../vol1-center/03-partners/12-legal.md) |
+| 기술 | 취약점 이해 | 유형·CWE·CVSS 읽기 | 신규 취약점 분석, 변형 탐색 | 제2편 [기초](../../vol2-tech/part1-foundations/01-what-is-vulnerability.md) → [웹·바이너리](../../vol2-tech/part3-web/00-overview.md) |
+| 기술 | 재현 | 제보대로 따라 해 보기 | 환경 구축, 패치 diff 읽기, PoC 최소화 | 제2편 [워크스루](../../vol2-tech/part7-walkthroughs/00-overview.md) |
+| 기술 | 도구 | 프록시, 스캐너 결과 읽기 | 디버거, 퍼저, SAST 룰 작성 | 제2편 [도구](../../vol2-tech/part6-tools/00-when-to-use-what.md) |
+| 기술 | AI 활용 | AI 결과 재검증, 기각 사유 기록 | 프롬프트·워크플로 설계, 유효율 분석 | [제1편 2부 9장](../../vol1-center/02-programs/09-ai.md) |
+| 소통 | 보고서 | 재현 절차·영향·조치 세 요소 | 독자별 버전, 공지 문안 | 제2편 [보고](../../vol2-tech/part8-reporting/01-report-structure.md) |
+| 소통 | 상대별 응대 | 신고자·제조사·기관 구분 | 에스컬레이션, 무응답 대응, 공개 조율 | [제1편 2부 5장](../../vol1-center/02-programs/05-bug-bounty.md), [제1편 3부 11장](../../vol1-center/03-partners/11-external.md) |
+| 소통 | 원내 협업 | 접점 부서와 식별자 공유 | 협의체 운영 | [제1편 3부 10장](../../vol1-center/03-partners/10-internal.md) |
+| 제도 | 운영 | 신고포상제·상시 신고조치제 절차 | 평가 기준 설계, 예산 | [제1편 2부 5·6장](../../vol1-center/02-programs/05-bug-bounty.md) |
+| 제도 | 법·국제 | 허용 범위 개념, CVE/CNA | 법제화 논거, 국제 사례 | [제1편 3부 12장](../../vol1-center/03-partners/12-legal.md) |
 
 ## 2. 추천 학습 순서
 
 ```mermaid
 flowchart LR
-    A["이 책<br/>1부 → 2부"] --> B["바이블 1부 기초<br/>+ 2부 1장 방법론"]
-    B --> C["바이블 SQL 인젝션<br/>실습 끝까지"]
-    C --> D["이 책 3부<br/>+ 자기 분야 바이블 장"]
-    D --> E["바이블 워크스루 1건<br/>직접 재현"]
+    A["제1편<br/>1부 → 2부"] --> B["제2편 기초<br/>+ 방법론 1장"]
+    B --> C["제2편 웹 1장 SQL 인젝션<br/>실습 끝까지"]
+    C --> D["제1편 3부 · 제3편 1부<br/>+ 자기 분야의 제2편 장"]
+    D --> E["제2편 워크스루 1건<br/>직접 재현"]
     E --> F["센터 실제 건<br/>주담당"]
 ```
 
@@ -55,3 +55,4 @@ flowchart LR
 | 날짜 | 변경 | 기여자 |
 |---|---|---|
 | 2026-10-21 | 초안 작성 | @anthonynoh5202 |
+| 2026-10-22 | 독자 테스트 반영: 장 참조 표기 통일(옛 별명→제2편, 부 이름 사용), 학습 순서 그림 라벨 수정 | @anthonynoh5202 |

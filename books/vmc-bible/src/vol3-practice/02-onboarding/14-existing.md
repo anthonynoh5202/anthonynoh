@@ -8,6 +8,8 @@
 > 2026년 한 해 동안 취약점 업무는 "제도 운영"에서 "국가 대응체계의 실행 조직"으로 성격이 바뀌었다.
 > 이 장은 그 변화를 한 장에 모으고, 기존 직원이 더 깊이 볼 영역을 제안한다.
 
+이 장은 센터 재직자를 전제로 쓴다. 센터 밖에서 분석 경력을 쌓고 온 외부 경력직은 [읽기 경로](../../reading-paths.md)의 경력직 항목을 따른다.
+
 ## 1. 2026년에 바뀐 것
 
 | 전 | 후 | 근거 |
@@ -33,18 +35,18 @@
 
 | 영역 | 왜 지금 | 자료 |
 |---|---|---|
-| CVD/VDP 국제 사례 | 2027 제도화 논거 준비 | [3부 12장](../../vol1-center/03-partners/12-legal.md), ISO/IEC 29147(공개)·30111(처리) |
-| CVE/CNA 운영 | 포괄적 CNA로서 레코드 품질 | [3부 11장](../../vol1-center/03-partners/11-external.md), CVE 프로그램 CNA 규칙 |
-| 공급망 취약점 | 디지털위협예방본부 신설로 협업 증가 | 제2편 [5부 4장](../../vol2-tech/part5-extended/04-supply-chain.md) |
-| AI 애플리케이션 취약점 | AI 서비스 자체가 점검 대상이 된다 | 제2편 [5부 5장](../../vol2-tech/part5-extended/05-ai-llm.md) |
-| 보고서·공지 품질 | "공지가 늦다"는 불만에 대한 답 | 제2편 [8부](../../vol2-tech/part8-reporting/01-report-structure.md) |
+| CVD/VDP 국제 사례 | 2027 제도화 논거 준비 | [제1편 3부 12장](../../vol1-center/03-partners/12-legal.md), ISO/IEC 29147(공개)·30111(처리) |
+| CVE/CNA 운영 | 포괄적 CNA로서 레코드 품질 | [제1편 3부 11장](../../vol1-center/03-partners/11-external.md), CVE 프로그램 CNA 규칙 |
+| 공급망 취약점 | 디지털위협예방본부 신설로 협업 증가 | 제2편 [확장 4장](../../vol2-tech/part5-extended/04-supply-chain.md) |
+| AI 애플리케이션 취약점 | AI 서비스 자체가 점검 대상이 된다 | 제2편 [확장 5장](../../vol2-tech/part5-extended/05-ai-llm.md) |
+| 보고서·공지 품질 | "공지가 늦다"는 불만에 대한 답 | 제2편 [보고 1장](../../vol2-tech/part8-reporting/01-report-structure.md) |
 
 ## 4. 이 책에 해 주실 일
 
 기존 직원은 이 책의 **검수자**다.
 
 - [부록 F](../../appendix/f-verify.md)의 🔎 항목 중 아는 것을 채운다
-- [1부 4장 4절](../../vol1-center/01-understanding/04-workflow.md)의 사례 틀에 익명화한 실제 사례를 하나 넣는다
+- [제1편 1부 4장 4절](../../vol1-center/01-understanding/04-workflow.md)의 사례 틀에 익명화한 실제 사례를 하나 넣는다
 - 틀린 서술을 발견하면 ✏️로 고치고 변경 이력에 남긴다
 - 신입이 자주 묻는 질문을 [부록 D FAQ](../../appendix/d-faq.md)에 추가한다
 
@@ -53,3 +55,4 @@
 | 날짜 | 변경 | 기여자 |
 |---|---|---|
 | 2026-10-21 | 초안 작성 | @anthonynoh5202 |
+| 2026-10-22 | 독자 테스트 반영: 재직자 전제 안내 한 줄 추가, 장 참조 표기 통일 | @anthonynoh5202 |

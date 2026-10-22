@@ -25,6 +25,17 @@
 - [업무 흐름](vol1-center/01-understanding/04-workflow.md)은 반드시 읽는다. 같은 "취약점"이라도 침해대응과 취약점관리는 시간축이 다르다.
 - 기술 배경이 없다면 제2편은 [기초 1장](vol2-tech/part1-foundations/01-what-is-vulnerability.md)과 [2장](vol2-tech/part1-foundations/02-cwe-cve-cvss.md)만 읽어도 분석가와 대화가 된다.
 
+## 🧑‍💻 외부 경력직
+
+보안 업계나 다른 기관에서 분석 경력을 쌓고 센터에 온 사람. 기술은 알지만 센터의 제도와 상대는 모른다.
+
+1. [제1편 2부 제도](vol1-center/02-programs/05-bug-bounty.md)의 세 장, [신고포상제](vol1-center/02-programs/05-bug-bounty.md)·[상시 신고조치제](vol1-center/02-programs/06-cvd-vdp.md)·[포털과 보안공지](vol1-center/02-programs/07-portal-advisory.md)를 먼저 읽는다. 센터가 신고자·제조사·기관을 어떤 규칙으로 만나는지가 여기 있다.
+2. 제2편은 자기 분야 장의 **7. 우회 기법**과 **8. 실제 CVE 사례**를 중심으로 읽는다. 1~6절은 아는 내용이면 건너뛰고, 모르는 것이 나오면 그 장을 처음부터 읽는다.
+3. [제2편 워크스루](vol2-tech/part7-walkthroughs/00-overview.md)를 하나 골라 이 책의 실습 환경에서 재현한다. 센터가 말하는 "재현"의 기준을 몸으로 익힌다.
+4. [제3편 1부 2장 검증](vol3-practice/01-workflow-tech/02-verification.md)을 읽는다. 전 직장의 검증과 센터의 검증이 어디서 다른지 본다.
+
+[제3편 2부 14장](vol3-practice/02-onboarding/14-existing.md)은 센터 재직자 전제라서 "2026년에 바뀐 것" 표만 보면 된다.
+
 ## 🔴 관리자·제도 담당
 
 - [조직 안에서의 위치](vol1-center/01-understanding/02-where.md)의 인력·예산 현황

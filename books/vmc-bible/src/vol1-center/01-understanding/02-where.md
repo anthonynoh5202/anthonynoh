@@ -25,6 +25,8 @@ flowchart TB
     style C fill:#dbeafe,stroke:#2563eb,color:#000
 ```
 
+그림의 약어 둘은 이 책 전체에서 자주 나온다. **KrCERT/CC**(Korea Computer Emergency Response Team Coordination Center)는 KISA의 인터넷침해대응센터로 침해사고 신고 접수와 대응을 맡는 조직이고, **N2SF**(National Network Security Framework, 국가망 보안체계)는 국가·공공기관의 망 분리를 대신하는 등급 기반 보안 체계다. [부록 A 용어집](../../appendix/a-glossary.md)
+
 📎 2026년 2월 9일자 조직개편: AI보안산업본부·디지털위협예방본부·랜섬웨어대응팀 신설, 디지털위협대응본부는 포렌식분석팀 확대 등 역할 강화. [KISA 보도자료](https://www.kisa.or.kr/402/form?postSeq=2573), [데일리시큐](https://www.dailysecu.com/news/articleView.html?idxno=204896), [머니투데이](https://www.mt.co.kr/tech/2026/02/03/2026020308271646188)
 📎 센터의 소속: "KISA 디지털위협대응본부 취약점관리센터 센터장" [바이라인네트워크 2026-09-21](https://byline.network/2026/09/21-619/)
 
@@ -77,3 +79,4 @@ flowchart TB
 | 날짜 | 변경 | 기여자 |
 |---|---|---|
 | 2026-10-21 | 초안 작성 | @anthonynoh5202 |
+| 2026-10-22 | 독자 테스트 반영: KrCERT/CC·N2SF 첫 등장에 원어와 한 줄 설명 추가 | @anthonynoh5202 |

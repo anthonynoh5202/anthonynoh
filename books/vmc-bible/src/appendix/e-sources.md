@@ -1,14 +1,12 @@
 # 부록 E. 출처
 
-이 책가 인용한 공개 자료 전체. 날짜는 기사·게시 기준. 접근 시점 2026-10-21. 링크가 깨지면 제목으로 검색한다.
+이 책이 1편·3편에서 인용한 공개 자료. 날짜는 기사·게시 기준. 접근 시점 2026-10-21. 링크가 깨지면 제목으로 검색한다.
 
 ## KISA 공식
 
 - [사이버 보안 취약점 정보 포털](https://knvd.krcert.or.kr/) · 처리 절차, 신고포상제, 공지, 담당부서(취약점관리센터 TF)
 - [포털 운영 소개](https://knvd.krcert.or.kr/operationIntroduce.do)
 - [KISA 보호나라&KrCERT/CC](https://www.boho.or.kr/)
-- [보안취약점 점검 (보호나라)](https://www.boho.or.kr/kr/subPage.do?menuNo=205009)
-- [KISA 보안취약점 신고포상제 페이지](https://www.kisa.or.kr/1020901)
 - [KISA 중소기업 보안 취약점 점검](https://www.kisa.or.kr/1020303)
 - [KISA, 'AI 기본사회 실현'을 위한 조직개편 단행 (2026-02)](https://www.kisa.or.kr/402/form?postSeq=2573)
 - [KISA, 신규 취약점 신고포상제 집중 신고기간 운영](https://www.kisa.or.kr/402/form?postSeq=1715&lang_type=KO)
@@ -48,7 +46,6 @@
 ## 정부 대응체계·상시 신고조치제 (2026-05~06)
 
 - [다음(연합) 2026-05-29: 정부, AI 기반 사이버 위협 대응체계 가동…취약점 관리 일원화](https://v.daum.net/v/20260529120046524)
-- [아시아경제 2026-05-29: "국제협력 통해 확보한 AI 모델 취약점 공유"](https://view.asiae.co.kr/article/2026052910500640350)
 - [아시아경제 2026-05-28: 누구나 화이트해커 된다…보안취약점 상시 신고 조치 시행](https://view.asiae.co.kr/article/2026052811291977316)
 - [데일리시큐: 화이트해커가 실제 운영망 취약점 24시간 탐색…민간 7곳·공공 8곳 참여](https://www.dailysecu.com/news/articleView.html?idxno=206932)
 - [전자신문 2026-05-28: 6월 보안취약점 상시 신고제 시범사업…화이트해커 모집](https://www.etnews.com/20260528000278)
@@ -59,7 +56,6 @@
 
 - [데일리시큐: KISA, 2월 9일 조직개편…AI보안산업본부·디지털위협예방본부 신설](https://www.dailysecu.com/news/articleView.html?idxno=204896)
 - [머니투데이: KISA, 'AI보안산업본부' 등 신설](https://www.mt.co.kr/tech/2026/02/03/2026020308271646188)
-- [아시아경제: 인터넷진흥원, 조직개편 단행](https://view.asiae.co.kr/article/2026020315460976721)
 
 ## 신고포상제·점검·클리닝
 
@@ -81,3 +77,12 @@
 
 - [디지털타임스: 국내 CNA 현황 (KISA, 금보원 포괄적 범위)](https://www.dt.co.kr/article/11438707)
 - [아시아경제 2026-05-18: 금융권 취약점 포상제, 가상자산사업자 등 70개사](https://view.asiae.co.kr/article/2026051811422356057)
+
+## 참고 (본문 미인용)
+
+본문에서 직접 인용하지는 않았지만 같은 주제를 다루어 함께 읽을 만한 자료.
+
+- [보안취약점 점검 (보호나라)](https://www.boho.or.kr/kr/subPage.do?menuNo=205009)
+- [KISA 보안취약점 신고포상제 페이지](https://www.kisa.or.kr/1020901)
+- [아시아경제 2026-02-03: 인터넷진흥원, 조직개편 단행](https://view.asiae.co.kr/article/2026020315460976721)
+- [아시아경제 2026-05-29: "국제협력 통해 확보한 AI 모델 취약점 공유"](https://view.asiae.co.kr/article/2026052910500640350) · 제1편 1장에서 인용했던 침해사고 건수 행을 출처 날짜 불일치로 삭제하면서 미인용이 됨
