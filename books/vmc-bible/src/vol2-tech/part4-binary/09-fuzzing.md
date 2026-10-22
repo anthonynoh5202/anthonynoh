@@ -183,7 +183,7 @@ mkdir corpus && cp seeds/* corpus/
 | **ASan** | 힙·스택 오버플로, UAF, double free | `export AFL_USE_ASAN=1` 후 컴파일 | `-fsanitize=fuzzer,address` |
 | **UBSan** | 부호 있는 정수 오버플로, 시프트, 널 역참조 등 UB | `AFL_USE_UBSAN=1` | `-fsanitize=fuzzer,undefined` (일부만: `signed-integer-overflow` 등) |
 | **MSan** | 초기화되지 않은 메모리 읽기 | `AFL_USE_MSAN=1` | `-fsanitize=fuzzer,memory` |
-| CFISan | 타입 혼동(잘못된 간접 호출) | `AFL_USE_CFISAN=1` | `-fsanitize=cfi` + LTO |
+| CFISan | 타입 혼동([10장](10-type-confusion.md))(잘못된 간접 호출) | `AFL_USE_CFISAN=1` | `-fsanitize=cfi` + LTO |
 | TSan | 데이터 레이스 | `AFL_USE_TSAN=1` | `-fsanitize=thread` |
 
 알아 둘 것은 네 가지다([fuzzing_in_depth.md](https://github.com/AFLplusplus/AFLplusplus/blob/stable/docs/fuzzing_in_depth.md)).
