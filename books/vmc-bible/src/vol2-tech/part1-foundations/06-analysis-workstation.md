@@ -148,7 +148,7 @@ flowchart TB
 
 | 도구 | 용도 | 설치 |
 |---|---|---|
-| binwalk, squashfs-tools, mtd-utils | 언패킹 | apt |
+| binwalk, squashfs-tools, mtd-utils | 언패킹 | apt (binwalk 2.x). 최신 3.x(Rust)는 [공식 저장소](https://github.com/ReFirmLabs/binwalk)에서 |
 | QEMU system (arm, mips) | 에뮬레이션 | apt |
 | EMBA | 자동 분석 | 전용 VM, [공식](https://github.com/e-m-b-a/emba) |
 
@@ -246,6 +246,8 @@ pipx install frida-tools objection awscli checkov
 # jadx: https://github.com/skylot/jadx/releases  / Trivy: https://github.com/aquasecurity/trivy/releases
 ```
 
+apt의 binwalk는 2.x(Python)다. 시스템에 최신 capstone이 깔려 있으면 2.x가 깨지는 경우가 있다. 그때는 3.x(Rust, `cargo install binwalk` 또는 릴리스 바이너리)로 바꾼다.
+
 ## 7. 설치 확인
 
 새 셸에서 다음을 실행해 본다. 하나라도 안 되면 그 도구의 설치 단계만 다시 한다.
@@ -256,7 +258,7 @@ cat > /tmp/t.c <<'EOF2'
 #include <stdio.h>
 int main(void){ char b[16]; gets(b); puts(b); return 0; }
 EOF2
-gcc -g -fno-stack-protector -no-pie -w /tmp/t.c -o /tmp/t
+gcc -g -fno-stack-protector -no-pie -w /tmp/t.c -o /tmp/t   # 링커의 gets 경고는 정상
 checksec --file=/tmp/t            # NX enabled, No PIE, No canary 가 보여야 한다
 ROPgadget --binary /tmp/t | tail -2
 gdb -q -batch -ex 'info functions main' /tmp/t | head -3   # pwndbg 로딩 메시지가 먼저 보인다
@@ -278,7 +280,10 @@ docker run --rm hello-world | head -2
     Stack:      No canary found
     NX:         NX enabled
     PIE:        No PIE (0x400000)
+    SHSTK:      Enabled            # 최신 pwntools는 CET 항목도 보여 준다
 ```
+
+gdb는 첫 줄에 `pwndbg: loaded N pwndbg commands`를 찍어야 한다. 안 보이면 `~/.gdbinit`에 `source ~/pwndbg/gdbinit.py`가 있는지 본다.
 
 ## 8. 운영 습관
 
@@ -341,3 +346,4 @@ gdb+pwndbg, pwntools, AFL++, radare2가 들어 있다. 단, ptrace 권한을 준
 | 날짜 | 변경 | 기여자 |
 |---|---|---|
 | 2026-10-22 | 초안 작성. 설치 스크립트와 binary-base 컨테이너 추가 | @anthonynoh5202 |
+| 2026-10-22 | 설치 스크립트를 Ubuntu 24.04에서 실제 실행해 검증(apt·pipx·venv·pwndbg 경로). GitHub 릴리스 다운로드는 실행 환경의 네트워크 제한으로 미검증 | @anthonynoh5202 |

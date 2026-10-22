@@ -58,15 +58,17 @@ if [[ $CHECK_ONLY -eq 1 ]]; then
   export PATH="$BIN_DIR:$HOME_DIR/tools/bin:$PATH"
   chk() { if command -v "$1" >/dev/null 2>&1; then ok "$1  $("$@" 2>&1 | head -1 | cut -c1-70)"; else warn "$1 없음"; fi; }
   log "기본";   chk git --version; chk docker --version; chk python3 --version; chk pipx --version; chk jq --version
-  log "웹";     chk mitmproxy --version; chk sqlmap --version; chk ffuf -V; chk nuclei -version; chk httpx -version; chk nmap --version
-  log "바이너리"; chk gdb --version; chk gcc --version; chk clang --version; chk afl-fuzz -h; chk radare2 -v; chk ROPgadget --version; chk ropper --version
-  [[ -x "$VENV_DIR/bin/python" ]] && ok "pwntools  $("$VENV_DIR/bin/python" -c 'import pwn,sys;print(pwn.__version__)' 2>/dev/null)" || warn "pwntools venv 없음"
-  [[ -d "$HOME_DIR/pwndbg" ]] && ok "pwndbg  $HOME_DIR/pwndbg" || warn "pwndbg 없음"
+  log "웹";     chk mitmproxy --version; chk sqlmap --version; chk ffuf -V; chk nmap --version
+  for t in nuclei httpx; do [[ -x "$TOOLS_DIR/bin/$t" ]] && ok "$t  $("$TOOLS_DIR/bin/$t" -version 2>&1 | grep -m1 -i version | cut -c1-60)" || warn "$t 없음 ($TOOLS_DIR/bin/$t)"; done
+  log "바이너리"; chk gdb --version; chk gcc --version; chk clang --version; chk radare2 -v; chk ROPgadget --version; chk ropper --version
+  command -v afl-fuzz >/dev/null && ok "afl-fuzz  $(afl-fuzz -h 2>&1 | grep -m1 -oE 'afl-fuzz\+\+?[0-9a-z.]+' )" || warn "afl-fuzz 없음"
+  [[ -x "$VENV_DIR/bin/python" ]] && ok "pwntools  $("$VENV_DIR/bin/python" -c 'from pwnlib.version import __version__;print(__version__)' 2>/dev/null)" || warn "pwntools venv 없음"
+  grep -q "pwndbg/gdbinit.py" "$HOME_DIR/.gdbinit" 2>/dev/null && ok "pwndbg  $HOME_DIR/pwndbg (gdb 시작 시 자동 로드)" || warn "pwndbg 없음 또는 ~/.gdbinit 미설정"
   ls -d "$TOOLS_DIR"/ghidra_* >/dev/null 2>&1 && ok "Ghidra  $(ls -d "$TOOLS_DIR"/ghidra_* | head -1)" || warn "Ghidra 없음"
   log "정적";   chk semgrep --version; chk codeql version
-  log "모바일"; chk adb --version; chk apktool --version; chk jadx --version; chk frida --version; chk objection version
+  log "모바일"; chk adb --version; command -v apktool >/dev/null && ok "apktool  $(apktool --version 2>/dev/null | grep -v JAVA_TOOL | head -1)" || warn "apktool 없음"; chk jadx --version; chk frida --version; chk objection version
   log "클라우드"; chk aws --version; chk trivy --version; chk checkov --version
-  log "펌웨어"; chk binwalk --help; chk unsquashfs -v; chk qemu-system-arm --version
+  log "펌웨어"; (binwalk --help >/dev/null 2>&1 && ok "binwalk") || warn "binwalk 오류 (apt의 2.x는 최신 capstone과 충돌할 수 있다 → 3.x: https://github.com/ReFirmLabs/binwalk)"; chk unsquashfs -v; chk qemu-system-arm --version
   exit 0
 fi
 
@@ -116,7 +118,8 @@ if has binary; then
   # pwndbg: 공식 저장소 + setup.sh
   if [[ ! -d "$HOME_DIR/pwndbg" ]]; then
     as_user git clone -q https://github.com/pwndbg/pwndbg "$HOME_DIR/pwndbg"
-    (cd "$HOME_DIR/pwndbg" && as_user ./setup.sh >/dev/null 2>&1) && ok "pwndbg 설치 (~/.gdbinit 갱신)" || warn "pwndbg setup.sh 실패: $HOME_DIR/pwndbg 에서 직접 실행"
+    (cd "$HOME_DIR/pwndbg" && as_user ./setup.sh >/tmp/pwndbg-setup.log 2>&1) || true
+    grep -q "pwndbg/gdbinit.py" "$HOME_DIR/.gdbinit" 2>/dev/null && ok "pwndbg 설치 (~/.gdbinit 에 source 추가)" || warn "pwndbg setup.sh 실패: /tmp/pwndbg-setup.log 확인 후 $HOME_DIR/pwndbg 에서 ./setup.sh 직접 실행"
   else ok "pwndbg 이미 있음"; fi
   # pwntools 등 파이썬 라이브러리는 전용 venv
   as_user python3 -m venv "$VENV_DIR"
