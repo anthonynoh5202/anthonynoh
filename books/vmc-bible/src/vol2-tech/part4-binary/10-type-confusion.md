@@ -69,10 +69,10 @@ C의 union은 같은 자리에 여러 타입을 겹쳐 놓는 **의도적 타입
 ```mermaid
 sequenceDiagram
     participant JS as 공격자 JS
-    participant Opt as 최적화 컴파일러
+    participant JIT as 최적화 컴파일러
     participant Code as 최적화된 기계어
-    JS->>Opt: f를 수천 번 호출. arr은 항상 double 배열
-    Opt->>Code: arr은 double 배열이라 가정하고 요소 접근의 타입 검사를 제거
+    JS->>JIT: f를 수천 번 호출. arr은 항상 double 배열
+    JIT->>Code: arr은 double 배열이라 가정하고 요소 접근의 타입 검사를 제거
     JS->>Code: f 호출. 도중에 콜백으로 arr의 형상을 바꿈
     Note over Code: 컴파일러가 부작용 없음이라 믿은 연산이 형상을 바꿨다
     Code->>Code: 옛 가정으로 arr을 읽고 쓴다. 타입 혼동
