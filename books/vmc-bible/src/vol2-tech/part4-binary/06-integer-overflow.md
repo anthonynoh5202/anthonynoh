@@ -53,7 +53,7 @@
 | 축소 변환 | [CWE-197](https://cwe.mitre.org/data/definitions/197.html) | 64비트로 검사하고 32비트로 사용 | 검사와 사용의 불일치 |
 | Off-by-one | [CWE-193](https://cwe.mitre.org/data/definitions/193.html) | `<=`와 `<`, NUL 종료 문자를 세지 않음 | 1바이트 오버플로. 힙 메타데이터·카나리 하위 바이트 변조 |
 
-Off-by-one은 오버플로가 아니지만 같은 장에서 다룬다. "경계값에서 계산이 하나 틀린다"는 점에서 원인과 탐지법이 같기 때문이다. 1바이트가 작아 보여도 [7부 4장 sudo Baron Samedit](../part7-walkthroughs/04-cve-2021-3156-sudo-baron-samedit.md)처럼 루트 권한으로 이어진다.
+Off-by-one은 오버플로가 아니지만 같은 장에서 다룬다. "경계값에서 계산이 하나 틀린다"는 점에서 원인과 탐지법이 같기 때문이다. 1바이트가 작아 보여도 [워크스루 4장 sudo Baron Samedit](../part7-walkthroughs/04-cve-2021-3156-sudo-baron-samedit.md)처럼 루트 권한으로 이어진다.
 
 ## 2. 발생하는 코드 패턴
 
@@ -180,7 +180,7 @@ grep -rnE "\bint\s+(len|length|size|count|n|num|off|offset)\b" --include='*.h' .
 **정적 분석기**
 
 - CodeQL C/C++ 쿼리 팩에 CWE-190 계열 쿼리(할당 크기 산술, 부호 비교)가 있다. 입력에서 할당 크기까지의 흐름을 추적하므로 grep보다 오탐이 적다.
-- Semgrep은 `malloc($N * $S)` 같은 구문 패턴 룰을 직접 쓰기 좋다. [6부 5장](../part6-tools/05-sast-semgrep-codeql.md)을 참고한다.
+- Semgrep은 `malloc($N * $S)` 같은 구문 패턴 룰을 직접 쓰기 좋다. [도구 5장](../part6-tools/05-sast-semgrep-codeql.md)을 참고한다.
 
 **리뷰할 때 보는 순서**
 
@@ -310,6 +310,65 @@ int main(void) {
 
 정수 취약점 사냥의 요령은 "검사가 있는가"가 아니라 **"검사한 값과 쓰는 값이 같은 타입·같은 시점인가"** 를 묻는 것이다. 다른 타입이면 변환이, 다른 시점이면 산술이 그 사이에 끼어든다.
 
+### 7.1 한 사례의 실제 우회 과정: CVE-2021-33909 "Sequoia", 축소 변환이 범위 밖 쓰기가 되기까지
+
+8절의 Sequoia를 단계별로 따라간다. 커널 코드는 v5.13 `fs/seq_file.c`, `fs/d_path.c`, `fs/proc_namespace.c`, 패치는 v5.14의 `seq_buf_alloc()` 기준이다(소스 대조). 익스플로잇 쪽은 발견자 Qualys의 공개 권고문 기준이다.
+
+**1단계: 입력을 만든다.** `/proc/self/mountinfo`는 각 마운트의 경로를 출력하는 `seq_file`이다. 비특권 사용자도 사용자 네임스페이스 안에서 디렉터리를 만들고 마운트할 수 있다. 공격자는 깊이가 매우 깊어 **전체 경로 길이가 1GB를 넘는** 디렉터리 구조를 만들고, 그 안에 마운트한 뒤, 디렉터리를 **삭제**한다(`d_unlinked`가 참이 되게). 그리고 `mountinfo`를 연다.
+
+**2단계: 버퍼가 2GB까지 자란다.** `seq_read_iter()`는 한 레코드가 버퍼에 안 들어가면 버퍼를 **두 배**로 키워 다시 시도한다. 상한이 없다.
+
+```c
+/* fs/seq_file.c v5.13 */
+m->buf = seq_buf_alloc(m->size <<= 1);     /* 4KB → 8KB → ... → 1GB → 2GB (0x80000000) */
+```
+
+경로가 1GB를 넘으므로 버퍼는 2GB, 즉 `m->size = 0x80000000`이 된다. `size_t`로는 문제없는 수다.
+
+**3단계: `size_t`가 `int`로 잘린다.** `show_mountinfo()`는 마운트 루트를 출력하려고 `seq_dentry()`를 부르고, 거기서 남은 버퍼 크기가 `size_t`에서 `int` 매개변수로 넘어간다.
+
+```c
+/* fs/seq_file.c */   size_t size = seq_get_buf(m, &buf);          /* 0x80000000 */
+                       char *p = dentry_path(dentry, buf, size);    /* int buflen ← 0x80000000 = INT_MIN (-2,147,483,648) */
+```
+
+1.2절 표의 **축소 변환**이다. 검사한 값(`size_t`, 양수)과 쓰는 값(`int`, 음수)이 다른 타입이다.
+
+**4단계: 음수 길이에서 검사식 자체가 되감긴다.** `dentry_path()`는 삭제된 디렉터리면 버퍼 **끝**에서 거꾸로 `//deleted`를 붙인다.
+
+```c
+/* fs/d_path.c v5.13 */
+p = buf + buflen;                                   /* buf + (-2GB) = buf - 2GB */
+if (prepend(&p, &buflen, "//deleted", 10) != 0) goto Elong;
+
+static int prepend(char **buffer, int *buflen, const char *str, int namelen)
+{
+    *buflen -= namelen;            /* INT_MIN - 10 → 부호 있는 오버플로 → +2,147,483,638 */
+    if (*buflen < 0)               /* 양수이므로 통과 ★ */
+        return -ENAMETOOLONG;
+    *buffer -= namelen;            /* buf - 2GB - 10 */
+    memcpy(*buffer, str, namelen); /* 범위 밖 쓰기: "//deleted" 10바이트 */
+    return 0;
+}
+```
+
+길이 검사는 있다. 그러나 `*buflen -= namelen`이 **검사 전에** 실행되고, `INT_MIN`에서 10을 빼면 되감겨 큰 양수가 된다. 2절 "오버플로 뒤에 하는 검사"와 "뺄셈 언더플로"가 한 줄에 겹쳐 있다. 결과는 `vmalloc`으로 잡은 2GB 버퍼의 **시작점에서 2GB 10바이트 아래**에 `//deleted` 10바이트를 쓰는 것이다. Qualys 권고문의 표현 그대로 "정확히 -2GB-10B 오프셋"이다.
+
+**5단계: 10바이트 쓰기를 권한 상승으로.** 쓰는 내용(`//deleted`)과 길이(10)는 고정이고 위치만 "버퍼 - 2GB - 10"이다. 공격자가 제어하는 것은 **그 자리에 무엇이 있는가**뿐이다. Qualys는 `vmalloc` 영역의 배치를 조작해 그 위치에 다른 커널 객체가 오게 하고, 그 객체의 10바이트가 바뀌는 것을 발판으로 root까지 갔다(권고문 기준. 배치와 후속 단계는 커널 버전·설정에 따라 다르다). 이 책의 관점에서 중요한 것은 **"쓰기 내용도 길이도 못 정하는 10바이트 범위 밖 쓰기"가 Critical이었다**는 사실이다. 5절 표에서 3단계(내용 제어)가 없어도 4단계(손상 위치의 의미)가 성립하면 심각도는 내려가지 않는다.
+
+**패치가 바꾼 것.** `seq_buf_alloc()`에 세 줄이 추가됐다(v5.13 → v5.14 diff).
+
+```c
+static void *seq_buf_alloc(unsigned long size)
+{
+	if (unlikely(size > MAX_RW_COUNT))      /* INT_MAX & PAGE_MASK. int로 변환해도 양수인 상한 */
+		return NULL;
+	return kvmalloc(size, GFP_KERNEL_ACCOUNT);
+}
+```
+
+`dentry_path`·`prepend`의 `int buflen`은 그대로 두고, **그 `int`에 음수가 들어갈 수 있는 크기를 처음부터 거부**했다. 6절의 "입력 숫자에 의미 있는 상한"이 커널에서 어떻게 생겼는지 보여 주는 예이고, 리뷰에서 `size_t → int` 매개변수 경계를 찾으면 "그 값이 2³¹을 넘을 수 있는가"를 반드시 묻게 되는 이유다.
+
 ## 8. 실제 CVE 사례
 
 | CVE | 제품 | 핵심 | 패치 |
@@ -319,7 +378,7 @@ int main(void) {
 | [CVE-2019-14287](https://nvd.nist.gov/vuln/detail/CVE-2019-14287) | sudo 1.8.28 이전 | `sudo -u#-1`(또는 `#4294967295`)로 지정한 UID가 `-1`로 변환되어 `setresuid`에 "변경 없음"으로 해석. `!root` 정책 우회로 root 명령 실행 | [sudo 권고](https://www.sudo.ws/alerts/minus_1_uid.html) |
 | [CVE-2021-33909](https://nvd.nist.gov/vuln/detail/CVE-2021-33909) | Linux 커널 3.16~5.13.3 `seq_file` | 1GB가 넘는 경로를 만들어 `size_t` 오프셋을 `int`로 변환하며 음수화 → 범위 밖 쓰기 → 로컬 root ("Sequoia") | [커널 커밋 8cae8cd8](https://github.com/torvalds/linux/commit/8cae8cd89f05f6de223d63e6d15e31c8ba9cf53b) |
 | [CVE-2022-0185](https://nvd.nist.gov/vuln/detail/CVE-2022-0185) | Linux 커널 `fs_context` `legacy_parse_param` | 매개변수 길이 검사 `len > PAGE_SIZE - 2 - size`에서 `size`가 커지면 우변이 언더플로 → 검사 통과 → 힙 오버플로 → 컨테이너 탈출·권한 상승 | [커널 커밋 722d9484](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=722d94847de2) |
-| [CVE-2021-3156](https://nvd.nist.gov/vuln/detail/CVE-2021-3156) | sudo 1.9.5p2 이전 | 백슬래시로 끝나는 인자 처리의 off-by-one → 힙 오버플로 → 로컬 root ("Baron Samedit") | [sudo 1.9.5p2](https://www.sudo.ws/stable.html#1.9.5p2), [7부 4장 워크스루](../part7-walkthroughs/04-cve-2021-3156-sudo-baron-samedit.md) |
+| [CVE-2021-3156](https://nvd.nist.gov/vuln/detail/CVE-2021-3156) | sudo 1.9.5p2 이전 | 백슬래시로 끝나는 인자 처리의 off-by-one → 힙 오버플로 → 로컬 root ("Baron Samedit") | [sudo 1.9.5p2](https://www.sudo.ws/stable.html#1.9.5p2), [워크스루 4장](../part7-walkthroughs/04-cve-2021-3156-sudo-baron-samedit.md) |
 
 **CVE-2002-0639에서 배울 것**: 패치는 `nresp`에 상한(100)을 두는 검사 한 줄을 추가했다(권고문 및 공개된 수정 코드 기준). 2절 첫 패턴 그대로이며, "의미 있는 상한"이 가장 싼 방어라는 6절의 주장이 여기서 나온다.
 
@@ -355,7 +414,7 @@ int main(void) {
 - [UndefinedBehaviorSanitizer 문서](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html) · 검사 목록, `-fno-sanitize-recover`, `UBSAN_OPTIONS`
 - [SEI CERT C: INT30-C (부호 없는 되감김), INT32-C (부호 있는 오버플로)](https://wiki.sei.cmu.edu/confluence/display/c/INT30-C.+Ensure+that+unsigned+integer+operations+do+not+wrap) · 규칙별 안전한 코드 예
 - Qualys, "Sequoia: A deep root in Linux's filesystem layer (CVE-2021-33909)", 2021 · `size_t`→`int` 변환 하나가 root가 되는 전 과정
-- [7부 4장 CVE-2021-3156 워크스루](../part7-walkthroughs/04-cve-2021-3156-sudo-baron-samedit.md) · off-by-one에서 권한 상승까지
+- [워크스루 4장 CVE-2021-3156](../part7-walkthroughs/04-cve-2021-3156-sudo-baron-samedit.md) · off-by-one에서 권한 상승까지
 
 ## 변경 이력
 
@@ -364,3 +423,4 @@ int main(void) {
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 본문 작성. 컴파일러 경고·UBSan·ASan 출력, `ckd_mul`/`__builtin_mul_overflow` 로컬 검증, CVE 6건 확인 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 6건 cvelistV5 대조(모두 실존, 버전·패치 링크 일치). records.c(ASan·UBSan·무새니타이저·수정판), `ckd_mul`(clang 18 `-std=c23`), `-Wconversion` 계열 경고, `-fwrapv` 실험을 재실행. 통상 산술 변환 표의 예시(`len > sizeof buf`는 통과가 아니라 거부) 정정, ASan 줄 번호 정정, 5단계 예제를 UBSan이 실제로 보고하는 형태(`int r = x + 1; return r > x;`)로 교체(한 식으로 쓰면 gcc가 접어 버려 보고 안 됨) | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 7절에 7.1 CVE-2021-33909 Sequoia 단계 서술 추가(v5.13 `seq_file.c`·`d_path.c`·`proc_namespace.c` 소스와 v5.14 `seq_buf_alloc()` diff 대조, Qualys 권고문 기준). 장 참조 표기 정리 | @anthonynoh5202 |

