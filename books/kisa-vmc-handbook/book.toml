@@ -1,0 +1,28 @@
+[book]
+title = "취약점관리센터 직원 안내서"
+description = "KISA 취약점관리센터에 새로 온 사람, 오래 있던 사람, 다른 부서에서 온 사람 모두를 위한 살아있는 안내서 (공개 자료 기반 비공식 초안)"
+authors = ["Anthony Noh", "Contributors"]
+language = "ko"
+src = "src"
+
+[build]
+build-dir = "book"
+create-missing = false
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/anthonynoh5202/anthonynoh"
+edit-url-template = "https://github.com/anthonynoh5202/anthonynoh/edit/main/books/kisa-vmc-handbook/{path}"
+site-url = "/anthonynoh/kisa-vmc-handbook/"
+additional-js = ["theme/mermaid.min.js", "theme/mermaid-init.js"]
+additional-css = ["theme/book.css"]
+
+[output.html.fold]
+enable = true
+level = 1
+
+[output.html.search]
+enable = true
+limit-results = 30
+use-boolean-and = true

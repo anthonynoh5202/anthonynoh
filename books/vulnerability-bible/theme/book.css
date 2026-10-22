@@ -1,0 +1,7 @@
+/* 이미지와 다이어그램 공통 스타일 */
+.mermaid { display: flex; justify-content: center; margin: 1.5rem 0; }
+.mermaid svg { max-width: 100%; height: auto; }
+figure { margin: 1.5rem 0; text-align: center; }
+figure img { max-width: 100%; border: 1px solid var(--quote-border); border-radius: 6px; }
+figure figcaption { font-size: 0.9em; color: var(--fg); opacity: 0.75; margin-top: 0.5rem; }
+img[alt^="스크린샷"] { max-width: 100%; border: 1px solid var(--quote-border); border-radius: 6px; }
