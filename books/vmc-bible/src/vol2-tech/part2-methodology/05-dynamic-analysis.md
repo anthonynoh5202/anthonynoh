@@ -268,3 +268,4 @@ Shadow bytes around the buggy address:
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. strace·gdb·ASan 출력은 실제 실행 결과, AFL++ 명령은 공식 문서 기준 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: ASan·gdb 예시 재실행으로 출력 형식 확인, AFL++ 명령을 docs/fuzzing_in_depth.md와 대조. 수정 없음 | 검증팀 |

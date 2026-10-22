@@ -201,7 +201,7 @@ select fileAccess, "This file access uses data from $@.",
 - `FileSystemAccess`는 `Concepts` 모듈이 정의한 **싱크 개념**이다. 같은 모듈에 `SqlExecution`, `SystemCommandExecution`, `CodeExecution`이 있다. 싱크 한 줄만 바꾸면 다른 취약점 유형의 쿼리가 된다.
 - 표준 쿼리 `py/sql-injection`, `py/command-line-injection`은 이 골격 위에 세심한 새니타이저 모델을 얹은 것이다. 직접 쓰기 전에 표준 쿼리가 이미 있는지 먼저 본다.
 
-> 🟡 CodeQL의 모듈형 데이터 흐름 API(`ConfigSig`, `Global<...>`)는 CLI 2.13.0부터 쓸 수 있고, 예전 `class ... extends TaintTracking::Configuration` 문법은 폐기되었다. 인터넷의 오래된 예시를 그대로 쓰면 컴파일되지 않는다. 데이터베이스 생성·쿼리 작성·CI 통합의 상세는 [6부 5장](../part6-tools/05-sast-semgrep-codeql.md)을 본다.
+> 🟡 CodeQL의 모듈형 데이터 흐름 API(`ConfigSig`, `Global<...>`)는 2023년 CodeQL 2.12~2.13 무렵 도입되었고, 예전 `class ... extends TaintTracking::Configuration` 문법은 폐기(deprecated)되었다. 인터넷의 오래된 예시를 그대로 쓰면 컴파일되지 않는다. 데이터베이스 생성·쿼리 작성·CI 통합의 상세는 [6부 5장](../part6-tools/05-sast-semgrep-codeql.md)을 본다.
 
 ## 5. 바이너리 정적 분석
 
@@ -209,7 +209,7 @@ select fileAccess, "This file access uses data from $@.",
 
 | 도구 역할 | 하는 일 | 쓰는 때 |
 |---|---|---|
-| `strings`, `file`, `readelf -h` | 문자열·아키텍처·보호 기법(NX, PIE, RELRO) 확인 | 처음 5분. 포맷 문자열, 하드코딩된 경로·URL·자격증명을 찾는다 |
+| `strings`, `file`, `readelf -h -l -d`(또는 `checksec`) | 문자열·아키텍처·보호 기법(NX, PIE, RELRO) 확인 | 처음 5분. 포맷 문자열, 하드코딩된 경로·URL·자격증명을 찾는다 |
 | 디스어셈블러(disassembler) | 기계어 → 어셈블리. 제어 흐름 그래프를 그린다 | 정확한 명령어 순서가 중요할 때 (취약 명령어, 패치 비교) |
 | 디컴파일러(decompiler) | 어셈블리 → C 비슷한 의사코드 | 큰 함수의 논리를 빠르게 이해할 때. **대부분의 시간을 여기서 보낸다** |
 | 바이너리 diff | 패치 전후 함수 비교 | N-day 분석. 패치가 어디를 고쳤는지 역으로 취약점을 찾는다 |
@@ -274,3 +274,4 @@ objdump -d ./target | grep -E "call.*<(strcpy|sprintf|system)@plt>"   # 위험 �
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. Semgrep 오염 추적 룰 동작 확인(1.182.0), CodeQL 예시는 공식 가이드 기준 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: Semgrep 1.182.0으로 taint 룰 실행(13행만 탐지, `# nosemgrep: rule-id` 동작 확인), CodeQL 쿼리를 github/codeql 공식 가이드 원문·`codeql/python-queries` 팩 이름과 대조. NX/RELRO 확인 명령(`readelf -h`→`-h -l -d`)과 CodeQL API 도입 버전 서술 정정 | 검증팀 |

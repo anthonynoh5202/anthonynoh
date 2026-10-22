@@ -94,7 +94,7 @@ Kali Linux가 없어도 된다. 이 책에서 쓰는 도구는 대부분 개별 
 |---|---|---|
 | `port is already allocated` | 8080 포트를 다른 프로그램이 쓴다 | `docker-compose.yml`에서 `127.0.0.1:8081:8080` 으로 바꾼다 |
 | `permission denied` (Linux) | 사용자가 docker 그룹에 없다 | `sudo usermod -aG docker $USER` 후 재로그인 |
-| Apple Silicon에서 바이너리 실습이 안 뜬다 | x86-64 이미지 | `docker compose up --platform linux/amd64` 또는 compose 파일의 `platform:` 설정 확인 |
+| Apple Silicon에서 바이너리 실습이 안 뜬다 | x86-64 이미지 | `DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose up --build` 또는 compose 파일의 `platform: linux/amd64` 설정 확인 |
 | 빌드가 너무 느리다 | 캐시 없음 | 처음 한 번만 느리다. 두 번째부터는 캐시를 쓴다 |
 | 앱이 떴는데 DB가 비어 있다 | 초기화 스크립트 실패 | `docker compose down -v` 후 다시 `up --build` |
 
@@ -115,3 +115,4 @@ Kali Linux가 없어도 된다. 이 책에서 쓰는 도구는 대부분 개별 
 | 날짜 | 변경 | 기여자 |
 |---|---|---|
 | 2026-10-21 | 초안 작성 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: `docker compose up`에는 `--platform` 옵션이 없어 `DOCKER_DEFAULT_PLATFORM` 환경변수로 정정 | 검증팀 |

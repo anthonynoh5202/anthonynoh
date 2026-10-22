@@ -179,7 +179,7 @@ CERT의 CVD 가이드는 이 기한을 "협상의 출발점이지 최종 기한�
 - [ISO/IEC 29147:2018 Vulnerability disclosure](https://www.iso.org/standard/72311.html) · 벤더 측 공개 절차 국제 표준 (유료)
 - [OpenSSF: Guide to coordinated vulnerability disclosure for OSS projects](https://github.com/ossf/oss-vulnerability-guide/blob/main/maintainer-guide.md) · 4절 기한 비교의 출처. 템플릿 포함
 - [Google Project Zero: Vulnerability Disclosure FAQ](https://googleprojectzero.blogspot.com/p/vulnerability-disclosure-faq.html) · 90+30 정책의 원문과 근거
-- [FIRST CVSS v3.1 Specification](https://www.first.org/cvss/v3.1/specification-document) · 5.2절 벡터 표기의 정의
+- [FIRST CVSS v3.1 Specification](https://www.first.org/cvss/v3.1/specification-document) · 6절 Vector String(벡터 표기)의 정의
 - [CWE-89](https://cwe.mitre.org/data/definitions/89.html) · 5절 예시 취약점의 공식 정의
 
 ## 변경 이력
@@ -188,3 +188,4 @@ CERT의 CVD 가이드는 이 기한을 "협상의 출발점이지 최종 기한�
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. 공개 기한 표는 CERT/CC·Google·OpenSSF 공개 문서 기준 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CERT/CC 45일·Google 90일·distros 7/14일·CERT 가이드 인용문을 OpenSSF maintainer-guide 원문과 대조, CVSS 7.5 재계산, 90일 날짜 계산 확인. CVSS 3.1 규격 절 번호(5.2→6) 정정 | 검증팀 |

@@ -36,7 +36,7 @@ curl -sI http://127.0.0.1:8080/
 
 ```
 HTTP/1.1 200 OK
-Server: Werkzeug/3.0.x Python/3.12.x
+Server: Werkzeug/3.1.x Python/3.12.x
 Content-Type: text/html; charset=utf-8
 ```
 
@@ -114,7 +114,7 @@ pip-audit -r requirements.txt -s osv -f json -o audit.json
 pip-audit
 ```
 
-📎 [npm audit 문서](https://docs.npmjs.com/cli/v12/commands/npm-audit/), [pip-audit](https://github.com/pypa/pip-audit)
+📎 [npm audit 문서](https://docs.npmjs.com/cli/commands/npm-audit), [pip-audit](https://github.com/pypa/pip-audit)
 
 ### 3.2 생태계를 가리지 않는 도구
 
@@ -287,7 +287,7 @@ echo "written: $OUT"
 - [OSV 스키마와 API](https://google.github.io/osv.dev/) · 생태계별 취약점 데이터의 공통 형식
 - [GitHub Advisory Database](https://github.com/advisories) · GHSA 권고와 리뷰 기준
 - [OSV-Scanner 문서](https://google.github.io/osv-scanner/) · 소스·이미지·SBOM 스캔
-- [pip-audit](https://github.com/pypa/pip-audit), [npm audit](https://docs.npmjs.com/cli/v12/commands/npm-audit/) · 생태계 기본 도구의 공식 문서
+- [pip-audit](https://github.com/pypa/pip-audit), [npm audit](https://docs.npmjs.com/cli/commands/npm-audit) · 생태계 기본 도구의 공식 문서
 - [Syft](https://github.com/anchore/syft) · SBOM 생성, [Grype](https://github.com/anchore/grype) · SBOM 매칭, [Trivy](https://trivy.dev/) · 통합 스캐너
 - [projectdiscovery httpx](https://docs.projectdiscovery.io/tools/httpx/usage), [nuclei](https://github.com/projectdiscovery/nuclei) · 지문·템플릿 스캔
 - [OWASP Web Security Testing Guide: Information Gathering](https://owasp.org/www-project-web-security-testing-guide/) · 블랙박스 정보 수집 항목의 표준 목록
@@ -298,3 +298,4 @@ echo "written: $OUT"
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. 스택 식별, SCA 명령, CVE 히스토리, OSINT 한계, 자동화 스크립트, 실습 추가 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: pip-audit·osv-scanner·syft·grype·httpx·nuclei·WhatWeb 명령을 각 공식 README와 대조(이상 없음). Werkzeug 버전 표기(flask 3.0.3은 3.1.x 설치), npm 문서 링크 버전 고정 제거 | 검증팀 |
