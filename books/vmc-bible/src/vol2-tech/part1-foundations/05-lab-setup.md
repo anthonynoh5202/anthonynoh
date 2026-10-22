@@ -86,7 +86,7 @@ Kali Linux가 없어도 된다. 이 책에서 쓰는 도구는 대부분 개별 
 | 디컴파일러 | Ghidra | [공식 릴리스](https://github.com/NationalSecurityAgency/ghidra/releases) |
 | 정적 분석 | semgrep | `pip install semgrep` |
 
-4부 바이너리 실습은 별도의 Docker 이미지(`labs/binary-base/`)를 쓴다. 디버거와 완화 기법 설정이 미리 되어 있다.
+바이너리 실습은 공용 컨테이너 `labs/binary-base/`(gdb+pwndbg, pwntools, AFL++, radare2)를 쓸 수 있다. 실제 제보와 바이너리를 다루는 **분석 환경**(VM 격리, 영역별 도구 세트, 설치 스크립트)은 [6장](06-analysis-workstation.md)에서 다룬다.
 
 ## 7. 문제 해결
 

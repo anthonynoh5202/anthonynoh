@@ -17,7 +17,7 @@
 | [`web-sqli/`](web-sqli/) | [3부 1장 SQL 인젝션](../books/vmc-bible/src/vol2-tech/part3-web/01-sql-injection.md) | 8080 | ✅ 동작 |
 | `web-xss/` | 3부 2장 XSS | 8081 | 📝 예정 |
 | `web-ssrf/` | 3부 3장 SSRF | 8082 | 📝 예정 |
-| `binary-base/` | 4부 공통 (gdb, pwndbg, pwntools) | - | 📝 예정 |
+| [`binary-base/`](binary-base/) | 제2편 바이너리 공통 (gdb+pwndbg, pwntools, AFL++, radare2) | - | ✅ Dockerfile |
 | `binary-stack/` | 4부 2장 스택 오버플로 | - | 📝 예정 |
 | `cve-2021-44228/` | 7부 1장 Log4Shell | 8090 | 📝 예정 |
 

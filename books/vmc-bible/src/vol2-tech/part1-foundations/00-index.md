@@ -9,3 +9,4 @@
 | [공격 표면과 신뢰 경계](03-attack-surface.md) | 🟢 |
 | [윤리와 법적 범위](04-ethics-and-law.md) | 🟢 |
 | [실습 환경 구축](05-lab-setup.md) | 🟢 |
+| [분석 환경 구축: 워크스테이션과 도구](06-analysis-workstation.md) | 🟢 |

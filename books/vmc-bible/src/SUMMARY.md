@@ -30,6 +30,7 @@
   - [공격 표면과 신뢰 경계](vol2-tech/part1-foundations/03-attack-surface.md)
   - [윤리와 법적 범위](vol2-tech/part1-foundations/04-ethics-and-law.md)
   - [실습 환경 구축](vol2-tech/part1-foundations/05-lab-setup.md)
+  - [분석 환경 구축: 워크스테이션과 도구](vol2-tech/part1-foundations/06-analysis-workstation.md)
 - [방법론](vol2-tech/part2-methodology/00-index.md)
   - [분석 방법론 개요](vol2-tech/part2-methodology/01-overview.md)
   - [정보 수집](vol2-tech/part2-methodology/02-recon.md)

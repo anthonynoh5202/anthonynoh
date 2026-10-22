@@ -16,6 +16,7 @@
 - [ ] 보호나라 보안공지 최근 5건을 읽고 [7장 4절](../../vol1-center/02-programs/07-portal-advisory.md) 과제를 한 건 한다
 - [ ] 센터 구성원과 각자의 담당을 한 장에 그린다 🔎
 - [ ] 접근 권한, 시스템 계정, 메일 그룹을 받는다 🔎
+- [ ] [분석 환경 구축](../../vol2-tech/part1-foundations/06-analysis-workstation.md)을 따라 분석 VM을 만들고 `setup-analyst.sh --check`를 통과시킨다
 - [ ] [부록 A 용어집](../../appendix/a-glossary.md)을 한 번 훑는다
 
 ## 30일: 흐름 이해
