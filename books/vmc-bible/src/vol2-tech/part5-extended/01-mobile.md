@@ -52,7 +52,7 @@ MASVS v2는 통제를 8개 그룹으로 나누고, MASTG v2는 각 통제를 약
 |---|---|---|
 | MASVS-STORAGE | 단말에 저장되는 민감 데이터 | 3.6, 4.1 |
 | MASVS-CRYPTO | 암호 사용의 올바름 | 3.6 |
-| MASVS-AUTH | 인증과 인가 | 3부 4장 |
+| MASVS-AUTH | 인증과 인가 | 웹 4장 |
 | MASVS-NETWORK | 서버와의 통신 보호 | 6 |
 | MASVS-PLATFORM | 플랫폼·다른 앱과의 상호작용 (IPC, WebView) | 3.2~3.5 |
 | MASVS-CODE | 안전한 데이터 처리, 업데이트 | 3.4 |
@@ -166,7 +166,7 @@ IPA를 풀어 `plutil -p Payload/App.app/Info.plist`로 본다. `NSAllowsArbitra
 
 ## 5. Frida로 런타임 계측 🔴
 
-[Frida](https://frida.re)는 실행 중인 프로세스에 JavaScript를 주입해 함수를 가로채고 반환값을 바꾸는 도구다. 모바일 분석에서 루팅 탐지 우회, 인증서 고정 해제, 암호화 전 평문 확인에 쓴다. [6부 3장 디버거](../part6-tools/03-debuggers.md)에서 gdb와 비교한다.
+[Frida](https://frida.re)는 실행 중인 프로세스에 JavaScript를 주입해 함수를 가로채고 반환값을 바꾸는 도구다. 모바일 분석에서 루팅 탐지 우회, 인증서 고정 해제, 암호화 전 평문 확인에 쓴다. [도구 3장 디버거](../part6-tools/03-debuggers.md)에서 gdb와 비교한다.
 
 ### 5.1 설치와 연결
 
@@ -207,7 +207,7 @@ frida -U -f com.example.app -l hook.js
 
 ### 6.1 트래픽을 보는 기본 절차
 
-1. PC에서 Burp를 띄우고 단말의 Wi‑Fi 프록시를 PC로 설정한다. [6부 1장](../part6-tools/01-burp-proxy.md)
+1. PC에서 Burp를 띄우고 단말의 Wi‑Fi 프록시를 PC로 설정한다. [도구 1장](../part6-tools/01-burp-proxy.md)
 2. Burp CA 인증서를 단말에 설치한다.
 3. 여기서 Android는 막힌다. **API 24(Android 7.0) 이상을 타깃하는 앱은 사용자 설치 CA를 기본으로 신뢰하지 않는다.** 📎 [Network Security Config 문서](https://developer.android.com/privacy-and-security/security-config) 해결책은 (a) 루팅 기기의 시스템 CA 저장소에 넣거나, (b) APK를 다시 패키징해 `network_security_config.xml`에 `<certificates src="user"/>`를 추가하거나, (c) Frida로 TLS 검증을 통째로 우회한다.
 4. 그래도 안 되면 인증서 고정이다.
@@ -295,3 +295,4 @@ frida -U -f com.example.app --codeshare pcipolloni/universal-android-ssl-pinning
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. MASVS/MASTG 현행 버전, Android·iOS 항목, Frida 스크립트, 고정 우회, 사례 4건 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 4건 cvelistV5 대조(모두 실존). Frida 17 제거 API(`Module.getBaseAddress`)를 현행 API로 교체, 릴리스 노트 링크를 17.0.0으로 정정, objection 1.12 CLI(`-n … start`) 반영, allowBackup/API 31 서술 정정, MASTG 릴리스 날짜(미확인) 삭제, MASVS/MASTG 저장소 URL 현행화 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 장 참조 표기를 편·부 이름 규칙으로 통일 | @anthonynoh5202 |

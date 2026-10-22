@@ -18,7 +18,7 @@
 
 대부분의 "고쳤습니다"는 ①에서 멈춘다. Google Project Zero가 2022년 상반기에 실제 공격에 쓰인 0-day 18건을 분석한 결과, **9건이 이미 패치된 취약점의 변형**이었다. 같은 글은 "최소 절반은 더 철저한 패치와 회귀 테스트로 막을 수 있었다"고 썼다. 📎 [Project Zero, "2022 0-day In-the-Wild Exploitation…so far" (Maddie Stone, 2022-06)](https://googleprojectzero.blogspot.com/2022/06/2022-0-day-in-wild-exploitationso-far.html)
 
-센터 입장에서 패치 검증은 [3편 1부 3장 4절](../../vol3-practice/01-workflow-tech/03-remediation.md)의 업무이고, 이 장은 그 기술적 내용이다.
+센터 입장에서 패치 검증은 [제3편 1부 3장 4절](../../vol3-practice/01-workflow-tech/03-remediation.md)의 업무이고, 이 장은 그 기술적 내용이다.
 
 ## 2. 패치 리뷰: 증상을 막았나, 원인을 없앴나
 
@@ -64,7 +64,7 @@ flowchart TD
 | 같은 API | 그 라이브러리의 위험 함수 목록으로 다시 검색 | `executescript`, ORM의 `raw()`/`extra()` |
 | 같은 역사 | `git log -S'execute(f"' --oneline`, 같은 커밋의 다른 파일 | 한 사람이 같은 주에 쓴 다른 엔드포인트 |
 
-보고서가 `/login` 하나만 지적했고 패치가 `/login`만 고쳤다면, 변형 분석 없이는 `/search`와 `/item`이 남는다. 실습 환경에서 직접 확인한다. `app/app.py`의 `login()`만 고친 뒤 [8부 1장 예시 보고서](01-report-structure.md)의 재현 절차 2, 3번을 돌리면 그대로 성공한다.
+보고서가 `/login` 하나만 지적했고 패치가 `/login`만 고쳤다면, 변형 분석 없이는 `/search`와 `/item`이 남는다. 실습 환경에서 직접 확인한다. `app/app.py`의 `login()`만 고친 뒤 [보고 1장 예시 보고서](01-report-structure.md)의 재현 절차 2, 3번을 돌리면 그대로 성공한다.
 
 ### 3.2 도구로 넓히기
 
@@ -78,9 +78,9 @@ codeql database analyze db-py codeql/python-queries:codeql-suites/python-securit
   --format=sarif-latest --output=variants.sarif --download
 ```
 
-도구 사용법은 [6부 5장](../part6-tools/05-sast-semgrep-codeql.md)에 있다. 변형 분석에서 도구의 역할은 **후보를 빠짐없이 나열**하는 것이고, 각 후보가 진짜 취약한지는 사람이 본다.
+도구 사용법은 [도구 5장](../part6-tools/05-sast-semgrep-codeql.md)에 있다. 변형 분석에서 도구의 역할은 **후보를 빠짐없이 나열**하는 것이고, 각 후보가 진짜 취약한지는 사람이 본다.
 
-바이너리도 같다. "길이를 입력에서 읽어 `memcpy`에 그대로 넘기는 곳"처럼 패턴을 정의하고 같은 파서·같은 구조체·같은 작성자의 코드를 훑는다. 보고서의 PoC를 퍼징 시드에 넣어 두면 변형이 크래시로 올라온다([4부 9장](../part4-binary/09-fuzzing.md)).
+바이너리도 같다. "길이를 입력에서 읽어 `memcpy`에 그대로 넘기는 곳"처럼 패턴을 정의하고 같은 파서·같은 구조체·같은 작성자의 코드를 훑는다. 보고서의 PoC를 퍼징 시드에 넣어 두면 변형이 크래시로 올라온다([바이너리 9장](../part4-binary/09-fuzzing.md)).
 
 ## 4. 회귀 테스트로 남기기
 
@@ -162,7 +162,7 @@ semgrep ci --config rules/              # CI: 변경된 파일만, 기준 커밋
 
 - **웹 로그**: 파라미터에 `'`, `UNION`, `SLEEP(` 패턴과 응답 500 급증. 인코딩·블라인드는 놓친다.
 - **DB 로그**: 구문 오류 급증, 평소 없던 `sqlite_master`/`information_schema` 조회. 쿼리 로깅이 켜져 있어야 한다.
-- **WAF**: 벤더 SQLi 룰셋에 이 보고서의 페이로드 시그니처 추가. [3부 1장 7절](../part3-web/01-sql-injection.md)의 우회로 뚫리므로 **패치의 대체물이 아니다**.
+- **WAF**: 벤더 SQLi 룰셋에 이 보고서의 페이로드 시그니처 추가. [웹 1장 7절](../part3-web/01-sql-injection.md)의 우회로 뚫리므로 **패치의 대체물이 아니다**.
 
 탐지 룰의 목적은 "막는다"가 아니라 **"패치가 늦어지는 동안 시도를 본다"** 다.
 
@@ -233,7 +233,7 @@ semgrep ci --config rules/              # CI: 변경된 파일만, 기준 커밋
 - [Google, Site Reliability Engineering 15장 "Postmortem Culture: Learning from Failure" (2016)](https://sre.google/sre-book/postmortem-culture/) · 비난 없는 사후 분석의 원전. 부록 D에 예시 문서
 - [Semgrep Docs: Testing rules](https://semgrep.dev/docs/writing-rules/testing-rules) · `semgrep test` / `semgrep validate` 사용법
 - [CodeQL CLI 문서](https://codeql.github.com/docs/codeql-cli/) · `database create` / `database analyze`
-- [3편 1부 3장 4절 패치 검증](../../vol3-practice/01-workflow-tech/03-remediation.md) · 센터 업무 흐름에서의 위치
+- [제3편 1부 3장 4절 패치 검증](../../vol3-practice/01-workflow-tech/03-remediation.md) · 센터 업무 흐름에서의 위치
 
 ## 변경 이력
 
@@ -242,3 +242,4 @@ semgrep ci --config rules/              # CI: 변경된 파일만, 기준 커밋
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. 증상 vs 원인, 변형 분석, 회귀 테스트, 탐지 룰, 사후 분석 템플릿 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: 회귀 테스트 3건을 labs/web-sqli에서 실행(취약 app.py 3건 실패, 파라미터화 후 3건 통과), Semgrep 룰로 91·110·123행 3건 검출 확인. 확인 못 한 Risky Biz 링크 삭제 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 장 참조 표기를 편·부 이름 규칙으로 통일 | @anthonynoh5202 |

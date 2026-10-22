@@ -17,7 +17,7 @@
 
 | 순간 | 쓰는 기능 | 이유 |
 |---|---|---|
-| 앱이 어떤 요청을 보내는지 모를 때 | Proxy (HTTP history) | 공격 표면 목록이 여기서 나온다. [1부 3장](../part1-foundations/03-attack-surface.md) |
+| 앱이 어떤 요청을 보내는지 모를 때 | Proxy (HTTP history) | 공격 표면 목록이 여기서 나온다. [기초 3장](../part1-foundations/03-attack-surface.md) |
 | 요청 하나를 조금씩 바꿔 가며 반응을 볼 때 | Repeater | 브라우저로는 헤더·쿠키·숨은 필드를 못 바꾼다 |
 | 같은 요청을 수십~수천 번 변형해 보낼 때 | Intruder | 컬럼 수 찾기, 파라미터 퍼징, ID 열거 |
 
@@ -46,7 +46,7 @@ sequenceDiagram
 이 구조에서 두 가지가 따라 나온다.
 
 - **CA 인증서를 브라우저에 설치해야 한다.** 설치하지 않으면 모든 HTTPS 사이트에서 경고가 뜨거나 연결이 거부된다.
-- **인증서 피닝(certificate pinning)을 한 앱은 가로채지 못한다.** 앱이 "이 서버의 인증서는 이 지문이어야 한다"고 박아 두면 Burp가 서명한 인증서를 거부한다. 모바일 앱에서 자주 만나며, 해법(Frida로 피닝 함수 후킹)은 [3장 8절](03-debuggers.md)과 [5부 1장](../part5-extended/01-mobile.md)에서 다룬다.
+- **인증서 피닝(certificate pinning)을 한 앱은 가로채지 못한다.** 앱이 "이 서버의 인증서는 이 지문이어야 한다"고 박아 두면 Burp가 서명한 인증서를 거부한다. 모바일 앱에서 자주 만나며, 해법(Frida로 피닝 함수 후킹)은 [3장 8절](03-debuggers.md)과 [확장 1장](../part5-extended/01-mobile.md)에서 다룬다.
 
 ## 3. 설치와 인증서
 
@@ -65,13 +65,13 @@ sequenceDiagram
 
 ## 4. 핵심 워크플로: 실습 앱의 검색 기능을 끝까지
 
-대상은 [3부 1장](../part3-web/01-sql-injection.md)의 실습 환경 `labs/web-sqli`(`http://localhost:8080`)다. 목표는 검색 파라미터 `q`에 SQL 인젝션이 있는지 Burp만으로 확인하고, UNION에 필요한 컬럼 수를 찾는 것이다.
+대상은 [웹 1장](../part3-web/01-sql-injection.md)의 실습 환경 `labs/web-sqli`(`http://localhost:8080`)다. 목표는 검색 파라미터 `q`에 SQL 인젝션이 있는지 Burp만으로 확인하고, UNION에 필요한 컬럼 수를 찾는 것이다.
 
 ### 4.1 스코프를 먼저 정한다
 
 Target 탭 → Scope settings에서 `http://localhost:8080`을 Include에 추가한다. 그리고 Proxy settings의 "Intercept client requests"에서 **"And URL Is in target scope"** 조건을 켠다. 이제 스코프 밖 요청(브라우저 업데이트 확인, 분석 트래픽)은 인터셉트에 걸리지 않고 HTTP history도 깨끗해진다.
 
-> 🔴 스코프는 편의 기능이 아니라 **안전장치**다. 실제 점검에서 스코프 밖 호스트로 Intruder를 돌리면 허가 범위를 넘는다. [1부 4장](../part1-foundations/04-ethics-and-law.md)
+> 🔴 스코프는 편의 기능이 아니라 **안전장치**다. 실제 점검에서 스코프 밖 호스트로 Intruder를 돌리면 허가 범위를 넘는다. [기초 4장](../part1-foundations/04-ethics-and-law.md)
 
 ### 4.2 탐색은 Intercept를 끄고
 
@@ -110,7 +110,7 @@ Repeater의 값은 URL 인코딩이 필요하다. 공백과 `#`, `&`가 들어�
 
 ### 4.5 기록한다
 
-보고서에는 스크린샷이 아니라 **요청·응답 원문**을 싣는다([기여 가이드](../../appendix/g-contributing.md)의 이미지 규칙). Repeater에서 요청 편집기를 우클릭 → "Copy to file" 또는 전체 선택 후 복사한다. 최소 페이로드(`Ghidra'`)와 그 응답, 그리고 컬럼 수를 확정한 두 요청(마지막 200과 첫 500)이면 충분하다. 이후의 추출 단계는 3부 1장의 실습이 이어받는다.
+보고서에는 스크린샷이 아니라 **요청·응답 원문**을 싣는다([기여 가이드](../../appendix/g-contributing.md)의 이미지 규칙). Repeater에서 요청 편집기를 우클릭 → "Copy to file" 또는 전체 선택 후 복사한다. 최소 페이로드(`Ghidra'`)와 그 응답, 그리고 컬럼 수를 확정한 두 요청(마지막 200과 첫 500)이면 충분하다. 이후의 추출 단계는 웹 1장의 실습이 이어받는다.
 
 ## 5. Community와 Professional의 차이 (확인된 것만)
 
@@ -220,3 +220,4 @@ Caido는 Burp와 같은 Proxy·Replay·Automate 구조를 Rust로 다시 쓴 도
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | HTTPS 가로채기 원리, 인증서 설치, 핵심 워크플로, Community/Pro 비교, ZAP·mitmproxy·Caido 작성 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: ZAP Docker 명령·mitmproxy 설치/인증서 경로/addon 훅/`Response.make` 시그니처를 공식 문서·소스로 대조, addon 예제를 mitmproxy 12.2에서 실제 실행 확인, 확인 불가한 Caido 플랜 개명 서술·링크 삭제 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 장 참조 표기를 편·부 이름 규칙으로 통일 | @anthonynoh5202 |

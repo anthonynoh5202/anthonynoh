@@ -11,7 +11,7 @@
 
 ## 1. 설정이 곧 코드다
 
-온프레미스에서 네트워크 경계였던 것이 클라우드에서는 **IAM(Identity and Access Management)** 이다. 방화벽 안에 있다는 사실은 아무것도 보장하지 않는다. API 호출마다 "이 주체가 이 자원에 이 행위를 해도 되는가"를 정책이 판단한다. 그래서 클라우드 취약점의 대부분은 정책·설정 오류이고, [1부 1장](../part1-foundations/01-what-is-vulnerability.md)에서 말한 네 번째 근본 원인("설정과 과정")에 속한다.
+온프레미스에서 네트워크 경계였던 것이 클라우드에서는 **IAM(Identity and Access Management)** 이다. 방화벽 안에 있다는 사실은 아무것도 보장하지 않는다. API 호출마다 "이 주체가 이 자원에 이 행위를 해도 되는가"를 정책이 판단한다. 그래서 클라우드 취약점의 대부분은 정책·설정 오류이고, [기초 1장](../part1-foundations/01-what-is-vulnerability.md)에서 말한 네 번째 근본 원인("설정과 과정")에 속한다.
 
 전형적인 침해 경로는 이렇다.
 
@@ -241,7 +241,7 @@ CI에서 두 도구를 돌리고 실패를 병합 차단으로 연결한다. 룰
 | [CVE-2022-0492](https://nvd.nist.gov/vuln/detail/CVE-2022-0492) (2022) | Linux 커널 cgroup v1 | `release_agent` 쓰기에 `CAP_SYS_ADMIN` 검사 누락. seccomp·AppArmor·SELinux 없이 띄운 컨테이너에서 탈출 | [Unit 42 분석](https://unit42.paloaltonetworks.com/cve-2022-0492-cgroups/) |
 | [CVE-2024-21626](https://nvd.nist.gov/vuln/detail/CVE-2024-21626) Leaky Vessels (2024) | runc 1.0.0-rc93~1.1.11 | 누출된 fd + cwd 미검증. `WORKDIR /proc/self/fd/7/` 이미지 또는 `runc exec --cwd`로 호스트 파일시스템 접근. 1.1.12에서 수정 | [Snyk 공개](https://snyk.io/blog/cve-2024-21626-runc-process-cwd-container-breakout/) · [runc 권고](https://github.com/opencontainers/runc/security/advisories/GHSA-xr7r-f8xq-vfvv) |
 
-**Capital One 에서 배울 것**: 취약점 보고서에 "SSRF"라고만 쓰면 Medium이다. "SSRF로 IMDS에 닿고, 그 역할이 `s3:ListBuckets`·`s3:GetObject`를 가진다"까지 증명하면 Critical이다. 클라우드 점검의 익스플로잇 검증은 **권한 체인을 끝까지 따라가는 것**이고, [8부 2장 영향도 산정](../part8-reporting/02-severity.md)에서 맥락이 점수를 정하는 이유다.
+**Capital One 에서 배울 것**: 취약점 보고서에 "SSRF"라고만 쓰면 Medium이다. "SSRF로 IMDS에 닿고, 그 역할이 `s3:ListBuckets`·`s3:GetObject`를 가진다"까지 증명하면 Critical이다. 클라우드 점검의 익스플로잇 검증은 **권한 체인을 끝까지 따라가는 것**이고, [보고 2장 영향도 산정](../part8-reporting/02-severity.md)에서 맥락이 점수를 정하는 이유다.
 
 ## 9. 실습 🧪
 
@@ -299,3 +299,4 @@ CI에서 두 도구를 돌리고 실패를 병합 차단으로 연결한다. 룰
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. IAM 상승 경로, S3·IMDS, 컨테이너 탈출(설정·runc CVE), K8s RBAC, IaC 스캐닝, 사례 5건 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 4건 cvelistV5·runc GHSA 대조(버전·CVSS·fd 7·1.1.12 수정 내용 일치), 수정 없음 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 장 참조 표기를 편·부 이름 규칙으로 통일 | @anthonynoh5202 |

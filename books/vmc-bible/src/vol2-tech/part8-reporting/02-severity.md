@@ -18,7 +18,7 @@ CVSS(Common Vulnerability Scoring System)는 FIRST가 관리하는 **기술적 �
 | 성공하면 기밀성·무결성·가용성이 얼마나 깨지는가 | 지금 실제로 공격받고 있는가 (시간/위협 메트릭으로 보정) |
 | 영향이 취약한 컴포넌트 밖으로 번지는가 | 국내 사용 규모, 대체 가능성 (센터의 파급도) |
 
-[1부 1장](../part1-foundations/01-what-is-vulnerability.md)의 "같은 취약점, 다른 위험"이 이 장의 출발점이다. 벡터 문자열 읽는 법은 [1부 2장](../part1-foundations/02-cwe-cve-cvss.md)에 있다.
+[기초 1장](../part1-foundations/01-what-is-vulnerability.md)의 "같은 취약점, 다른 위험"이 이 장의 출발점이다. 벡터 문자열 읽는 법은 [기초 2장](../part1-foundations/02-cwe-cve-cvss.md)에 있다.
 
 ## 2. CVSS 3.1 기본 메트릭
 
@@ -53,7 +53,7 @@ Roundup은 소수 첫째 자리로 **올림**이다. 등급은 None 0.0, Low 0.1
 
 ### 3.1 CVE-2014-0160 Heartbleed
 
-[7부 2장 워크스루](../part7-walkthroughs/02-cve-2014-0160-heartbleed.md)의 대상이다. NVD 벡터: `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N` = **7.5 High**. 📎 [NVD](https://nvd.nist.gov/vuln/detail/CVE-2014-0160)
+[워크스루 2장 워크스루](../part7-walkthroughs/02-cve-2014-0160-heartbleed.md)의 대상이다. NVD 벡터: `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N` = **7.5 High**. 📎 [NVD](https://nvd.nist.gov/vuln/detail/CVE-2014-0160)
 
 | 메트릭 | 선택 | 근거 |
 |---|---|---|
@@ -76,7 +76,7 @@ Base = Roundup(3.595 + 3.887) = Roundup(7.482) = 7.5
 
 ### 3.2 CVE-2021-3156 sudo Baron Samedit
 
-[7부 4장 워크스루](../part7-walkthroughs/04-cve-2021-3156-sudo-baron-samedit.md)의 대상이다. NVD 벡터: `CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H` = **7.8 High**. 📎 [NVD](https://nvd.nist.gov/vuln/detail/CVE-2021-3156)
+[워크스루 4장 워크스루](../part7-walkthroughs/04-cve-2021-3156-sudo-baron-samedit.md)의 대상이다. NVD 벡터: `CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H` = **7.8 High**. 📎 [NVD](https://nvd.nist.gov/vuln/detail/CVE-2021-3156)
 
 | 메트릭 | 선택 | 근거 |
 |---|---|---|
@@ -165,7 +165,7 @@ flowchart LR
 2. **가장 엄격한 전제로 매긴다.** 체인 어느 고리라도 UI:R이면 전체가 UI:R이다. 어느 고리라도 PR:L이면 전체가 PR:L이다.
 3. **각 고리를 따로 고칠 수 있게 쓴다.** 하나만 끊어도 체인이 깨진다. 고리별로 수정 제안을 쓰면 개발자가 가장 싼 것부터 끊는다.
 
-실습 환경으로 돌아가면, `/item`의 블라인드 SQLi 하나만 보고하면 "느린 데이터 읽기"다. `/login`의 인증 우회와 묶으면 "관리자 세션 + 전체 DB"가 된다. [8부 1장의 예시 보고서](01-report-structure.md)가 세 엔드포인트를 하나로 묶고 각각 번호를 매긴 이유다.
+실습 환경으로 돌아가면, `/item`의 블라인드 SQLi 하나만 보고하면 "느린 데이터 읽기"다. `/login`의 인증 우회와 묶으면 "관리자 세션 + 전체 DB"가 된다. [보고 1장의 예시 보고서](01-report-structure.md)가 세 엔드포인트를 하나로 묶고 각각 번호를 매긴 이유다.
 
 ## 7. 과장과 축소의 비용
 
@@ -186,7 +186,7 @@ flowchart LR
 |---|---|---|
 | HackerOne | None / Low / Medium / High / Critical | CVSS 계산기로 점수를 매기고 등급으로 번역한다. 자산별로 **최대 심각도 상한**을 둘 수 있다. 📎 [HackerOne Docs: Severity](https://docs.hackerone.com/organizations/severity.html) |
 | Bugcrowd | VRT(Vulnerability Rating Taxonomy) P1 Critical ~ P5 Informational | CVSS 대신 **유형별 기본 등급표**다. 예: SQL 인젝션 P1, IDOR는 변형에 따라 P1(반복 가능한 ID로 민감 정보 변경·열람)~P5, 반사형 XSS는 Non-Self P3 / Self P5, 보안 헤더 누락은 대부분 P5. 공개 JSON으로 배포되며 2026-07 판이 최신. 📎 [Bugcrowd VRT](https://bugcrowd.com/vrt), [GitHub](https://github.com/bugcrowd/vulnerability-rating-taxonomy) |
-| KISA 신고포상제 | 위험도 · 파급도 · 발굴 난이도 | 위험도가 CVSS에 가깝고, 파급도(국내 사용 규모·분야)와 난이도는 CVSS 밖의 축이다. [1편 5장 4절](../../vol1-center/02-programs/05-bug-bounty.md) |
+| KISA 신고포상제 | 위험도 · 파급도 · 발굴 난이도 | 위험도가 CVSS에 가깝고, 파급도(국내 사용 규모·분야)와 난이도는 CVSS 밖의 축이다. [제1편 2부 5장 4절](../../vol1-center/02-programs/05-bug-bounty.md) |
 
 VRT의 교훈은 **같은 유형도 변형에 따라 다섯 단계가 갈린다**는 것이다. "IDOR 발견"으로는 등급을 못 매긴다. 열람인가 변경인가, ID가 순차인가 UUID인가, 데이터가 민감한가를 보고서가 답해야 한다.
 
@@ -214,7 +214,7 @@ VRT의 교훈은 **같은 유형도 변형에 따라 다섯 단계가 갈린다*
 - [FIRST, CVSS v4.0 Examples](https://www.first.org/cvss/v4.0/examples) · 실제 CVE를 4.0으로 매긴 공식 예제
 - [Bugcrowd Vulnerability Rating Taxonomy](https://bugcrowd.com/vrt) · 유형·변형별 기본 등급. 보고서가 답해야 할 질문 목록으로 읽는다
 - [NIST NVD: Vulnerability Metrics](https://nvd.nist.gov/vuln-metrics/cvss) · NVD가 3.1과 4.0을 병기하는 기준
-- [1편 5장 보안 취약점 신고포상제](../../vol1-center/02-programs/05-bug-bounty.md) · 위험도·파급도·난이도 축
+- [제1편 2부 5장 보안 취약점 신고포상제](../../vol1-center/02-programs/05-bug-bounty.md) · 위험도·파급도·난이도 축
 
 ## 변경 이력
 
@@ -223,3 +223,4 @@ VRT의 교훈은 **같은 유형도 변형에 따라 다섯 단계가 갈린다*
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. 3.1 풀이 2건, 환경 메트릭 예시, 4.0 변화, 연쇄, 플랫폼 기준 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVSS 3.1 공식을 재구현해 7.5·7.8·10.0·9.1·9.8·6.1·9.6, 시간 7.2, 환경 4.7·9.3 모두 재계산 일치. Heartbleed·sudo 벡터를 CVE 레코드와 대조. Bugcrowd VRT(2026-07-08, SQLi P1, IDOR P1~P5, XSS P3/P5) JSON으로 확인. 확인 못 한 HackerOne 3.0 계산기 서술 삭제, 명세 절 번호 보정 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 장 참조 표기를 편·부 이름 규칙으로 통일 | @anthonynoh5202 |

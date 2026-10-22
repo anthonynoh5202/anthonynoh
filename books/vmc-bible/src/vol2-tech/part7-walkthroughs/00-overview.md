@@ -41,7 +41,7 @@
 
 ## 3. 이 순서가 센터의 업무 순서인 이유
 
-워크스루의 1~7절은 [제3편 검증 단계](../../vol3-practice/01-workflow-tech/02-verification.md)의 세 수준과 그대로 겹친다.
+워크스루의 1~7절은 [제3편 1부 2장 검증 단계](../../vol3-practice/01-workflow-tech/02-verification.md)의 세 수준과 그대로 겹친다.
 
 ```mermaid
 flowchart LR
@@ -120,8 +120,8 @@ flowchart LR
 ## 더 읽기
 
 - [워크스루 템플릿](https://github.com/anthonynoh5202/anthonynoh/blob/main/templates/walkthrough-template.md) · 이 파트의 모든 장이 따르는 구조
-- [제3편 검증 단계: 재현이 전부다](../../vol3-practice/01-workflow-tech/02-verification.md) · 워크스루 순서가 업무 순서인 이유
-- [8부 3장 패치 검증과 재발 방지](../part8-reporting/03-patch-verification.md) · 2절 "패치 diff 읽기"의 업무판
+- [제3편 1부 2장 검증 단계: 재현이 전부다](../../vol3-practice/01-workflow-tech/02-verification.md) · 워크스루 순서가 업무 순서인 이유
+- [보고 3장 패치 검증과 재발 방지](../part8-reporting/03-patch-verification.md) · 2절 "패치 diff 읽기"의 업무판
 - [Vulhub](https://github.com/vulhub/vulhub) · Docker Compose 기반 공개 취약점 재현 환경 모음. 이 파트의 재현 환경 여러 개가 여기에 있다
 - [부록 C. 연표](../../appendix/c-timeline.md) · 다섯 사례가 보안 역사에서 어디에 있는지
 
@@ -132,3 +132,4 @@ flowchart LR
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성: 템플릿 구조, 선정 기준, 업무 흐름 대응, 기여 절차 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증 완료, 수정 없음 (링크 대상 파일·템플릿 경로 존재 확인) | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 장 참조 표기를 편·부 이름 규칙으로 통일 | @anthonynoh5202 |

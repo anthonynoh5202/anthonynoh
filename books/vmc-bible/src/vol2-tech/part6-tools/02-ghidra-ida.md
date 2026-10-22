@@ -11,7 +11,7 @@
 
 ## 1. 언제 쓰는가
 
-소스가 없을 때다. 바이너리만 받은 취약점 신고를 검증할 때, 패치 전후 바이너리를 비교해 고쳐진 지점을 찾을 때(N-day 분석, [8부 3장](../part8-reporting/03-patch-verification.md)), 펌웨어 안의 네이티브 라이브러리를 읽을 때다.
+소스가 없을 때다. 바이너리만 받은 취약점 신고를 검증할 때, 패치 전후 바이너리를 비교해 고쳐진 지점을 찾을 때(N-day 분석, [보고 3장](../part8-reporting/03-patch-verification.md)), 펌웨어 안의 네이티브 라이브러리를 읽을 때다.
 
 ```mermaid
 flowchart LR
@@ -118,7 +118,7 @@ LEA    RAX,[RBP + -0x20]
 CALL   strcpy
 ```
 
-프레임 크기는 `0x30`이고 `buf`는 `RBP-0x20`에서 시작한다(실제 오프셋은 컴파일러 버전에 따라 다르다). 즉 `buf`에서 저장된 `RBP`까지 32바이트, 복귀 주소까지 40바이트다. 디컴파일러가 보여준 `[32]`는 맞다. 이 숫자가 [4부 2장 스택 버퍼 오버플로](../part4-binary/02-stack-overflow.md)의 익스플로잇에서 그대로 쓰인다. 스택 프레임은 Decompiler 창에서는 안 보이고 Listing의 함수 머리 또는 Edit Function → Stack Frame 편집기에서만 보인다.
+프레임 크기는 `0x30`이고 `buf`는 `RBP-0x20`에서 시작한다(실제 오프셋은 컴파일러 버전에 따라 다르다). 즉 `buf`에서 저장된 `RBP`까지 32바이트, 복귀 주소까지 40바이트다. 디컴파일러가 보여준 `[32]`는 맞다. 이 숫자가 [바이너리 2장 스택 버퍼 오버플로](../part4-binary/02-stack-overflow.md)의 익스플로잇에서 그대로 쓰인다. 스택 프레임은 Decompiler 창에서는 안 보이고 Listing의 함수 머리 또는 Edit Function → Stack Frame 편집기에서만 보인다.
 
 ### 3.4 결론을 적는다
 
@@ -238,7 +238,7 @@ rizin은 radare2에서 갈라져 나온(fork) 프로젝트이고, Cutter는 rizi
 
 **결론 내기 전**
 - [ ] "할 수 있다"(정적)와 "실제로 일어난다"(동적)를 구분해 적었는가?
-- [ ] 완화 기법(카나리, NX, PIE, RELRO)을 확인했는가? [4부 7장](../part4-binary/07-mitigations.md)
+- [ ] 완화 기법(카나리, NX, PIE, RELRO)을 확인했는가? [바이너리 7장](../part4-binary/07-mitigations.md)
 
 ## 더 읽기
 
@@ -257,3 +257,4 @@ rizin은 radare2에서 갈라져 나온(fork) 프로젝트이고, Cutter는 rizi
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | Ghidra 워크플로, 디컴파일러 한계 표, PyGhidra·Java 스크립트, IDA 판본 비교, 도구 비교표 작성 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: Ghidra 12.2 JDK 25·PyGhidra Python 3.9~3.15 요구를 공식 WhatsNew/GettingStarted로 확인, target.c 컴파일·objdump로 프레임 0x30/버퍼 RBP-0x20/오프셋 40 확인, 확인 불가한 IDA Pro 플랜별 디컴파일러 세부와 FAQ URL을 완화 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 장 참조 표기를 편·부 이름 규칙으로 통일 | @anthonynoh5202 |

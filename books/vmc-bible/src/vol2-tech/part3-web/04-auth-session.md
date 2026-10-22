@@ -268,7 +268,7 @@ print(jwt.decode(forged, "server-secret", algorithms=["HS256"]))      # ✅ Inva
 | 4 | JWT·서명 쿠키를 위조해 다른 역할(admin)로 인식된다 | 전 계정 탈취 가능. Critical |
 | 5 | MFA를 켠 자기 계정에 MFA 없이 들어간다 | MFA를 믿는 조직에 특히 치명적. High~Critical |
 
-4단계 증명은 `sub`를 자기 두 번째 계정으로 바꾸는 것으로 충분하다. `admin`으로 바꿔 관리자 화면을 여는 것은 허가 범위를 확인한 뒤에 한다. 비밀번호 사전 공격은 실습 환경이나 자기 계정에만 한다. 영향도 산정은 [8부 2장](../part8-reporting/02-severity.md)을 따른다.
+4단계 증명은 `sub`를 자기 두 번째 계정으로 바꾸는 것으로 충분하다. `admin`으로 바꿔 관리자 화면을 여는 것은 허가 범위를 확인한 뒤에 한다. 비밀번호 사전 공격은 실습 환경이나 자기 계정에만 한다. 영향도 산정은 [보고 2장](../part8-reporting/02-severity.md)을 따른다.
 
 ## 6. 방어
 
@@ -298,6 +298,99 @@ print(jwt.decode(forged, "server-secret", algorithms=["HS256"]))      # ✅ Inva
 | 타이밍 공격은 네트워크 지터 때문에 실전성이 없다 | 같은 연결에서 두 요청을 동시에 보내 **도착 순서**로 비교하는 Timeless Timing Attacks (Van Goethem et al., USENIX Security 2020). HTTP/2 멀티플렉싱이 전제 |
 | OAuth `redirect_uri` 정확 일치 | 등록된 URI 자체에 open redirect, 등록된 호스트의 서브도메인 탈취, 여러 인가 서버를 쓰는 클라이언트의 mix-up 공격(코드를 다른 서버에 보내게 함) |
 | MFA 응답 조작 차단 | 세션이 "1단계 통과" 상태로 들어간 뒤 **다른 기능**(API 토큰 발급, 이메일 변경)이 2단계를 요구하는지 각각 확인한다. 보통 하나는 빠져 있다 |
+
+### 7.1 JWT 알고리즘 혼동: RS256 → HS256
+
+**원리.** 서버는 IdP의 **공개키**로 RS256 서명을 검증한다. 검증 코드가 토큰 헤더의 `alg`를 그대로 따르고, 어떤 알고리즘이든 "설정에 있는 그 키"를 넘기는 구조라면, 헤더를 `HS256`으로 바꾼 토큰은 **공개키 바이트를 HMAC 비밀로 쓰는 검증**을 받게 된다. 공개키는 이름 그대로 공개다. `/.well-known/jwks.json`, TLS 인증서, 또는 같은 키로 만든 서명 두 개에서 모듈러스를 복원하는 방법으로 얻는다. 공격자는 `HMAC-SHA256(key = 공개키 바이트, data = header.payload)`로 서명하면 되고, 서버는 같은 계산을 하므로 일치한다. 조건은 하나다. **서버가 메모리에 쥔 키와 바이트 단위로 같아야 한다.** PEM이면 줄 끝의 개행까지, DER이면 DER 그대로, JWK에서 변환했다면 서버가 변환한 결과와 같은 형식이어야 하므로 실제 점검에서는 몇 가지 형식을 다 시도한다.
+
+실습 환경에서 자기 키로 재현하면 15줄이다. 취약한 검증기는 통과시키고, 라이브러리는 거부한다.
+
+```python
+# confusion.py  (실습용. 키는 방금 만든 자기 것)
+import base64, hmac, hashlib, json, jwt
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+priv = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+pub_pem = priv.public_key().public_bytes(serialization.Encoding.PEM,
+          serialization.PublicFormat.SubjectPublicKeyInfo)          # 서버가 검증에 쓰는 공개키
+b64 = lambda d: base64.urlsafe_b64encode(d).rstrip(b"=").decode()
+head, body = b64(b'{"alg":"HS256","typ":"JWT"}'), b64(b'{"sub":"admin"}')
+sig = b64(hmac.new(pub_pem, f"{head}.{body}".encode(), hashlib.sha256).digest())   # 공개키 = HMAC 키
+forged = f"{head}.{body}.{sig}"
+# ❌ 취약: 헤더의 alg를 따르고 "그 키"로 HMAC 비교
+print(hmac.compare_digest(sig, b64(hmac.new(pub_pem, f"{head}.{body}".encode(), hashlib.sha256).digest())))  # True
+# ✅ PyJWT 2.15: 둘 다 예외
+jwt.decode(forged, pub_pem, algorithms=["RS256"])   # InvalidAlgorithmError: The specified alg value is not allowed
+jwt.decode(forged, pub_pem, algorithms=["HS256"])   # InvalidKeyError: … asymmetric key … should not be used as an HMAC secret
+```
+
+**라이브러리가 막는 두 겹.** 첫째는 알고리즘 허용 목록이다. PyJWT 2.x는 `algorithms`를 생략하면 `decode()` 자체를 거부하고, 토큰의 `alg`가 목록에 없으면 `InvalidAlgorithmError`다. 둘째는 **키 종류와 알고리즘의 결합**이다. 허용 목록에 `HS256`이 들어 있더라도, `HMACAlgorithm.prepare_key()`가 키가 PEM·SSH·DER 형식이면 거부한다(2.4.0에서 추가, [CVE-2022-29217](https://nvd.nist.gov/vuln/detail/CVE-2022-29217)의 패치).
+
+```python
+# PyJWT jwt/algorithms.py, HMACAlgorithm.prepare_key (2.15)
+if (is_pem_format(key_bytes) or is_ssh_key(key_bytes) or self._is_der_key(key_bytes)):
+    raise InvalidKeyError("The specified key is an asymmetric key or x509 certificate and"
+                          " should not be used as an HMAC secret.")
+```
+
+Node의 jsonwebtoken 9.x는 `verify.js`에서 키를 먼저 `KeyObject`로 만들고, `algorithms`가 없으면 **키 종류에서** 허용 목록을 정한 뒤, `alg` 접두사와 키 종류가 맞는지 한 번 더 본다.
+
+```js
+// jsonwebtoken verify.js (9.0.2)
+if (!options.algorithms) {
+  if (secretOrPublicKey.type === 'secret') { options.algorithms = HS_ALGS; }
+  else if (['rsa', 'rsa-pss'].includes(secretOrPublicKey.asymmetricKeyType)) { options.algorithms = RSA_KEY_ALGS }
+  …
+}
+if (options.algorithms.indexOf(decodedToken.header.alg) === -1) { return done(new JsonWebTokenError('invalid algorithm')); }
+if (header.alg.startsWith('HS') && secretOrPublicKey.type !== 'secret') {
+  return done(new JsonWebTokenError(`secretOrPublicKey must be a symmetric key when using ${header.alg}`))
+}
+```
+
+위 `forged`를 jsonwebtoken 9.0.2에 넣으면 옵션 없이는 `invalid algorithm`, `{algorithms:['HS256']}`을 줘도 `secretOrPublicKey must be a symmetric key when using HS256`이다. 그러므로 코드 리뷰에서 볼 것은 (1) `algorithms`가 명시되어 있는가, (2) 라이브러리 버전이 키 종류 검사를 포함하는가(PyJWT ≥ 2.4.0, jsonwebtoken ≥ 9.0.0), (3) **자체 구현** 검증기가 있는가다. 3번이 있으면 거의 확실히 취약하다.
+
+### 7.2 세션 고정: "로그인 때 재발급한다"를 우회하는 흐름
+
+세션 고정(session fixation)은 공격자가 **먼저 안** 세션 ID로 피해자가 로그인하게 만드는 공격이다. 흐름은 네 단계다.
+
+1. 공격자가 사이트에 접속해 세션 ID `S`를 받는다. 서버가 아무 값이나 세션으로 받아들이는 설정(PHP `session.use_strict_mode=0`, 기본값)이면 받을 필요도 없이 지어내면 된다.
+2. 피해자 브라우저에 `S`를 심는다. URL 재작성(`;jsessionid=S`, `?PHPSESSID=S`)을 쓰는 서버면 링크 하나로 끝난다. 쿠키만 쓰는 서버면 같은 상위 도메인의 다른 서브도메인에서 `Set-Cookie: sid=S; Domain=.example.com`을 내리거나(서브도메인 XSS·헤더 인젝션), `<meta http-equiv="Set-Cookie">`를 쓴다.
+3. 피해자가 `S`를 가진 채 로그인한다. 서버가 ID를 바꾸지 않으면 `S`가 인증된 세션이 된다.
+4. 공격자가 `S`로 요청을 보낸다.
+
+방어는 2절의 `session_regenerate_id(true)`·`req.session.regenerate()`처럼 **인증 성공 시점에 ID를 바꾸는 것**이다. 그런데 "로그인 때 바꾼다"가 구현되어 있어도 다음 경로에서 흔히 빠진다.
+
+| 빠지는 곳 | 왜 |
+|---|---|
+| 로그인 **이외의** 인증 경로 | OAuth 콜백, SSO 복귀, "로그인 유지" 쿠키로 자동 로그인, 비밀번호 재설정 뒤 자동 로그인, 이메일 매직 링크. 메인 로그인 핸들러에만 `regenerate`가 있다 |
+| 재발급 시점이 **인증 전** | 로그인 **페이지를 열 때** ID를 바꾸고 자격 증명 확인 뒤에는 안 바꾼다. 공격자가 로그인 페이지를 먼저 열어 "바뀐 뒤의" ID를 받아 심으면 된다 |
+| 권한 **상승** 시점 | 일반 사용자 → 관리자 전환, MFA 2단계 통과, 재인증(sudo mode). 세션의 신뢰 수준이 올라갈 때마다 바꿔야 한다 |
+| 프레임워크 기본값 신뢰 | 컨테이너 인증을 쓰지 않고 직접 로그인 폼을 만들면 Tomcat의 `changeSessionIdOnAuthentication` 같은 보호가 적용되지 않는다 |
+
+점검 절차는 단순하다. 인증 경로마다 **로그인 직전 쿠키 값을 적어 두고, 성공 직후 값과 비교한다.** 같으면 고정이다. Burp라면 Proxy history에서 로그인 요청의 `Cookie`와 응답의 `Set-Cookie`를 나란히 본다. 응답에 `Set-Cookie`가 없으면 그 경로는 재발급을 안 한 것이다.
+
+### 7.3 OAuth `redirect_uri` 검증 우회 패턴
+
+인가 서버는 `redirect_uri`가 **등록된 값과 같은지** 확인한다. 이 비교가 느슨하면 인가 코드나 토큰이 공격자에게 간다. 공개 연구(PortSwigger Web Security Academy의 OAuth 랩, RFC 9700 4.1절)에서 반복되는 패턴은 세 가지다.
+
+**1. 부분 일치.** 등록값으로 "시작하면" 통과시키는 검증이다. 다음이 모두 `https://client.example/callback`으로 시작한다.
+
+```
+https://client.example/callback/../redirect?to=https://attacker.example   ← 경로 순회. 클라이언트 서버가 정규화하면 /redirect
+https://client.example/callback?next=https://attacker.example             ← 파라미터 추가. 콜백이 next를 따르면 끝
+https://client.example/callback#@attacker.example
+https://client.example.attacker.example/callback                          ← 호스트 "시작" 일치
+https://client.example@attacker.example/callback                          ← userinfo. 검증기와 브라우저가 호스트를 다르게 읽는다
+```
+
+마지막 두 줄은 [3장 SSRF](03-ssrf.md) 7절의 URL 파서 불일치와 같은 기법이다. 검증기는 문자열로, 브라우저는 RFC 3986으로 읽는다.
+
+**2. 정확 일치 + 클라이언트의 오픈 리다이렉트.** 인가 서버가 정확 일치를 해도, 등록된 콜백 페이지(또는 같은 호스트의 다른 경로)에 오픈 리다이렉트가 있으면 결합된다. 흐름은 이렇다. 공격자가 `redirect_uri=https://client.example/callback/../open-redirect?url=https://attacker.example`처럼 **인가 서버의 느슨한 검증**(1번)이나, 검증을 통과하는 정상 콜백에서 **클라이언트의 자체 리다이렉트**를 거치게 만든다. 인가 서버는 코드(또는 implicit 흐름의 토큰)를 붙여 클라이언트로 돌려보내고, 클라이언트가 다시 공격자 사이트로 보낸다. `code`는 `Referer`로, implicit 흐름의 `#access_token=`은 브라우저가 리다이렉트 시 프래그먼트를 유지하는 성질 때문에 공격자 페이지의 `location.hash`로 도착한다. PortSwigger의 "Stealing OAuth access tokens via an open redirect" 랩이 정확히 이 조합이다.
+
+**3. 인가 서버 혼동(mix-up).** 클라이언트가 여러 인가 서버를 쓸 때, 공격자가 자기 인가 서버로 흐름을 시작시키고 피해자가 정직한 서버에서 받은 코드를 공격자 서버에 보내게 만든다. 대응은 RFC 9700 4.4절의 `iss` 파라미터 검증이다.
+
+점검에서는 `redirect_uri`에 위 변형을 하나씩 넣어 인가 서버가 **거부**하는지 본다. 하나라도 통과하면, 그 URI로 실제로 코드가 전달되는지는 **자기 소유 계정과 자기 서버**로만 확인한다. 보고서에는 "부분 일치 검증"처럼 원인을 적고, RFC 9700 4.1.3절의 **단순 문자열 비교**를 권고로 쓴다. 클라이언트 쪽에는 오픈 리다이렉트 제거와 PKCE·`state`를 함께 적는다. 코드가 새더라도 PKCE의 `code_verifier`가 없으면 토큰으로 바꾸지 못한다.
 
 ## 8. 실제 CVE 사례
 
@@ -358,3 +451,4 @@ print(jwt.decode(forged, "server-secret", algorithms=["HS256"]))      # ✅ Inva
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 본문 작성. 비밀번호 저장·타이밍·세션·JWT·OAuth·MFA, CVE 6건 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 6건 레코드 대조(전부 실존). 타이밍 예제의 미정의 _verify 헬퍼 추가, PyJWT 2.x에서 algorithms 생략 호출이 거부됨을 반영. argon2·hmac·PyJWT alg:none 예제 실행 확인 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 7절에 JWT 알고리즘 혼동(PyJWT 2.15·jsonwebtoken 9.0.2 소스·실행 확인), 세션 고정 우회 흐름, OAuth redirect_uri 우회 패턴 추가. 장 참조 표기 정리 | @anthonynoh5202 |

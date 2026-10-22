@@ -19,7 +19,7 @@
 | 크래시는 났는데 프로세스는 이미 없다 (코어 덤프만 있다) | gdb + 코어, `coredumpctl` | 6절 |
 | Windows 앱의 크래시 덤프(`.dmp`)를 받았다 | WinDbg | 7절 |
 | 실행 중인 앱의 함수 인자·반환값을 보고 싶다, 소스도 심볼도 없다 | Frida | 8절 |
-| Android·iOS 앱의 인증서 피닝을 우회해야 한다 | Frida | 8절, [5부 1장](../part5-extended/01-mobile.md) |
+| Android·iOS 앱의 인증서 피닝을 우회해야 한다 | Frida | 8절, [확장 1장](../part5-extended/01-mobile.md) |
 
 디버거를 **쓰지 않는** 경우도 있다. 입력 공간이 넓어 어떤 입력이 문제인지 모르면 [4장 퍼저](04-fuzzers.md)가 먼저다. 퍼저가 크래시 입력을 찾아 주면 그때 디버거를 연다.
 
@@ -92,7 +92,7 @@ pwndbg> cyclic -n 8 -l 0x6161616161616166
 Found at offset 40
 ```
 
-**오프셋 40.** 정적 분석의 계산과 일치한다. 이 값은 [4부 2장](../part4-binary/02-stack-overflow.md)의 익스플로잇에서 패딩 길이가 된다. `vmmap`으로 스택이 실행 불가(`NX: Yes`)임을 확인하면 셸코드가 아니라 [ROP](../part4-binary/08-rop.md)가 필요하다는 것까지 알 수 있다.
+**오프셋 40.** 정적 분석의 계산과 일치한다. 이 값은 [바이너리 2장](../part4-binary/02-stack-overflow.md)의 익스플로잇에서 패딩 길이가 된다. `vmmap`으로 스택이 실행 불가(`NX: Yes`)임을 확인하면 셸코드가 아니라 [ROP](../part4-binary/08-rop.md)가 필요하다는 것까지 알 수 있다.
 
 ## 5. 브레이크포인트 전략
 
@@ -258,3 +258,4 @@ Java.perform(() => {
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | pwndbg/GEF 설치와 명령 표, 크래시 워크플로, 브레이크포인트 전략, 코어 덤프, WinDbg, Frida 17 기준 예제 작성 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: pwndbg(GDB 12.1+/Python 3.10+, install.pwndbg.re)·GEF(GDB 10+/Python 3.10+) 요구와 명령을 공식 문서로 대조, Frida 17.0.0 릴리스 노트·JS API 문서로 제거/신규 API 확인, frida-trace `-j`/`/isu` 플래그 확인, gdb로 오프셋 40 재현, 수정 없음 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 장 참조 표기를 편·부 이름 규칙으로 통일 | @anthonynoh5202 |

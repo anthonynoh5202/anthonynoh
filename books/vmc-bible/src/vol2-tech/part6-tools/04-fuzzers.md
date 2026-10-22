@@ -6,7 +6,7 @@
 
 > **한눈에 보기**
 > 퍼저 선택은 '대상이 무엇을 먹는가'로 결정된다. 파일을 먹으면 AFL++, 함수를 먹으면 libFuzzer, 네트워크 메시지를 먹으면 boofuzz나 AFLNet이다.
-> 퍼징의 원리(커버리지 피드백, 하네스, 새니타이저)는 [4부 9장](../part4-binary/09-fuzzing.md)이 다룬다. 이 장은 **조작법**이다. 설치, 계측, 실행, 병렬화, 코퍼스 관리, 크래시 재현까지.
+> 퍼징의 원리(커버리지 피드백, 하네스, 새니타이저)는 [바이너리 9장](../part4-binary/09-fuzzing.md)이 다룬다. 이 장은 **조작법**이다. 설치, 계측, 실행, 병렬화, 코퍼스 관리, 크래시 재현까지.
 > 퍼저가 찾은 크래시는 [3장 디버거](03-debuggers.md)로 넘긴다. 퍼저는 "죽는 입력"을 주고, 디버거는 "왜"를 준다.
 
 ## 1. 언제 어느 퍼저를 쓰는가
@@ -258,3 +258,4 @@ python3 infra/helper.py run_fuzzer --corpus-dir=<dir> <project> <fuzz_target>
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | AFL++ 설치·계측·실행·병렬·코퍼스, libFuzzer, boofuzz·AFLNet, OSS-Fuzz 작성 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: AFL++ INSTALL/env_variables/fuzzing_in_depth/afl-fuzz 소스로 플래그·환경 변수 대조, AFLNet 옵션·프로토콜, OSS-Fuzz project.yaml·helper.py, boofuzz API를 공식 저장소로 확인하고 boofuzz 예제 객체 생성 실행, parse.c ASan 빌드로 크래시 재현, 수정 없음 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 장 참조 표기를 편·부 이름 규칙으로 통일 | @anthonynoh5202 |

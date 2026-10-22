@@ -33,7 +33,7 @@ flowchart LR
 <figcaption>그림 1. 소스에서 싱크로 가는 경로에 새니타이저가 없으면 취약점 후보다. 정적 분석은 이 경로를 찾는 일이다.</figcaption>
 </figure>
 
-취약점은 **소스에서 싱크까지 새니타이저를 거치지 않는 경로**가 있을 때 생긴다. 이 문장이 정적 분석의 전부다. [1부 1장](../part1-foundations/01-what-is-vulnerability.md)의 신뢰 경계를 코드 위에 올려놓은 것이다.
+취약점은 **소스에서 싱크까지 새니타이저를 거치지 않는 경로**가 있을 때 생긴다. 이 문장이 정적 분석의 전부다. [기초 1장](../part1-foundations/01-what-is-vulnerability.md)의 신뢰 경계를 코드 위에 올려놓은 것이다.
 
 세 가지를 조심해야 한다.
 
@@ -149,7 +149,7 @@ $ semgrep scan --config taint-cmd.yaml --metrics=off app.py
            13┆ return subprocess.check_output("ping -c 1 " + host, shell=True)
 ```
 
-> 🟡 Semgrep의 오염 추적은 기본적으로 **함수 안(intraprocedural)** 에서 동작한다. `host`가 다른 함수로 넘어가 거기서 싱크에 닿으면 기본 설정으로는 놓친다. 함수 경계를 넘는 추적은 CodeQL이나 Semgrep Pro의 영역이다. 룰 문법 상세는 [6부 5장](../part6-tools/05-sast-semgrep-codeql.md)에서 다룬다.
+> 🟡 Semgrep의 오염 추적은 기본적으로 **함수 안(intraprocedural)** 에서 동작한다. `host`가 다른 함수로 넘어가 거기서 싱크에 닿으면 기본 설정으로는 놓친다. 함수 경계를 넘는 추적은 CodeQL이나 Semgrep Pro의 영역이다. 룰 문법 상세는 [도구 5장](../part6-tools/05-sast-semgrep-codeql.md)에서 다룬다.
 
 ## 4. CodeQL: 데이터 흐름을 느리게 깊게
 
@@ -201,7 +201,7 @@ select fileAccess, "This file access uses data from $@.",
 - `FileSystemAccess`는 `Concepts` 모듈이 정의한 **싱크 개념**이다. 같은 모듈에 `SqlExecution`, `SystemCommandExecution`, `CodeExecution`이 있다. 싱크 한 줄만 바꾸면 다른 취약점 유형의 쿼리가 된다.
 - 표준 쿼리 `py/sql-injection`, `py/command-line-injection`은 이 골격 위에 세심한 새니타이저 모델을 얹은 것이다. 직접 쓰기 전에 표준 쿼리가 이미 있는지 먼저 본다.
 
-> 🟡 CodeQL의 모듈형 데이터 흐름 API(`ConfigSig`, `Global<...>`)는 2023년 CodeQL 2.12~2.13 무렵 도입되었고, 예전 `class ... extends TaintTracking::Configuration` 문법은 폐기(deprecated)되었다. 인터넷의 오래된 예시를 그대로 쓰면 컴파일되지 않는다. 데이터베이스 생성·쿼리 작성·CI 통합의 상세는 [6부 5장](../part6-tools/05-sast-semgrep-codeql.md)을 본다.
+> 🟡 CodeQL의 모듈형 데이터 흐름 API(`ConfigSig`, `Global<...>`)는 2023년 CodeQL 2.12~2.13 무렵 도입되었고, 예전 `class ... extends TaintTracking::Configuration` 문법은 폐기(deprecated)되었다. 인터넷의 오래된 예시를 그대로 쓰면 컴파일되지 않는다. 데이터베이스 생성·쿼리 작성·CI 통합의 상세는 [도구 5장](../part6-tools/05-sast-semgrep-codeql.md)을 본다.
 
 ## 5. 바이너리 정적 분석
 
@@ -220,7 +220,7 @@ strings -n 8 ./target | grep -iE "http|passw|/tmp|%s"
 objdump -d ./target | grep -E "call.*<(strcpy|sprintf|system)@plt>"   # 위험 함수 호출 지점
 ```
 
-디컴파일 결과는 **소스가 아니라 추정**이다. 타입이 틀리고, 구조체 필드가 `*(a1 + 0x18)`로 보이고, 인라인된 함수는 사라진다. 디컴파일러 출력에서 후보를 잡은 뒤 반드시 디스어셈블리로 확인하고, 다시 디버거([5장](05-dynamic-analysis.md))로 실제 값을 본다. Ghidra와 IDA의 사용법은 [6부 2장](../part6-tools/02-ghidra-ida.md)에서, 메모리 손상 유형별로 바이너리에서 무엇을 보는지는 [4부](../part4-binary/00-overview.md) 각 장에서 다룬다.
+디컴파일 결과는 **소스가 아니라 추정**이다. 타입이 틀리고, 구조체 필드가 `*(a1 + 0x18)`로 보이고, 인라인된 함수는 사라진다. 디컴파일러 출력에서 후보를 잡은 뒤 반드시 디스어셈블리로 확인하고, 다시 디버거([5장](05-dynamic-analysis.md))로 실제 값을 본다. Ghidra와 IDA의 사용법은 [도구 2장](../part6-tools/02-ghidra-ida.md)에서, 메모리 손상 유형별로 바이너리에서 무엇을 보는지는 [바이너리](../part4-binary/00-overview.md) 각 장에서 다룬다.
 
 ## 6. 오탐 다루기
 
@@ -275,3 +275,4 @@ objdump -d ./target | grep -E "call.*<(strcpy|sprintf|system)@plt>"   # 위험 �
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. Semgrep 오염 추적 룰 동작 확인(1.182.0), CodeQL 예시는 공식 가이드 기준 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: Semgrep 1.182.0으로 taint 룰 실행(13행만 탐지, `# nosemgrep: rule-id` 동작 확인), CodeQL 쿼리를 github/codeql 공식 가이드 원문·`codeql/python-queries` 팩 이름과 대조. NX/RELRO 확인 명령(`readelf -h`→`-h -l -d`)과 CodeQL API 도입 버전 서술 정정 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 장 참조 표기를 편·부 이름 규칙으로 통일 | @anthonynoh5202 |

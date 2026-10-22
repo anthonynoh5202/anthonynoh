@@ -35,7 +35,7 @@ flowchart TB
 | 특징 | 결과 |
 |---|---|
 | 모든 프로세스가 root | 서비스 하나의 결함 = 장비 전체 |
-| 완화 기법 없음 (NX·ASLR·canary·PIE 미적용이 흔함) | [4부](../part4-binary/00-overview.md)의 교과서적 익스플로잇이 그대로 통함 |
+| 완화 기법 없음 (NX·ASLR·canary·PIE 미적용이 흔함) | [바이너리](../part4-binary/00-overview.md)의 교과서적 익스플로잇이 그대로 통함 |
 | 업데이트 경로 없음 또는 사용자가 안 함 | N-day가 수년간 살아 있음 |
 | 같은 SDK(칩셋 벤더 제공)를 수십 제조사가 공유 | CVE 하나가 수백 모델에 해당 |
 | 관리 인터페이스가 WAN에 노출 | 인터넷에서 바로 공격 가능 |
@@ -215,7 +215,7 @@ Ghidra에서 `system`, `popen`, `execl`의 호출처(xref)를 모두 열고 인�
 | 프로세스 | 서비스 계정 | root |
 | 디버깅 | 바로 gdb | 5.1의 QEMU + `gdb-multiarch`, 또는 UART 셸에서 gdbserver |
 
-[4부 2장](../part4-binary/02-stack-overflow.md)의 절차를 MIPS/ARM 호출 규약으로 바꾸면 된다. 완화가 없으니 오히려 쉽다. 익스플로잇 검증은 "CGI 프로세스 크래시"까지 보이면 심각도 판단에 충분한 경우가 많다. root 프로세스의 원격 크래시는 그 자체로 DoS이고, 코드 실행 가능성은 완화 부재로 거의 확실하다.
+[바이너리 2장](../part4-binary/02-stack-overflow.md)의 절차를 MIPS/ARM 호출 규약으로 바꾸면 된다. 완화가 없으니 오히려 쉽다. 익스플로잇 검증은 "CGI 프로세스 크래시"까지 보이면 심각도 판단에 충분한 경우가 많다. root 프로세스의 원격 크래시는 그 자체로 DoS이고, 코드 실행 가능성은 완화 부재로 거의 확실하다.
 
 ### 6.3 인증 우회
 
@@ -223,7 +223,7 @@ Ghidra에서 `system`, `popen`, `execl`의 호출처(xref)를 모두 열고 인�
 
 ### 6.4 퍼징
 
-네트워크 서비스는 `boofuzz`로 프로토콜 수준 퍼징을, 파서 바이너리는 QEMU 사용자 모드 + AFL++(`afl-fuzz -Q`)로 돌린다. [4부 9장](../part4-binary/09-fuzzing.md)을 참고한다.
+네트워크 서비스는 `boofuzz`로 프로토콜 수준 퍼징을, 파서 바이너리는 QEMU 사용자 모드 + AFL++(`afl-fuzz -Q`)로 돌린다. [바이너리 9장](../part4-binary/09-fuzzing.md)을 참고한다.
 
 ## 7. 실제 사례
 
@@ -240,8 +240,8 @@ Ghidra에서 `system`, `popen`, `execl`의 호출처(xref)를 모두 열고 인�
 ## 8. 실습 🧪
 
 - **OWASP IoTGoat** ([github.com/OWASP/IoTGoat](https://github.com/OWASP/IoTGoat)): OpenWrt 기반의 의도적 취약 펌웨어. 3절 binwalk 언패킹 → 4.1 자격증명 찾기 → 5절 QEMU 부팅 → 웹 UI 명령 인젝션까지 이 장의 흐름을 한 번에 연습한다.
-- **DVRF** (Damn Vulnerable Router Firmware, [github.com/praetorian-inc/DVRF](https://github.com/praetorian-inc/DVRF)): MIPS 바이너리의 스택 오버플로·포맷 스트링 문제. 6.2절과 [4부](../part4-binary/00-overview.md)의 임베디드 적용.
-- **자기 소유 장비**: 집의 공유기 펌웨어를 벤더 사이트에서 받아 3·4절만 해 본다. 장비에 공격 트래픽을 보내는 것은 **자기 소유 장비에, 인터넷과 분리한 네트워크에서만** 한다. 남의 장비는 [1부 4장](../part1-foundations/04-ethics-and-law.md)의 범위 밖이다.
+- **DVRF** (Damn Vulnerable Router Firmware, [github.com/praetorian-inc/DVRF](https://github.com/praetorian-inc/DVRF)): MIPS 바이너리의 스택 오버플로·포맷 스트링 문제. 6.2절과 [바이너리](../part4-binary/00-overview.md)의 임베디드 적용.
+- **자기 소유 장비**: 집의 공유기 펌웨어를 벤더 사이트에서 받아 3·4절만 해 본다. 장비에 공격 트래픽을 보내는 것은 **자기 소유 장비에, 인터넷과 분리한 네트워크에서만** 한다. 남의 장비는 [기초 4장](../part1-foundations/04-ethics-and-law.md)의 범위 밖이다.
 
 ## 체크리스트
 
@@ -280,3 +280,4 @@ Ghidra에서 `system`, `popen`, `execl`의 호출처(xref)를 모두 열고 인�
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. 획득(다운로드·UART·SPI), binwalk v3, 파일시스템 분석, EMBA·FirmAE·QEMU, 임베디드 바이너리 변형, 사례 5건 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 5건 cvelistV5 대조(모두 실존, KEV 등재 확인), Mirai scanner.c 62쌍·FirmAE 79%/16% 1차 자료 확인, 출처 미확인 EMBA 95% 수치·heise 링크 삭제, Mirai 소스 공개 시점 정정, C 예제 컴파일 확인 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 장 참조 표기를 편·부 이름 규칙으로 통일 | @anthonynoh5202 |

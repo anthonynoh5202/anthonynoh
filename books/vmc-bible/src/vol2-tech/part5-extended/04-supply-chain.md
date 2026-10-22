@@ -38,7 +38,7 @@ flowchart LR
 | **악의적 의존성** | event-stream, ua-parser-js, xz | 의도적으로 심은 코드 | 설치 전 탐지, 설치 스크립트 차단, 핀 고정 |
 | **빌드·배포 침해** | SolarWinds, Codecov, tj-actions, polyfill.io | 빌드 환경 또는 배포 채널 | 파이프라인 최소 권한, 서명·출처 증명, 해시 검증 |
 
-[1부 1장](../part1-foundations/01-what-is-vulnerability.md)의 분류로 말하면 첫 번째는 보통의 취약점이고, 나머지 둘은 "과정"의 취약점이다. 이 장은 뒤의 둘에 집중한다. 센터 업무에서는 이 영역이 디지털위협예방본부와 가장 자주 겹친다.
+[기초 1장](../part1-foundations/01-what-is-vulnerability.md)의 분류로 말하면 첫 번째는 보통의 취약점이고, 나머지 둘은 "과정"의 취약점이다. 이 장은 뒤의 둘에 집중한다. 센터 업무에서는 이 영역이 디지털위협예방본부와 가장 자주 겹친다.
 
 ## 2. 의존성 혼동 (dependency confusion)
 
@@ -160,7 +160,7 @@ Docker 이미지의 `latest`, Terraform 모듈의 브랜치 참조, `pip install
 
 ## 5. SBOM
 
-**SBOM**(Software Bill of Materials)은 "이 소프트웨어에 무엇이 들어 있는가"의 목록이다. 2021년 12월 Log4Shell 때 대부분의 조직이 며칠 동안 답하지 못한 질문, "우리 어디에 log4j-core 2.x가 있나"에 즉시 답하기 위한 것이다. [7부 1장 Log4Shell 워크스루](../part7-walkthroughs/01-cve-2021-44228-log4shell.md)
+**SBOM**(Software Bill of Materials)은 "이 소프트웨어에 무엇이 들어 있는가"의 목록이다. 2021년 12월 Log4Shell 때 대부분의 조직이 며칠 동안 답하지 못한 질문, "우리 어디에 log4j-core 2.x가 있나"에 즉시 답하기 위한 것이다. [워크스루 1장 Log4Shell 워크스루](../part7-walkthroughs/01-cve-2021-44228-log4shell.md)
 
 | 표준 | 주관 | 상태 |
 |---|---|---|
@@ -275,3 +275,4 @@ SolarWinds는 빌드 서버에 상주한 악성코드가 컴파일 직전에 소
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. 의존성 혼동, 악성 패키지 탐지, CI(pwn request·태그 변조·시크릿), SBOM, Sigstore·SLSA, 사례 8건 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 3건 cvelistV5·GHSA 대조(tj-actions 태그 범위·23,000 저장소·v46.0.1 일치), CNCF 카탈로그로 Codecov·ua-parser-js·polyfill 날짜·수치 확인, 도구 명령(guarddog·cosign·syft·checkov) README 대조, 확인 불가한 Daily Swig 링크 삭제, 워크플로 YAML 파싱 확인 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 장 참조 표기를 편·부 이름 규칙으로 통일 | @anthonynoh5202 |

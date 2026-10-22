@@ -20,11 +20,11 @@
 | 3. 어떻게 할 것인가? (What are we going to do about it?) | 5절 우선순위와 대응 | 우선순위가 매겨진 대응 목록 |
 | 4. 충분히 했나? (Did we do a good enough job?) | 6절 워크숍의 마지막 5분 | 검토 기록, 다음 할 일 |
 
-취약점 **분석가**에게 위협 모델링은 설계 도구가 아니라 **탐색 순서를 정하는 도구**다. 입력 지점이 서른 개면 서른 개를 같은 깊이로 볼 수 없다. 모델은 "여기부터"를 말해 준다. 그리고 발견이 모델을 고친다. [2부 1장](01-overview.md)의 "발견한 것이 앞 단계를 다시 시킨다"가 이것이다.
+취약점 **분석가**에게 위협 모델링은 설계 도구가 아니라 **탐색 순서를 정하는 도구**다. 입력 지점이 서른 개면 서른 개를 같은 깊이로 볼 수 없다. 모델은 "여기부터"를 말해 준다. 그리고 발견이 모델을 고친다. [방법론 1장](01-overview.md)의 "발견한 것이 앞 단계를 다시 시킨다"가 이것이다.
 
 ## 2. 시스템 모델링: DFD에 신뢰 경계 표시
 
-첫 질문의 답은 그림이다. DFD의 요소와 그리는 순서는 [1부 3장](../part1-foundations/03-attack-surface.md)에서 다뤘다. 여기서는 위협 모델링에 쓸 수 있는 형태로 한 번 더 그린다. 핵심은 **경계를 넘는 화살표마다 번호를 붙이는 것**이다. 3절의 STRIDE는 그 번호마다 돈다.
+첫 질문의 답은 그림이다. DFD의 요소와 그리는 순서는 [기초 3장](../part1-foundations/03-attack-surface.md)에서 다뤘다. 여기서는 위협 모델링에 쓸 수 있는 형태로 한 번 더 그린다. 핵심은 **경계를 넘는 화살표마다 번호를 붙이는 것**이다. 3절의 STRIDE는 그 번호마다 돈다.
 
 ```mermaid
 flowchart LR
@@ -73,12 +73,12 @@ flowchart LR
 
 | 글자 | 위협 | 깨지는 속성 | 이 책에서 |
 |---|---|---|---|
-| **S** | Spoofing (위장) | 인증(authentication) | [3부 4장](../part3-web/04-auth-session.md) |
-| **T** | Tampering (변조) | 무결성(integrity) | [3부 1장](../part3-web/01-sql-injection.md), [7장](../part3-web/07-deserialization.md), [4부](../part4-binary/00-overview.md) |
+| **S** | Spoofing (위장) | 인증(authentication) | [웹 4장](../part3-web/04-auth-session.md) |
+| **T** | Tampering (변조) | 무결성(integrity) | [웹 1장](../part3-web/01-sql-injection.md), [7장](../part3-web/07-deserialization.md), [바이너리](../part4-binary/00-overview.md) |
 | **R** | Repudiation (부인) | 책임 추적(accountability) | 각 장의 "탐지" 행 |
-| **I** | Information disclosure (정보 노출) | 기밀성(confidentiality) | [3부 3장 SSRF](../part3-web/03-ssrf.md), [8장 XXE](../part3-web/08-xxe.md), [7부 2장 Heartbleed](../part7-walkthroughs/02-cve-2014-0160-heartbleed.md) |
-| **D** | Denial of service (서비스 거부) | 가용성(availability) | [3부 10장](../part3-web/10-race-condition.md), [4부 9장 퍼징](../part4-binary/09-fuzzing.md) |
-| **E** | Elevation of privilege (권한 상승) | 인가(authorization) | [3부 5장](../part3-web/05-access-control.md), [7부 4장 sudo](../part7-walkthroughs/04-cve-2021-3156-sudo-baron-samedit.md) |
+| **I** | Information disclosure (정보 노출) | 기밀성(confidentiality) | [웹 3장 SSRF](../part3-web/03-ssrf.md), [8장 XXE](../part3-web/08-xxe.md), [워크스루 2장 Heartbleed](../part7-walkthroughs/02-cve-2014-0160-heartbleed.md) |
+| **D** | Denial of service (서비스 거부) | 가용성(availability) | [웹 10장](../part3-web/10-race-condition.md), [바이너리 9장 퍼징](../part4-binary/09-fuzzing.md) |
+| **E** | Elevation of privilege (권한 상승) | 인가(authorization) | [웹 5장](../part3-web/05-access-control.md), [워크스루 4장 sudo](../part7-walkthroughs/04-cve-2021-3156-sudo-baron-samedit.md) |
 
 ### 3.1 요소별로 돈다 (STRIDE-per-element)
 
@@ -162,7 +162,7 @@ flowchart TD
 
 잎마다 속성을 붙이면 트리가 우선순위 도구가 된다. "가능/불가능", "필요한 비용·장비", "탐지 가능성". 가장 싼 경로가 공격자가 먼저 갈 길이고, 그 경로의 가장 싼 방어가 우리가 먼저 할 일이다.
 
-분석가에게 공격 트리가 특히 유용한 순간은 **발견한 취약점의 영향을 설명할 때**다. "SQLi가 있다"보다 "SQLi + DB 계정 권한 과다 = 관리자 DB 읽기"가 심각도를 설명한다. [8부 2장](../part8-reporting/02-severity.md)의 연쇄 평가가 이것이다.
+분석가에게 공격 트리가 특히 유용한 순간은 **발견한 취약점의 영향을 설명할 때**다. "SQLi가 있다"보다 "SQLi + DB 계정 권한 과다 = 관리자 DB 읽기"가 심각도를 설명한다. [보고 2장](../part8-reporting/02-severity.md)의 연쇄 평가가 이것이다.
 
 ## 5. 우선순위: 영향 × 가능성
 
@@ -174,7 +174,7 @@ flowchart TD
 | **영향 중간** (한 사용자 데이터, 일부 기능) | 3순위 | 2순위 | **1순위** |
 | **영향 낮음** (정보성, 불편) | 4순위 | 3순위 | 2순위 |
 
-**가능성**을 판단하는 단서는 다음과 같다. 인증 전에 닿는가(CVSS의 PR:N), 공개 PoC나 유사 CVE가 있는가(EPSS가 높은 유형인가), 입력이 코드로 해석되는가, 필요한 조건이 공격자 손에 있는가. **영향**은 공격 트리의 뿌리가 무엇인가다. [1부 2장](../part1-foundations/02-cwe-cve-cvss.md)의 CVSS 메트릭을 **점수가 아니라 질문**으로 쓰면 이 두 축을 일관되게 매길 수 있다.
+**가능성**을 판단하는 단서는 다음과 같다. 인증 전에 닿는가(CVSS의 PR:N), 공개 PoC나 유사 CVE가 있는가(EPSS가 높은 유형인가), 입력이 코드로 해석되는가, 필요한 조건이 공격자 손에 있는가. **영향**은 공격 트리의 뿌리가 무엇인가다. [기초 2장](../part1-foundations/02-cwe-cve-cvss.md)의 CVSS 메트릭을 **점수가 아니라 질문**으로 쓰면 이 두 축을 일관되게 매길 수 있다.
 
 숫자로 정밀하게 매기려는 유혹을 경계한다. Microsoft가 썼던 DREAD(Damage, Reproducibility, Exploitability, Affected users, Discoverability)는 사람마다 값이 달라 재현성이 낮다는 비판을 받았다. 3×3이면 충분하다. 중요한 것은 **왜 그 칸인지 한 줄 적는 것**이다.
 
@@ -253,7 +253,7 @@ tm.process()
 [`labs/web-sqli/`](https://github.com/anthonynoh5202/anthonynoh/tree/main/labs/web-sqli)의 위협 모델을 30분에 만든다. 혼자 해도 된다.
 
 1. **범위**: 앱 전체. 엔드포인트가 네 개뿐이다.
-2. **DFD**: [1부 3장 6절](../part1-foundations/03-attack-surface.md)의 그림에 흐름 번호를 붙인다. F1 `/login`, F2 `/search`, F3 `/item`, F4 앱 → SQLite.
+2. **DFD**: [기초 3장 6절](../part1-foundations/03-attack-surface.md)의 그림에 흐름 번호를 붙인다. F1 `/login`, F2 `/search`, F3 `/item`, F4 앱 → SQLite.
 3. **STRIDE 패스**: F1~F4에 3.2절 질문을 읽는다. 최소한 다음이 나와야 한다.
    - F1 S: 비밀번호 검증이 SQL에 의존 → 인증 우회
    - F1·F2·F3 T: 입력이 SQL 문자열에 연결 → 임의 쿼리
@@ -261,7 +261,7 @@ tm.process()
    - F4 E: 앱이 DB 전체에 하나의 연결로 접근 → 인젝션 시 전체 테이블
    - 프로세스 1 R: 로그인 실패가 기록되지 않음
 4. **우선순위**: T가 1순위. 인증 전, 코드로 해석, PoC 자명.
-5. **검증**: [3부 1장 4절](../part3-web/01-sql-injection.md)의 실습 세 개가 위협 목록의 T 세 줄과 일치하는지 확인한다. 일치하면 모델이 탐색 순서를 맞게 정한 것이다.
+5. **검증**: [웹 1장 4절](../part3-web/01-sql-injection.md)의 실습 세 개가 위협 목록의 T 세 줄과 일치하는지 확인한다. 일치하면 모델이 탐색 순서를 맞게 정한 것이다.
 6. **고치고 다시**: 파라미터화한 뒤 위협 목록에서 T 줄의 대응을 "완화됨(검증일)"으로 바꾼다. 모델은 살아 있는 문서다.
 
 ## 체크리스트
@@ -298,3 +298,4 @@ tm.process()
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. 네 가지 질문, DFD 경계 표시, STRIDE 질문 목록, 공격 트리, 우선순위, 30분 워크숍, 도구, 실습 추가 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: 완료(pytm 예시·옵션 README 대조, STRIDE-per-element 표 확인), 수정 없음 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 장 참조 표기를 편·부 이름 규칙으로 통일 | @anthonynoh5202 |

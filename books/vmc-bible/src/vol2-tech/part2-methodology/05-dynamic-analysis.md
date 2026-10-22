@@ -21,7 +21,7 @@
 | 요청을 바꾸면 서버가 어떻게 반응하는가? | 프록시 | 5 |
 | 이 크래시가 취약점인가, 그냥 버그인가? | 크래시 분류(triage) | 6 |
 
-모든 동적 분석은 **실습 환경 안에서** 한다. 환경 구축은 [1부 5장](../part1-foundations/05-lab-setup.md), 허용 범위는 [1부 4장](../part1-foundations/04-ethics-and-law.md)을 따른다.
+모든 동적 분석은 **실습 환경 안에서** 한다. 환경 구축은 [기초 5장](../part1-foundations/05-lab-setup.md), 허용 범위는 [기초 4장](../part1-foundations/04-ethics-and-law.md)을 따른다.
 
 ## 2. 계측: 프로그램이 하는 일을 본다
 
@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
 }
 ```
 
-좋은 하네스의 조건은 세 가지다. (1) **입력에서 대상 함수까지 최단 거리**. 인증, 네트워크, 초기화를 건너뛴다. (2) **결정적**. 같은 입력이면 같은 경로. 난수·시각·스레드를 고정한다. (3) **빠르다**. 초당 수백~수천 회 실행이 목표다. 하네스가 잘못되면 퍼저는 며칠 동안 아무것도 못 찾는다. 하네스 설계와 libFuzzer·구조화 입력 퍼징은 [4부 9장](../part4-binary/09-fuzzing.md)과 [6부 4장](../part6-tools/04-fuzzers.md)에서 다룬다.
+좋은 하네스의 조건은 세 가지다. (1) **입력에서 대상 함수까지 최단 거리**. 인증, 네트워크, 초기화를 건너뛴다. (2) **결정적**. 같은 입력이면 같은 경로. 난수·시각·스레드를 고정한다. (3) **빠르다**. 초당 수백~수천 회 실행이 목표다. 하네스가 잘못되면 퍼저는 며칠 동안 아무것도 못 찾는다. 하네스 설계와 libFuzzer·구조화 입력 퍼징은 [바이너리 9장](../part4-binary/09-fuzzing.md)과 [도구 4장](../part6-tools/04-fuzzers.md)에서 다룬다.
 
 ## 4. 디버거로 상태 추적
 
@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
 | `ni` / `si` / `finish` | 명령어 단위 실행, 함수 호출 안으로, 현재 함수 끝까지 |
 | `p $_siginfo._sifields._sigfault.si_addr` | 시그널을 일으킨 접근 주소 |
 
-[4부 2장](../part4-binary/02-stack-overflow.md)의 32바이트 스택 버퍼에 56바이트를 넣고 gdb로 본 실제 세션이다.
+[바이너리 2장](../part4-binary/02-stack-overflow.md)의 32바이트 스택 버퍼에 56바이트를 넣고 gdb로 본 실제 세션이다.
 
 ```
 $ gdb -q --args ./stack $(python3 -c "print('A'*40+'BBBBBBBB'+'C'*8)")
@@ -165,7 +165,7 @@ rbp            0x4141414141414141  0x4141414141414141
 
 읽는 법: `rbp`가 `0x41414141…`('A')로 덮였고, `rsp`가 가리키는 복귀 주소 자리에 `0x42424242…`('B')가 있다. `ret` 명령이 이 값을 `rip`에 넣으려다 실패한 것이다. **입력의 41~48번째 바이트가 복귀 주소를 통제한다**는 사실이 확정됐다. 이것이 [6장](06-exploit-verification.md)의 "제어" 단계로 넘어가는 증거다.
 
-pwndbg·GEF 같은 확장을 붙이면 스택·레지스터·디스어셈블리가 한 화면에 나온다. Windows의 WinDbg, 모바일·동적 계측의 Frida까지 포함한 디버거 사용법은 [6부 3장](../part6-tools/03-debuggers.md)에서 다룬다.
+pwndbg·GEF 같은 확장을 붙이면 스택·레지스터·디스어셈블리가 한 화면에 나온다. Windows의 WinDbg, 모바일·동적 계측의 Frida까지 포함한 디버거 사용법은 [도구 3장](../part6-tools/03-debuggers.md)에서 다룬다.
 
 ## 5. 프록시로 요청·응답 조작
 
@@ -174,13 +174,13 @@ pwndbg·GEF 같은 확장을 붙이면 스택·레지스터·디스어셈블리�
 | 바꾸는 것 | 보는 것 | 찾는 취약점 |
 |---|---|---|
 | 숨은 필드, 비활성화된 폼 값 | 서버가 클라이언트 검증만 믿는가 | 가격 조작, 권한 상승 |
-| `id=123` → `id=124` | 남의 자원이 나오는가 | IDOR ([3부 5장](../part3-web/05-access-control.md)) |
+| `id=123` → `id=124` | 남의 자원이 나오는가 | IDOR ([웹 5장](../part3-web/05-access-control.md)) |
 | 파라미터에 `'`, `{{7*7}}`, `../` | 에러, 평가 결과, 다른 파일 | 인젝션 계열 |
-| `Content-Type`, 파일 확장자 | 서버가 어떤 기준으로 파일을 받는가 | 업로드 ([3부 6장](../part3-web/06-file-upload-path-traversal.md)) |
-| 요청을 그대로 두 번, 동시에 | 두 번 처리되는가 | 경쟁 조건 ([3부 10장](../part3-web/10-race-condition.md)) |
+| `Content-Type`, 파일 확장자 | 서버가 어떤 기준으로 파일을 받는가 | 업로드 ([웹 6장](../part3-web/06-file-upload-path-traversal.md)) |
+| 요청을 그대로 두 번, 동시에 | 두 번 처리되는가 | 경쟁 조건 ([웹 10장](../part3-web/10-race-condition.md)) |
 | 응답의 `"role":"user"` → `"admin"` | 클라이언트가 응답을 믿고 UI를 여는가 | 클라이언트 측 권한 검사 |
 
-클라이언트가 보낸 모든 것은 입력이다. 쿠키, 헤더, JSON 필드 이름, 멀티파트 경계까지. [1부 1장](../part1-foundations/01-what-is-vulnerability.md)의 신뢰 경계가 정확히 프록시가 앉은 자리에 있다. 프록시는 반복 전송(Repeater), 자동 변형(Intruder), 스캐너를 묶어 제공하고, 상세는 [6부 1장](../part6-tools/01-burp-proxy.md)에서 다룬다. 명령줄에서는 `curl -x http://127.0.0.1:8080`으로 같은 프록시를 거치게 해 재현 스크립트를 만든다.
+클라이언트가 보낸 모든 것은 입력이다. 쿠키, 헤더, JSON 필드 이름, 멀티파트 경계까지. [기초 1장](../part1-foundations/01-what-is-vulnerability.md)의 신뢰 경계가 정확히 프록시가 앉은 자리에 있다. 프록시는 반복 전송(Repeater), 자동 변형(Intruder), 스캐너를 묶어 제공하고, 상세는 [도구 1장](../part6-tools/01-burp-proxy.md)에서 다룬다. 명령줄에서는 `curl -x http://127.0.0.1:8080`으로 같은 프록시를 거치게 해 재현 스크립트를 만든다.
 
 ## 6. 크래시 분류(triage)
 
@@ -224,9 +224,9 @@ Shadow bytes around the buggy address:
 | `*-buffer-overflow` **READ** | 중간 | 읽은 내용이 출력으로 나가는가 (정보 유출, Heartbleed 유형) |
 | `SEGV on address 0x0` 근처 READ | 낮음 | 널 역참조. 대개 DoS에 그친다. 커널·서비스 데몬이면 가용성 영향 |
 | `stack-overflow`(재귀), `allocation-size-too-big` | 낮음 | 자원 고갈. 원격 유발 가능하면 DoS |
-| `UndefinedBehaviorSanitizer: signed-integer-overflow` | 상황 의존 | 그 값이 길이·인덱스로 쓰이는가 ([4부 6장](../part4-binary/06-integer-overflow.md)) |
+| `UndefinedBehaviorSanitizer: signed-integer-overflow` | 상황 의존 | 그 값이 길이·인덱스로 쓰이는가 ([바이너리 6장](../part4-binary/06-integer-overflow.md)) |
 
-이 표는 **출발점**이지 결론이 아니다. 널 역참조가 권한 상승이 된 사례도 있고, WRITE 오버플로가 보호 기법([4부 7장](../part4-binary/07-mitigations.md)) 때문에 DoS로 끝나는 경우도 흔하다. 최종 판단은 [6장](06-exploit-verification.md)에서 실제로 제어를 얻어 보는 것이다.
+이 표는 **출발점**이지 결론이 아니다. 널 역참조가 권한 상승이 된 사례도 있고, WRITE 오버플로가 보호 기법([바이너리 7장](../part4-binary/07-mitigations.md)) 때문에 DoS로 끝나는 경우도 흔하다. 최종 판단은 [6장](06-exploit-verification.md)에서 실제로 제어를 얻어 보는 것이다.
 
 ### 6.3 분류 작업 순서
 
@@ -269,3 +269,4 @@ Shadow bytes around the buggy address:
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. strace·gdb·ASan 출력은 실제 실행 결과, AFL++ 명령은 공식 문서 기준 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: ASan·gdb 예시 재실행으로 출력 형식 확인, AFL++ 명령을 docs/fuzzing_in_depth.md와 대조. 수정 없음 | 검증팀 |
+| 2026-10-22 | 독자 테스트 반영: 장 참조 표기를 편·부 이름 규칙으로 통일 | @anthonynoh5202 |
