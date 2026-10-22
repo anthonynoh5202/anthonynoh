@@ -1,6 +1,6 @@
 [book]
-title = "취약점관리센터 바이블"
-description = "취약점관리센터 직원을 위한 한 권: 센터와 제도, 분석 기술, 현장 적용. 계속 개정되는 살아있는 책"
+title = "취약점, 발견에서 조치까지"
+description = "분석 기술과 대응 체계의 교과서. 취약점관리센터 구성원을 위한 한 권, 계속 개정되는 살아있는 책"
 authors = ["Anthony Noh", "Contributors"]
 language = "ko"
 src = "src"
