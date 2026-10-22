@@ -186,7 +186,7 @@ addons = [TagAndLog()]
 
 ### 7.3 Caido
 
-Caido는 Burp와 같은 Proxy·Replay·Automate 구조를 Rust로 다시 쓴 도구다. 무료 Basic 플랜은 프로젝트·워크플로·플러그인 수에 제한이 있고 📎 [공식 가격 페이지](https://caido.io/pricing), 2025년 3월에 유료 Pro 플랜의 이름이 Individual로 바뀌었다 📎 [공지](https://caido.io/blog/2025-03-10-plan-rename). HTTPQL이라는 자체 필터 문법으로 히스토리를 검색하는 점이 다르다.
+Caido는 Burp와 같은 Proxy·Replay·Automate 구조를 Rust로 다시 쓴 도구다. 무료 Basic 플랜은 기능 제한이 있고 유료 플랜의 이름과 구성은 자주 바뀌므로 📎 [공식 가격 페이지](https://caido.io/pricing)를 본다. HTTPQL이라는 자체 필터 문법으로 히스토리를 검색하는 점이 다르다.
 
 ## 체크리스트
 
@@ -219,3 +219,4 @@ Caido는 Burp와 같은 Proxy·Replay·Automate 구조를 Rust로 다시 쓴 도
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | HTTPS 가로채기 원리, 인증서 설치, 핵심 워크플로, Community/Pro 비교, ZAP·mitmproxy·Caido 작성 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: ZAP Docker 명령·mitmproxy 설치/인증서 경로/addon 훅/`Response.make` 시그니처를 공식 문서·소스로 대조, addon 예제를 mitmproxy 12.2에서 실제 실행 확인, 확인 불가한 Caido 플랜 개명 서술·링크 삭제 | 검증팀 |

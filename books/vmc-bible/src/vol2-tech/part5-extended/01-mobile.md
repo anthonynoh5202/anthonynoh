@@ -43,8 +43,8 @@ flowchart LR
 
 | 문서 | 역할 | 현행 버전 |
 |---|---|---|
-| **MASVS** (Mobile Application Security Verification Standard) | "무엇을" 검증하는가. 통제 항목 목록 | v2.1.0 (2024-01) 📎 [릴리스](https://github.com/OWASP/owasp-masvs/releases) |
-| **MASTG** (Mobile Application Security Testing Guide) | "어떻게" 검증하는가. 테스트 절차·도구·데모 | v2.0.0 (2026-06-30) 📎 [릴리스](https://github.com/OWASP/owasp-mastg/releases) |
+| **MASVS** (Mobile Application Security Verification Standard) | "무엇을" 검증하는가. 통제 항목 목록 | v2.1.0 (2024-01) 📎 [릴리스](https://github.com/OWASP/masvs/releases) |
+| **MASTG** (Mobile Application Security Testing Guide) | "어떻게" 검증하는가. 테스트 절차·도구·데모 | v2.0.0 📎 [릴리스](https://github.com/OWASP/mastg/releases) |
 
 MASVS v2는 통제를 8개 그룹으로 나누고, MASTG v2는 각 통제를 약점 목록(MASWE)·테스트·데모로 잇는다. 보고서의 결함 분류에 이 ID를 그대로 쓰면 개발자와 대화가 빨라진다.
 
@@ -97,7 +97,7 @@ adb shell content query --uri content://com.example.app.provider/users  # Provid
 
 ### 3.4 debuggable과 backup
 
-`<application android:debuggable="true">`가 릴리스 빌드에 남으면 누구나 디버거를 붙이고, 루팅 없이 `adb shell run-as com.example.app`으로 앱 샌드박스에 들어간다. `allowBackup="true"`(API 30 이하 기본값)면 `adb backup`으로 앱 데이터를 통째로 꺼낼 수 있다. 둘 다 릴리스 빌드에서 `false`인지 확인한다.
+`<application android:debuggable="true">`가 릴리스 빌드에 남으면 누구나 디버거를 붙이고, 루팅 없이 `adb shell run-as com.example.app`으로 앱 샌드박스에 들어간다. `allowBackup="true"`(기본값)면 `adb backup`으로 앱 데이터를 통째로 꺼낼 수 있다(API 31 이상을 타깃하면 `adb backup`이 앱 데이터를 더는 내보내지 않지만, 구버전 타깃 앱은 여전히 해당된다). 둘 다 릴리스 빌드에서 `false`인지 확인한다.
 
 ### 3.5 WebView
 
@@ -144,7 +144,7 @@ iOS에서 비밀은 Keychain에 둔다. 문제는 **접근성 클래스**다.
 | `kSecAttrAccessibleWhenUnlocked` | 잠금 해제 중에만 | 기본값, 보통 적절 |
 | `...ThisDeviceOnly` 변형 | 백업으로 다른 기기에 옮겨지지 않음 | ✅ 인증 토큰에 권장 |
 
-`NSUserDefaults`(plist)와 앱 `Documents` 디렉터리는 암호화된 Keychain이 아니다. 토큰이 여기 있으면 탈옥 기기나 백업 파일에서 그대로 읽힌다. 탈옥 기기에서는 `objection --gadget com.example.app explore`로 들어가 `ios keychain dump`, `ios nsuserdefaults get`으로 한 번에 확인한다. App Store 바이너리는 FairPlay로 암호화돼 있어 `strings`를 돌려도 아무것도 안 나온다. 탈옥 기기에서 메모리 덤프로 복호화한 뒤(`frida-ios-dump` 류) `otool -L`, `strings`로 본다.
+`NSUserDefaults`(plist)와 앱 `Documents` 디렉터리는 암호화된 Keychain이 아니다. 토큰이 여기 있으면 탈옥 기기나 백업 파일에서 그대로 읽힌다. 탈옥 기기에서는 `objection -n com.example.app start`(1.12 이전 문법은 `--gadget <앱> explore`)로 들어가 `ios keychain dump`, `ios nsuserdefaults get`으로 한 번에 확인한다. App Store 바이너리는 FairPlay로 암호화돼 있어 `strings`를 돌려도 아무것도 안 나온다. 탈옥 기기에서 메모리 덤프로 복호화한 뒤(`frida-ios-dump` 류) `otool -L`, `strings`로 본다.
 
 ### 4.2 ATS (App Transport Security)
 
@@ -199,9 +199,9 @@ frida -U -f com.example.app -l hook.js
 - `Java.perform`: Java VM 스레드에 붙는다. Java API는 이 안에서만 쓴다.
 - `Java.use(클래스명)`: 클래스 래퍼를 얻는다. 난독화된 이름은 `jadx`에서 확인한 그대로 쓴다.
 - `.implementation = function`: 메서드를 교체한다. 오버로드가 여러 개면 `RootCheck.isRooted.overload('android.content.Context').implementation = ...` 처럼 시그니처를 지정한다.
-- Frida 17(2025~)부터 Java·ObjC 브리지는 GumJS 런타임에 번들되지 않는다. `frida` REPL과 `frida-trace`는 자동으로 포함하므로 위 명령은 그대로 되지만, Python·Node API로 직접 스크립트를 주입할 때는 `frida-java-bridge`를 import해야 한다. 📎 [Frida 17.0 릴리스 노트](https://frida.re/news/2025/05/17/frida-17-0-1-released/)
+- Frida 17(2025-05)부터 Java·ObjC·Swift 브리지는 GumJS 런타임에 번들되지 않는다. `frida` REPL과 `frida-trace`(frida-tools 14+)는 브리지를 포함하므로 위 명령은 그대로 되지만, Python·Node API로 직접 스크립트를 주입하거나 `frida-compile`로 빌드할 때는 `frida-java-bridge`를 import해야 한다. 📎 [Frida 17.0.0 릴리스 노트](https://frida.re/news/2025/05/17/frida-17-0-0-released/)
 
-무엇을 후킹할지는 `jadx`에서 문자열("rooted", "su", "Cydia")로 역추적해 찾고, `frida-trace -U -f com.example.app -j 'com.example.app.security.*!*'`로 실제 호출되는 메서드를 확인한 뒤 스크립트를 쓴다. 네이티브 라이브러리(`.so`) 안의 검사는 `Interceptor.attach`로 C 함수를 가로챈다. 함수 이름이 스트립돼 있으면 Ghidra로 오프셋을 찾아 `Module.getBaseAddress("libapp.so").add(0x1234)`에 붙인다.
+무엇을 후킹할지는 `jadx`에서 문자열("rooted", "su", "Cydia")로 역추적해 찾고, `frida-trace -U -f com.example.app -j 'com.example.app.security.*!*'`로 실제 호출되는 메서드를 확인한 뒤 스크립트를 쓴다. 네이티브 라이브러리(`.so`) 안의 검사는 `Interceptor.attach`로 C 함수를 가로챈다. 함수 이름이 스트립돼 있으면 Ghidra로 오프셋을 찾아 `Process.getModuleByName("libapp.so").base.add(0x1234)`에 붙인다(Frida 17에서 `Module.getBaseAddress()` 정적 메서드는 제거됐다).
 
 ## 6. 인증서 고정과 트래픽 분석
 
@@ -237,7 +237,7 @@ OkHttp는 `CertificatePinner`, iOS는 ATS의 `NSPinnedDomains`(iOS 14+)로 선�
 
 ```bash
 # objection: OkHttp · TrustManager · iOS NSURLSession 등 알려진 구현을 한꺼번에 패치
-objection --gadget com.example.app explore
+objection -n com.example.app start      # 1.12 이전: objection --gadget com.example.app explore
 ... android sslpinning disable
 ... ios sslpinning disable
 
@@ -294,3 +294,4 @@ frida -U -f com.example.app --codeshare pcipolloni/universal-android-ssl-pinning
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. MASVS/MASTG 현행 버전, Android·iOS 항목, Frida 스크립트, 고정 우회, 사례 4건 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CVE 4건 cvelistV5 대조(모두 실존). Frida 17 제거 API(`Module.getBaseAddress`)를 현행 API로 교체, 릴리스 노트 링크를 17.0.0으로 정정, objection 1.12 CLI(`-n … start`) 반영, allowBackup/API 31 서술 정정, MASTG 릴리스 날짜(미확인) 삭제, MASVS/MASTG 저장소 URL 현행화 | 검증팀 |

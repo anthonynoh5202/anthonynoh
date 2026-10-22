@@ -257,3 +257,4 @@ python3 infra/helper.py run_fuzzer --corpus-dir=<dir> <project> <fuzz_target>
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | AFL++ 설치·계측·실행·병렬·코퍼스, libFuzzer, boofuzz·AFLNet, OSS-Fuzz 작성 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: AFL++ INSTALL/env_variables/fuzzing_in_depth/afl-fuzz 소스로 플래그·환경 변수 대조, AFLNet 옵션·프로토콜, OSS-Fuzz project.yaml·helper.py, boofuzz API를 공식 저장소로 확인하고 boofuzz 예제 객체 생성 실행, parse.c ASan 빌드로 크래시 재현, 수정 없음 | 검증팀 |

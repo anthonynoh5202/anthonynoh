@@ -188,9 +188,9 @@ Java 스크립트는 `ghidra.app.script.GhidraScript`를 상속해 `run()`을 �
 |---|---|---|---|---|
 | IDA Free | 개인·비상업용 | x86/x64만 | 클라우드 기반, x64 | 공식 안내가 버전마다 달라 **직접 확인** |
 | IDA Home | 비상업용, 지명 사용자 | 구매 시 고른 한 프로세서 계열 | 클라우드 기반, 한 계열 | IDAPython, IDC, C++ SDK |
-| IDA Pro | 상용 | 전 계열 | Essential은 클라우드 2개, Expert/Ultimate는 로컬(air gap) 실행 | IDAPython, IDC, C++ SDK |
+| IDA Pro | 상용 | 전 계열 | 플랜(Essential/Expert/Ultimate 등)에 따라 클라우드·로컬 실행과 지원 계열이 다르다. 구매 전 공식 FAQ 확인 | IDAPython, IDC, C++ SDK |
 
-출처: [Hex-Rays: IDA Free](https://hex-rays.com/ida-free), [IDA Home](https://hex-rays.com/ida-home), [디컴파일러 플랜 차이 FAQ](https://hex-rays.com/faqs/whats-the-difference-between-the-decompiler-offerings-across-various-ida-pro-plans). 가격과 플랜 구성은 자주 바뀌므로 구매 전 공식 페이지를 다시 본다. 기관에서 Ghidra 대신 IDA를 고르는 이유는 보통 둘이다. 팀에 쌓인 IDB 파일과 플러그인이 있거나, Ghidra가 지원하지 않는 프로세서를 봐야 하거나.
+출처: [Hex-Rays: IDA Free](https://hex-rays.com/ida-free), [IDA Home](https://hex-rays.com/ida-home), [Hex-Rays 공식 사이트의 플랜·FAQ](https://hex-rays.com/). 가격과 플랜 구성은 자주 바뀌므로 구매 전 공식 페이지를 다시 본다. 기관에서 Ghidra 대신 IDA를 고르는 이유는 보통 둘이다. 팀에 쌓인 IDB 파일과 플러그인이 있거나, Ghidra가 지원하지 않는 프로세서를 봐야 하거나.
 
 ### 6.2 IDAPython 개요
 
@@ -256,3 +256,4 @@ rizin은 radare2에서 갈라져 나온(fork) 프로젝트이고, Cutter는 rizi
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | Ghidra 워크플로, 디컴파일러 한계 표, PyGhidra·Java 스크립트, IDA 판본 비교, 도구 비교표 작성 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: Ghidra 12.2 JDK 25·PyGhidra Python 3.9~3.15 요구를 공식 WhatsNew/GettingStarted로 확인, target.c 컴파일·objdump로 프레임 0x30/버퍼 RBP-0x20/오프셋 40 확인, 확인 불가한 IDA Pro 플랜별 디컴파일러 세부와 FAQ URL을 완화 | 검증팀 |

@@ -44,7 +44,7 @@ flowchart LR
 
 ### 2.1 원리
 
-2021년 2월 Alex Birsan이 공개한 기법이다. 📎 [원문](https://medium.com/@alex.birsan/dependency-confusion-4a5d60fec610) 회사 내부 패키지 이름(`acme-auth-utils`)이 공개 코드, `package.json`, 에러 메시지에 노출된다. 공격자가 **같은 이름**을 공개 레지스트리(npm, PyPI)에 더 높은 버전으로 올린다. 사내 빌드가 공개 레지스트리와 사설 레지스트리를 함께 보도록 설정돼 있으면 패키지 관리자는 "더 높은 버전"을 고른다. 설치 스크립트가 빌드 서버에서 실행된다. Birsan은 이 방법으로 Apple, Microsoft, PayPal 등 35개 조직의 내부 빌드에 코드를 실행시켰고 13만 달러 이상의 포상금을 받았다. 📎 [보도](https://portswigger.net/daily-swig/researcher-hacks-apple-microsoft-and-other-major-tech-companies-in-novel-supply-chain-attack)
+2021년 2월 Alex Birsan이 공개한 기법이다. 📎 [원문](https://medium.com/@alex.birsan/dependency-confusion-4a5d60fec610) 회사 내부 패키지 이름(`acme-auth-utils`)이 공개 코드, `package.json`, 에러 메시지에 노출된다. 공격자가 **같은 이름**을 공개 레지스트리(npm, PyPI)에 더 높은 버전으로 올린다. 사내 빌드가 공개 레지스트리와 사설 레지스트리를 함께 보도록 설정돼 있으면 패키지 관리자는 "더 높은 버전"을 고른다. 설치 스크립트가 빌드 서버에서 실행된다. Birsan은 이 방법으로 Apple, Microsoft, PayPal 등 35개 조직의 내부 빌드에 코드를 실행시켰고 13만 달러 이상의 포상금을 받았다(원문 기준).
 
 ```ini
 # ❌ 취약: pip.conf. extra-index-url은 "추가"지 "우선"이 아니다. 두 인덱스를 모두 보고 높은 버전을 고른다
@@ -274,3 +274,4 @@ SolarWinds는 빌드 서버에 상주한 악성코드가 컴파일 직전에 소
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. 의존성 혼동, 악성 패키지 탐지, CI(pwn request·태그 변조·시크릿), SBOM, Sigstore·SLSA, 사례 8건 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CVE 3건 cvelistV5·GHSA 대조(tj-actions 태그 범위·23,000 저장소·v46.0.1 일치), CNCF 카탈로그로 Codecov·ua-parser-js·polyfill 날짜·수치 확인, 도구 명령(guarddog·cosign·syft·checkov) README 대조, 확인 불가한 Daily Swig 링크 삭제, 워크플로 YAML 파싱 확인 | 검증팀 |

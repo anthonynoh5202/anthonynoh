@@ -257,3 +257,4 @@ Java.perform(() => {
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | pwndbg/GEF 설치와 명령 표, 크래시 워크플로, 브레이크포인트 전략, 코어 덤프, WinDbg, Frida 17 기준 예제 작성 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: pwndbg(GDB 12.1+/Python 3.10+, install.pwndbg.re)·GEF(GDB 10+/Python 3.10+) 요구와 명령을 공식 문서로 대조, Frida 17.0.0 릴리스 노트·JS API 문서로 제거/신규 API 확인, frida-trace `-j`/`/isu` 플래그 확인, gdb로 오프셋 40 재현, 수정 없음 | 검증팀 |

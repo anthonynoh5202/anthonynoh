@@ -87,7 +87,7 @@ def ping():
 ```
 
 ```bash
-semgrep --validate --config rules/        # 문법 검사
+semgrep --validate --config rules/        # 문법 검사 (semgrep.dev의 룰 린트에 접속한다)
 semgrep --test rules/                     # ruleid/ok 주석과 대조
 ```
 
@@ -113,7 +113,7 @@ codeql database analyze db-py codeql/python-queries:codeql-suites/python-securit
   --format=sarif-latest --output=results.sarif
 ```
 
-스위트(`.qls`)는 쿼리 묶음이다. `python-code-scanning.qls`(기본, 정밀도 높은 것만), `python-security-extended.qls`(보안 쿼리 확대), `python-security-and-quality.qls`(품질 포함) 순으로 넓어진다. 결과 SARIF는 VS Code의 SARIF Viewer나 GitHub code scanning에서 보고, `--format=csv`로 표도 만든다. 쿼리 하나만 돌리려면 스위트 자리에 `.ql` 파일 경로를 준다.
+스위트(`.qls`)는 쿼리 묶음이다. `python-code-scanning.qls`(기본, 정밀도 높은 것만), `python-security-extended.qls`(보안 쿼리 확대), `python-security-and-quality.qls`(품질 포함) 순으로 넓어진다. 결과 SARIF는 VS Code의 SARIF Viewer나 GitHub code scanning에서 보고, `--format=csv`로 표도 만든다. 쿼리 하나만 돌리려면 스위트 자리에 `.ql` 파일 경로를 준다. 단, `database analyze`는 `@kind` 메타데이터가 있는 쿼리만 받으므로, 3.3절처럼 메타데이터 없이 쓴 실험용 쿼리는 `codeql query run --database=db-py 파일.ql`로 돌린다.
 
 ### 3.3 QL의 기본 구조
 
@@ -166,7 +166,7 @@ where OsSystemFlow::flowPath(source, sink)
 select sink.getNode(), source, sink, "os.system() 인자가 $@ 에서 온다.", source.getNode(), "원격 입력"
 ```
 
-`RemoteFlowSource`는 표준 라이브러리가 정의한 "원격에서 오는 입력"(Flask·Django 요청 등)의 집합이라 프레임워크별 소스를 나열할 필요가 없다. 새니타이저는 `isBarrier(DataFlow::Node node)` 술어로 지정한다. 표준 쿼리 `py/command-line-injection`의 설정 모듈이 정확히 이 세 술어로 되어 있다 📎 [CommandInjectionQuery.qll](https://github.com/github/codeql/blob/main/python/ql/lib/semmle/python/security/dataflow/CommandInjectionQuery.qll). 경로가 필요 없으면 `@kind problem`으로 바꾸고 `OsSystemFlow::flow(source, sink)`에 `DataFlow::Node`를 쓴다. Semgrep의 taint 룰과 구조는 같고, 차이는 CodeQL이 함수와 파일 경계를 넘어 흐름을 따라간다는 것이다.
+`RemoteFlowSource`는 표준 라이브러리가 정의한 "원격에서 오는 입력"(Flask·Django 요청 등)의 집합이라 프레임워크별 소스를 나열할 필요가 없다. 새니타이저는 `isBarrier(DataFlow::Node node)` 술어로 지정한다. 표준 쿼리 `py/command-line-injection`의 설정 모듈이 이 세 술어(와 증분 분석용 술어 하나)로 되어 있다 📎 [CommandInjectionQuery.qll](https://github.com/github/codeql/blob/main/python/ql/lib/semmle/python/security/dataflow/CommandInjectionQuery.qll). 경로가 필요 없으면 `@kind problem`으로 바꾸고 `OsSystemFlow::flow(source, sink)`에 `DataFlow::Node`를 쓴다. Semgrep의 taint 룰과 구조는 같고, 차이는 CodeQL이 함수와 파일 경계를 넘어 흐름을 따라간다는 것이다.
 
 ## 4. 핵심 워크플로: 룰 하나를 CI까지
 
@@ -257,3 +257,4 @@ jobs:
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | Semgrep 룰 문법·taint 룰·테스트, CodeQL CLI·QL 구조·taint 설정 모듈, CI 통합, 오탐 관리 작성 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: Semgrep 룰·테스트 파일을 semgrep 1.182에서 `--test` 통과·SARIF 1건 확인, CodeQL 쿼리 2개를 CodeQL CLI 2.27로 컴파일·실행 확인, CommandInjectionQuery.qll·codeql-action v4·README 한계 서술 대조, `--validate` 네트워크 필요 주석 추가 | 검증팀 |

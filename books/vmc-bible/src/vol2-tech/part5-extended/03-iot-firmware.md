@@ -178,7 +178,7 @@ sudo ./run.sh -c <브랜드> <firmware.bin>
 sudo ./run.sh -r <브랜드> <firmware.bin>
 ```
 
-에뮬레이션이 뜨면 장비의 웹 UI에 Burp를 붙여 [3부 웹 취약점](../part3-web/00-overview.md)의 절차를 그대로 돌린다. 명령 인젝션은 `; sleep 5`·`$(sleep 5)`로, 버퍼 오버플로는 긴 파라미터로 CGI 프로세스가 죽는지로 본다. 에뮬레이션이 안 뜨는 펌웨어는 많다. 📎 EMBA 2.0은 FirmAE 코퍼스 1,074개 기준 95% 성공률을 주장하지만([heise 보도](https://heise.de/-11119751)) 성공 기준이 "네트워크 서비스 하나 이상 응답"이라 실제 공격 표면이 모두 뜬 것은 아니다. 안 뜨면 5.1로 내려가거나 실제 장비로 간다.
+에뮬레이션이 뜨면 장비의 웹 UI에 Burp를 붙여 [3부 웹 취약점](../part3-web/00-overview.md)의 절차를 그대로 돌린다. 명령 인젝션은 `; sleep 5`·`$(sleep 5)`로, 버퍼 오버플로는 긴 파라미터로 CGI 프로세스가 죽는지로 본다. 에뮬레이션이 안 뜨는 펌웨어는 많다. 프레임워크가 내세우는 성공률(FirmAE 논문의 79% 등)은 성공 기준이 "네트워크 서비스 하나 이상 응답"이라 실제 공격 표면이 모두 뜬 것은 아니다. 안 뜨면 5.1로 내려가거나 실제 장비로 간다.
 
 ## 6. 바이너리 취약점의 임베디드 변형 🔴
 
@@ -229,7 +229,7 @@ Ghidra에서 `system`, `popen`, `execl`의 호출처(xref)를 모두 열고 인�
 
 | 사례 | 대상 | 핵심 | 출처 |
 |---|---|---|---|
-| **Mirai** (2016) | IP 카메라·DVR·라우터 수십만 대 | CVE 없음. telnet(23/2323) 스캔 + 62개 기본 자격증명 사전으로 감염. 2016-09 KrebsOnSecurity·OVH, 2016-10-21 Dyn DNS DDoS. 소스는 2016-10 초 공개 | [USENIX Security 2017 분석 논문](https://www.usenix.org/conference/usenixsecurity17/technical-sessions/presentation/antonakakis) · [소스](https://github.com/jgamblin/Mirai-Source-Code) |
+| **Mirai** (2016) | IP 카메라·DVR·라우터 수십만 대 | CVE 없음. telnet(23/2323) 스캔 + 62개 기본 자격증명 사전으로 감염. 2016-09 KrebsOnSecurity·OVH, 2016-10-21 Dyn DNS DDoS. 소스는 2016-09 말 공개 | [USENIX Security 2017 분석 논문](https://www.usenix.org/conference/usenixsecurity17/technical-sessions/presentation/antonakakis) · [소스](https://github.com/jgamblin/Mirai-Source-Code) |
 | [CVE-2014-9222](https://nvd.nist.gov/vuln/detail/CVE-2014-9222) Misfortune Cookie (2014) | AllegroSoft RomPager (수십 벤더 라우터, 약 1,200만 대 📎) | HTTP 쿠키 처리의 메모리 손상으로 인증 우회. 2005년에 고쳐진 코드가 2014년까지 출하됨. "SDK 공유"의 전형 | [Check Point 발표 보도](https://www.securityweek.com/misfortune-cookie-vulnerability-exposes-millions-routers/) |
 | [CVE-2017-17215](https://nvd.nist.gov/vuln/detail/CVE-2017-17215) (2017) | Huawei HG532 | WAN의 37215 포트 UPnP(TR-064) `DeviceUpgrade`에 셸 메타문자 → 명령 인젝션. Satori(Mirai 변종) 봇넷에 사용 | [Check Point Research](https://research.checkpoint.com/2017/good-zero-day-skiddie/) |
 | [CVE-2018-10561](https://nvd.nist.gov/vuln/detail/CVE-2018-10561) + [CVE-2018-10562](https://nvd.nist.gov/vuln/detail/CVE-2018-10562) (2018) | Dasan GPON 라우터 (약 100만 대 노출 📎) | URL에 `?images/`를 붙이면 인증 우회 + 진단 폼의 명령 인젝션. 공개 직후 봇넷이 채택. CISA KEV 등재 | [SecurityWeek](https://www.securityweek.com/hackers-target-flaws-affecting-million-internet-exposed-routers) |
@@ -279,3 +279,4 @@ Ghidra에서 `system`, `popen`, `execl`의 호출처(xref)를 모두 열고 인�
 |---|---|---|
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 작성. 획득(다운로드·UART·SPI), binwalk v3, 파일시스템 분석, EMBA·FirmAE·QEMU, 임베디드 바이너리 변형, 사례 5건 | @anthonynoh5202 |
+| 2026-10-22 | 기술 검증: CVE 5건 cvelistV5 대조(모두 실존, KEV 등재 확인), Mirai scanner.c 62쌍·FirmAE 79%/16% 1차 자료 확인, 출처 미확인 EMBA 95% 수치·heise 링크 삭제, Mirai 소스 공개 시점 정정, C 예제 컴파일 확인 | 검증팀 |
