@@ -7,7 +7,7 @@
 | 1 | 센터 내부 팀 구성과 정원 | [제1편 1부 2장](../vol1-center/01-understanding/02-where.md) | ⬜ |
 | 2 | 디지털위협대응본부 산하 조직 정확한 목록 | [제1편 1부 2장](../vol1-center/01-understanding/02-where.md) | ⬜ |
 | 3 | 인력 수치 기준일, 현재 정원표, 비상근 인력의 소속과 협업 규칙 | [제1편 1부 2장](../vol1-center/01-understanding/02-where.md) | ⬜ |
-| 4 | 일원화 이전 각 경로 담당 팀과 이관된 업무 목록: 신고포상제·보안공지·CNA 등 기능의 센터 신설 전 소속 팀, 센터로의 이관 시점·범위(전입자의 이전 소속·담당 범위 구분) | [제1편 1부 1장 4절](../vol1-center/01-understanding/01-why.md), [제3편 2부 15장](../vol3-practice/02-onboarding/15-transfer.md) | ⬜ |
+| 4 | 일원화 이전 각 경로 담당 팀과 이관된 업무 목록: 신고포상제·보안공지·CNA 등 기능의 센터 신설 전 소속 팀, 센터로의 이관 시점·범위(전입자의 이전 소속·담당 범위 구분) | [제1편 1부 1장 4절](../vol1-center/01-understanding/01-why.md), [제3편 2부 3장](../vol3-practice/02-onboarding/03-transfer.md) | ⬜ |
 | 5 | 국내 취약점 식별번호 체계(KVE 등)의 부여 규칙 | [제1편 1부 4장](../vol1-center/01-understanding/04-workflow.md) | ⬜ |
 | 6 | 내부 연락 체계, SLA(응답 시한) | [제1편 1부 3장](../vol1-center/01-understanding/03-roles.md) | ⬜ |
 | 7 | 실제 처리 사례 1건 (익명화) | [제1편 1부 4장 4절](../vol1-center/01-understanding/04-workflow.md) | ⬜ |
@@ -31,8 +31,8 @@
 | 25 | 관련 법령 조문 번호와 KISA 업무 근거 (법무 검토) | [제1편 3부 12장](../vol1-center/03-partners/12-legal.md) | ⬜ |
 | 26 | 허용 범위 밖 신고의 내부 처리 지침 | [제1편 3부 12장](../vol1-center/03-partners/12-legal.md) | ⬜ |
 | 27 | 해외 CVD 사례 비교 자료 유무 | [제1편 3부 12장](../vol1-center/03-partners/12-legal.md) | ⬜ |
-| 28 | 멘토 제도, 접근 권한·계정 절차, 에스컬레이션 기준 | [제3편 2부 13장](../vol3-practice/02-onboarding/13-new-hire.md) | ⬜ |
-| 29 | 내부 교육 과정, 외부 교육·자격증 지원, 역량 평가 연계 | [제3편 2부 16장](../vol3-practice/02-onboarding/16-skills.md) | ⬜ |
+| 28 | 멘토 제도, 접근 권한·계정 절차, 에스컬레이션 기준 | [제3편 2부 1장](../vol3-practice/02-onboarding/01-new-hire.md) | ⬜ |
+| 29 | 내부 교육 과정, 외부 교육·자격증 지원, 역량 평가 연계 | [제3편 2부 4장](../vol3-practice/02-onboarding/04-skills.md) | ⬜ |
 | 30 | 센터 내부 용어(시스템명, 양식명) | [부록 A](a-glossary.md) | ⬜ |
 | 31 | 내부 연혁 | [부록 C](c-timeline.md) | ⬜ |
 | 32 | 운영망 대상 신고 검증의 세부 기준: 센터 직원의 비파괴 확인 규칙(사전 통보, 계정, 출발지 등록), 기관 확인 요청 회신 기한, 보류 시한과 경과 시 처리, 테스트 환경 제공 요청 근거 | [제3편 1부 2장 7절](../vol3-practice/01-workflow-tech/02-verification.md) | ⬜ |

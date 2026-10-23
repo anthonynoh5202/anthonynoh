@@ -116,7 +116,7 @@
 
 - [부록 E. 출처](e-sources.md) · 이 책이 인용한 자료
 - [부록 B. 치트시트](b-cheatsheets.md) · 도구 명령 요약
-- [제3편 2부 16장 공통 역량과 학습 자료](../vol3-practice/02-onboarding/16-skills.md) · 직급별 학습 경로
+- [제3편 2부 4장 공통 역량과 학습 자료](../vol3-practice/02-onboarding/04-skills.md) · 직급별 학습 경로
 
 ## 변경 이력
 

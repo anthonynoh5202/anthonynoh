@@ -3,23 +3,26 @@
 [이 책에 대하여](introduction.md)
 [독자별 읽기 경로](reading-paths.md)
 
-# 제1편. 센터와 제도
+# 제1편 1부. 센터 이해하기
 
-- [센터 이해하기](vol1-center/01-understanding/00-index.md)
-  - [센터는 왜 생겼나](vol1-center/01-understanding/01-why.md)
-  - [조직 안에서의 위치](vol1-center/01-understanding/02-where.md)
-  - [역할과 기능](vol1-center/01-understanding/03-roles.md)
-  - [핵심 업무 흐름: 취약점의 생애주기](vol1-center/01-understanding/04-workflow.md)
-- [제도와 서비스](vol1-center/02-programs/00-index.md)
-  - [보안 취약점 신고포상제](vol1-center/02-programs/05-bug-bounty.md)
-  - [보안취약점 상시 신고조치제 (CVD/VDP)](vol1-center/02-programs/06-cvd-vdp.md)
-  - [취약점 정보 포털과 보안공지](vol1-center/02-programs/07-portal-advisory.md)
-  - [기업 기술지원과 점검](vol1-center/02-programs/08-assessment-support.md)
-  - [AI를 활용한 탐지와 검증](vol1-center/02-programs/09-ai.md)
-- [함께 일하는 곳](vol1-center/03-partners/00-index.md)
-  - [원내 협업](vol1-center/03-partners/10-internal.md)
-  - [유관기관과 국제협력](vol1-center/03-partners/11-external.md)
-  - [법과 제도의 근거](vol1-center/03-partners/12-legal.md)
+- [센터는 왜 생겼나](vol1-center/01-understanding/01-why.md)
+- [조직 안에서의 위치](vol1-center/01-understanding/02-where.md)
+- [역할과 기능](vol1-center/01-understanding/03-roles.md)
+- [핵심 업무 흐름: 취약점의 생애주기](vol1-center/01-understanding/04-workflow.md)
+
+# 제1편 2부. 제도와 서비스
+
+- [보안 취약점 신고포상제](vol1-center/02-programs/05-bug-bounty.md)
+- [보안취약점 상시 신고조치제 (CVD/VDP)](vol1-center/02-programs/06-cvd-vdp.md)
+- [취약점 정보 포털과 보안공지](vol1-center/02-programs/07-portal-advisory.md)
+- [기업 기술지원과 점검](vol1-center/02-programs/08-assessment-support.md)
+- [AI를 활용한 탐지와 검증](vol1-center/02-programs/09-ai.md)
+
+# 제1편 3부. 함께 일하는 곳
+
+- [원내 협업](vol1-center/03-partners/10-internal.md)
+- [유관기관과 국제협력](vol1-center/03-partners/11-external.md)
+- [법과 제도의 근거](vol1-center/03-partners/12-legal.md)
 
 # 제2편. 분석 기술
 
@@ -88,16 +91,16 @@
 
 # 제3편. 현장 적용
 
-- [업무 흐름 × 기술](vol3-practice/01-workflow-tech/00-index.md)
+- [1부. 업무 흐름 × 기술](vol3-practice/01-workflow-tech/00-index.md)
   - [입수·분석 단계에서 쓰는 기술](vol3-practice/01-workflow-tech/01-intake-analysis.md)
   - [검증 단계: 재현이 전부다](vol3-practice/01-workflow-tech/02-verification.md)
   - [조치 단계: 고쳐지게 만드는 보고서](vol3-practice/01-workflow-tech/03-remediation.md)
   - [공유·공지 단계: 영향도와 문안](vol3-practice/01-workflow-tech/04-advisory.md)
-- [온보딩](vol3-practice/02-onboarding/00-index.md)
-  - [신입 직원: 첫 30·60·90일](vol3-practice/02-onboarding/13-new-hire.md)
-  - [기존 직원: 바뀐 것과 더 깊이 볼 것](vol3-practice/02-onboarding/14-existing.md)
-  - [전입 직원: 다른 팀·본부에서 오신 분께](vol3-practice/02-onboarding/15-transfer.md)
-  - [공통 역량과 학습 자료](vol3-practice/02-onboarding/16-skills.md)
+- [2부. 온보딩](vol3-practice/02-onboarding/00-index.md)
+  - [신입 직원: 첫 30·60·90일](vol3-practice/02-onboarding/01-new-hire.md)
+  - [기존 직원: 바뀐 것과 더 깊이 볼 것](vol3-practice/02-onboarding/02-existing.md)
+  - [전입 직원: 다른 팀·본부에서 오신 분께](vol3-practice/02-onboarding/03-transfer.md)
+  - [공통 역량과 학습 자료](vol3-practice/02-onboarding/04-skills.md)
 
 # 부록
 

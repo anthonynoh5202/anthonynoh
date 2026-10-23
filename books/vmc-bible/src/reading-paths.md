@@ -1,9 +1,23 @@
 # 독자별 읽기 경로
 
+## 장 번호 읽는 법
+
+이 책의 장 번호는 **왼쪽 목차(사이드바)의 번호와 같다**.
+
+| 표기 | 뜻 | 사이드바 |
+|---|---|---|
+| 제1편 5장 (또는 제1편 2부 5장) | 제1편은 1~12장이 부를 넘어 이어진다. 5장은 신고포상제 | `5.` |
+| 제2편 기초 2장 | 제2편은 부 이름 + 부 안의 순번 | `기초` 아래 `.2` |
+| 제2편 웹 11장 | 웹 부의 11번째 장 | `웹 취약점` 아래 `.11` |
+| 제3편 1부 2장 | 제3편 1부(업무 흐름 × 기술)의 2번째 장 | `1부` 아래 `.2` |
+| 제3편 2부 3장 | 제3편 2부(온보딩)의 3번째 장 | `2부` 아래 `.3` |
+
+같은 편 안에서는 편 이름을 생략한다. 파일 이름의 앞 번호도 이 번호와 같다(제1편 `05-bug-bounty.md`, 제2편 기초 `02-cwe-cve-cvss.md`, 제3편 2부 `03-transfer.md`).
+
 ## 🆕 신입 직원
 
 1. [제1편 센터 이해하기](vol1-center/01-understanding/01-why.md) 네 장을 순서대로 읽는다. 반나절이면 된다.
-2. [제3편 신입 30·60·90일](vol3-practice/02-onboarding/13-new-hire.md) 체크리스트를 복사해 자기 것으로 만든다.
+2. [제3편 신입 30·60·90일](vol3-practice/02-onboarding/01-new-hire.md) 체크리스트를 복사해 자기 것으로 만든다.
 3. [제1편 제도](vol1-center/02-programs/05-bug-bounty.md)의 신고포상제와 포털·보안공지 장을 읽고, 실제 공지 하나를 끝까지 따라가 본다.
 4. [제2편 기초](vol2-tech/part1-foundations/01-what-is-vulnerability.md)와 [방법론 개요](vol2-tech/part2-methodology/01-overview.md)를 읽는다.
 5. [SQL 인젝션](vol2-tech/part3-web/01-sql-injection.md) 실습을 끝까지 한다. 이 장이 이 책의 "읽는 법" 자체다.
@@ -12,7 +26,7 @@
 
 ## 🏢 기존 직원
 
-- [제3편 바뀐 것과 더 깊이 볼 것](vol3-practice/02-onboarding/14-existing.md)부터 읽는다. 2026년 한 해의 변화를 한 장에 모았다.
+- [제3편 바뀐 것과 더 깊이 볼 것](vol3-practice/02-onboarding/02-existing.md)부터 읽는다. 2026년 한 해의 변화를 한 장에 모았다.
 - [상시 신고조치제](vol1-center/02-programs/06-cvd-vdp.md)와 [AI 활용](vol1-center/02-programs/09-ai.md)은 새 제도라서 전원이 읽는다.
 - 제2편에서 "안다고 생각했던" 장을 펴서 **7. 우회 기법**과 **8. 실제 CVE 사례**를 읽는다. 모르는 것이 있으면 그 장을 처음부터 다시 읽는다.
 - [제2편 워크스루](vol2-tech/part7-walkthroughs/00-overview.md)를 하나 골라 직접 재현한다.
@@ -20,7 +34,7 @@
 
 ## 🔁 다른 팀·본부에서 온 직원
 
-- [제3편 전입 직원](vol3-practice/02-onboarding/15-transfer.md)에 출신 부서별로 "이미 아는 것"과 "새로 알아야 할 것"을 나눠 두었다.
+- [제3편 전입 직원](vol3-practice/02-onboarding/03-transfer.md)에 출신 부서별로 "이미 아는 것"과 "새로 알아야 할 것"을 나눠 두었다.
 - [원내 협업](vol1-center/03-partners/10-internal.md)에서 예전 부서와 센터가 어떻게 연결되는지 본다. 그 연결고리가 전입자의 가장 큰 강점이다.
 - [업무 흐름](vol1-center/01-understanding/04-workflow.md)은 반드시 읽는다. 같은 "취약점"이라도 침해대응과 취약점관리는 시간축이 다르다.
 - 기술 배경이 없다면 제2편은 [기초 1장](vol2-tech/part1-foundations/01-what-is-vulnerability.md)과 [2장](vol2-tech/part1-foundations/02-cwe-cve-cvss.md)만 읽어도 분석가와 대화가 된다.
@@ -34,7 +48,7 @@
 3. [제2편 워크스루](vol2-tech/part7-walkthroughs/00-overview.md)를 하나 골라 이 책의 실습 환경에서 재현한다. 센터가 말하는 "재현"의 기준을 몸으로 익힌다.
 4. [제3편 1부 2장 검증](vol3-practice/01-workflow-tech/02-verification.md)을 읽는다. 전 직장의 검증과 센터의 검증이 어디서 다른지 본다.
 
-[제3편 2부 14장](vol3-practice/02-onboarding/14-existing.md)은 센터 재직자 전제라서 "2026년에 바뀐 것" 표만 보면 된다.
+[제3편 2부 2장](vol3-practice/02-onboarding/02-existing.md)은 센터 재직자 전제라서 "2026년에 바뀐 것" 표만 보면 된다.
 
 ## 🔴 관리자·제도 담당
 
