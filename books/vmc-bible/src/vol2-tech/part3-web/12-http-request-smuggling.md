@@ -209,34 +209,55 @@ CL.TE 탐침을 **먼저** 보낸다. 순서를 바꾸면 TE.CL 탐침이 CL.TE 
 
 ### 4.2 로컬 (선택): 파서 모형으로 경계가 갈리는 것 보기
 
-서버 두 대 대신, 같은 바이트열을 CL 우선 파서와 TE 우선 파서가 어떻게 자르는지 28줄짜리 모형으로 본다. 실제 서버가 아니라 **원리를 확인하는 도구**다.
+서버 두 대 대신, 같은 바이트열을 CL 우선 파서와 TE 우선 파서가 어떻게 자르는지 36줄짜리 모형으로 본다. 실제 서버가 아니라 **원리를 확인하는 도구**다. 아래가 전체이며 그대로 저장해 `python3 desync_parse.py`로 돌린다(Python 3.13에서 실행 확인). `CHUNKED` 표식과 `body_len()`은 2절의 `body_length()`와 같은 역할이고, `prefer_te` 인자가 "어느 헤더를 믿는 서버인가"를 흉내 낸다.
 
 ```python
-# desync_parse.py  (핵심만. 전체는 28줄)
+# desync_parse.py  같은 바이트열을 CL 우선 파서와 TE 우선 파서가 어떻게 다르게 자르는지 본다 (실습용 모형)
+import re
+
+CHUNKED = -1                                         # "청크로 읽어라"는 표식 (2절 body_length와 같은 뜻)
+
+def body_len_cl(head):
+    m = re.search(rb"(?im)^content-length:\s*(\d+)", head)
+    return int(m.group(1)) if m else 0
+
+def body_len(head, prefer_te):                       # 어느 헤더를 믿을지는 서버마다 다르다
+    if prefer_te and re.search(rb"(?im)^transfer-encoding:.*chunked", head):
+        return CHUNKED
+    return body_len_cl(head)
+
 def split(buf, prefer_te):
     reqs = []
     while b"\r\n\r\n" in buf:
         head, _, rest = buf.partition(b"\r\n\r\n")
-        if prefer_te and re.search(rb"(?im)^transfer-encoding:.*chunked", head):
+        n = body_len(head, prefer_te)
+        if n == CHUNKED:
             body = b""
             while True:                              # 크기(16진수) CRLF 데이터 CRLF … 0 CRLF CRLF
                 size_line, _, rest = rest.partition(b"\r\n")
                 size = int(size_line.split(b";")[0], 16)
                 body += rest[:size]; rest = rest[size + 2:]
                 if size == 0: break
-        else: n = body_len_cl(head); body, rest = rest[:n], rest[n:]      # CL 길이만큼
+        else:
+            body, rest = rest[:n], rest[n:]          # CL 길이만큼
         reqs.append(head + b"\r\n\r\n" + body); buf = rest
     return reqs, buf                                 # buf: 다음 요청의 앞머리로 남는 바이트
+
+raw = (b"POST / HTTP/1.1\r\nHost: lab\r\nContent-Length: 6\r\nTransfer-Encoding: chunked\r\n\r\n"
+       b"0\r\n\r\nG")                                # 1절 그림 1의 바이트열
+for name, te in (("CL 우선(프런트)", False), ("TE 우선(백엔드)", True)):
+    reqs, left = split(raw, te)
+    print(f"== {name}: 요청 {len(reqs)}개, 남은 바이트 {left!r}")
 ```
 
-1절의 CL.TE 바이트열(`…\r\n\r\n0\r\n\r\nG`)을 `prefer_te=False`와 `True`로 한 번씩 돌린다.
+스크립트 끝의 `raw`가 1절의 CL.TE 바이트열(`…\r\n\r\n0\r\n\r\nG`)이고, 이것을 `prefer_te=False`와 `True`로 한 번씩 돌린 출력이 다음이다.
 
 ```
 == CL 우선(프런트): 요청 1개, 남은 바이트 b''
 == TE 우선(백엔드): 요청 1개, 남은 바이트 b'G'
 ```
 
-남은 `b'G'`가 그림 1의 "G"다. 2절의 `✅ body_length`처럼 둘 다 있을 때 예외를 던지도록 고치면 어느 쪽도 남는 바이트가 없다. 고치는 것까지가 실습이다.
+남은 `b'G'`가 그림 1의 "G"다. `body_len()`을 2절의 `✅ body_length`처럼 두 헤더가 함께 있을 때 예외를 던지도록 고치면 어느 쪽 파서도 남는 바이트가 없다(요청 자체가 거부된다). 고치는 것까지가 실습이다.
 
 ## 5. 익스플로잇 검증
 
@@ -349,3 +370,4 @@ TE 변형이 전부 막혀도 두 길이 남는다. 첫째, 백엔드가 본문�
 |---|---|---|
 | 2026-10-22 | 초안 작성. CL.TE·TE.CL 바이트열 길이 계산과 파서 모형, Node 22의 CL+TE 거부를 로컬 확인. CVE 8건 cvelistV5 레코드 대조 | @anthonynoh5202 |
 | 2026-10-23 | 기술 검증(2차): CVE 11건 레코드 재대조(전부 실존, 버전·CWE 일치). TE.CL 청크 길이(0x5c=92)·탐침 CL 값·파서 모형 재실행, Node 22 `HPE_INVALID_TRANSFER_ENCODING` 재확인, nginx 1.17.7 `error_page` 경로의 `ngx_http_discard_request_body` 추가를 소스로 확인. CL.0 행의 CVE-2022-22720이 8절에 없는데 "8절의"로 가리키던 것을 바로잡고, HTTP/2 헤더 값의 CR/LF가 규격상 금지(RFC 9113 8.2.1)임을 명시 | 검증팀 |
+| 2026-10-23 | 독자 테스트 2차 반영: 4.2절 `desync_parse.py`를 발췌 대신 전체(36줄, `import`·`CHUNKED`·`body_len_cl`·`raw`·실행부 포함)로 수록하고 Python 3.13으로 실행 확인 | @anthonynoh5202 |

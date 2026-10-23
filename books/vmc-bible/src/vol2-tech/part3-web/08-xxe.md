@@ -365,12 +365,15 @@ etree.fromstring(doc, parser).text     # 'expanded' ← 파서가 하는 것 (re
 | [CVE-2019-12415](https://nvd.nist.gov/vuln/detail/CVE-2019-12415) | Apache POI (4.1.1 미만) | `XSSFExportToXml`이 조작된 XLSX 안의 XML을 안전 설정 없이 파싱. 숨은 XML 입력의 전형 | [POI 보안 공지](https://poi.apache.org/security.html) |
 | [CVE-2019-3773](https://nvd.nist.gov/vuln/detail/CVE-2019-3773) | Spring Web Services (2.4.3·3.0.4 이하) | 신뢰할 수 없는 출처의 XML을 받을 때 XXE. SOAP 프레임워크 자체의 결함 | [Spring 권고](https://spring.io/security/cve-2019-3773) |
 | [CVE-2021-23926](https://nvd.nist.gov/vuln/detail/CVE-2021-23926) | Apache XMLBeans (2.6.0 이하) | 내부 파서가 XXE 방어 속성을 설정하지 않음. POI 등 상위 라이브러리에 전파 | [XMLBeans 3.0.0](https://xmlbeans.apache.org/) |
+| [CVE-2017-12629](https://nvd.nist.gov/vuln/detail/CVE-2017-12629) | Apache Solr (7.1 미만) | 기본 활성인 XML 쿼리 파서(`deftype=xmlparser`)의 XXE로 파일을 읽거나(ftp 래퍼 블라인드) Config API의 `add-listener`에 닿아 `RunExecutableListener`로 **명령 실행**. XXE가 RCE의 첫 단계가 된 제품 사례 | [Apache 공지 (oss-security)](http://openwall.com/lists/oss-security/2017/10/13/1), Solr 7.1 |
 
 **libxml2 (CVE-2014-3660) 에서 배울 것**: "개체 치환을 껐으니 안전하다"가 틀렸다. 치환은 꺼졌지만 파서가 개체 크기를 계산하는 과정에서 확장이 일어났다. 공개 분석 기준으로, 패치는 치환 여부와 무관하게 개체 확장 크기를 세어 한도를 넘으면 중단하도록 검사 로직을 보강했다. DTD 처리를 통째로 끄는 것이 개별 옵션 조합보다 안전한 이유다. PHP, Python lxml, Ruby Nokogiri가 모두 libxml2 위에 있으므로 영향 범위가 넓었다.
 
 **Apache POI (CVE-2019-12415) 에서 배울 것**: 권고문 기준으로, 패치는 해당 도구의 파서 생성에 안전 설정을 적용했다. 애플리케이션은 "엑셀 파일을 받을 뿐"이었고 XML 파서를 호출한 적이 없다. 3.2절 숨은 입력 표의 DOCX·XLSX 행이 실제로 어떻게 터지는지 보여 준다.
 
 **XMLBeans (CVE-2021-23926) 에서 배울 것**: 권고문 기준으로, 3.0.0에서 파서 생성 시 외부 개체·DTD 관련 속성을 안전하게 설정하도록 바꿨다. 라이브러리의 라이브러리에서 난 결함이다. 의존성 트리 깊은 곳의 XML 파서까지가 공격 표면이다.
+
+**Apache Solr (CVE-2017-12629) 에서 배울 것**: 레코드 기준으로 결함은 둘이다. 검색 요청의 `deftype=xmlparser`가 기본으로 열려 있어 인증 없이 XXE가 되고, 그 XXE로 Config API에 요청을 넣어 `RunExecutableListener`(설정에 적힌 외부 명령을 실행하는 리스너)를 등록하면 명령이 실행된다. 레코드는 Lucene을 쓰는 Elasticsearch는 해당하지 않는다고 명시한다. 5절의 "XXE가 어디까지 가는가"를 판단할 때 **파일 읽기에서 멈추지 말고, 읽은 내용이나 SSRF 성격의 요청으로 닿는 관리 기능이 있는지**까지 보라는 사례다.
 
 ## 9. 체크리스트
 
@@ -411,3 +414,4 @@ etree.fromstring(doc, parser).text     # 'expanded' ← 파서가 하는 것 (re
 | 2026-10-22 | 기술 검증: CVE 4건 레코드 대조(전부 실존; CVE-2019-3773·CVE-2021-23926 영향 버전을 레코드 기준으로 수정). lxml 5.0부터 기본 resolve_entities='internal'로 바뀐 점을 반영해 취약 예제·재현 코드 수정(lxml 6.1·defusedxml 실행 확인). Java JAXP/StAX 설정 문자열 실행 확인 | 검증팀 |
 | 2026-10-23 | 기술 검증(2차, 7절): UTF-16 DOCTYPE·OOB 파라미터 개체 6단계(에러 기반)·내부 서브셋 PE 참조 거부·로컬 DTD 재사용을 lxml 6.1.3(libxml2 2.14.6)과 JDK 21 내장 파서로 재실행해 본문의 오류 문구(`PEReferences forbidden in internal subset`, `cannot occur within markup in the internal subset`, `FileNotFoundException`, `Can't resolve URI`)와 동작 차이를 확인. XML 1.0 WFC·4.2절 근거 확인. 수정 없음 | 검증팀 |
 | 2026-10-22 | 독자 테스트 반영: 7절에 로컬 DTD 재사용 원리(JDK 파서·libxml2 실행 확인), 블라인드 OOB 파라미터 개체 단계표, UTF-16 인코딩 우회 원리(lxml 실행 확인) 추가 | @anthonynoh5202 |
+| 2026-10-23 | 독자 테스트 2차 반영: 8절에 제품 사례 CVE-2017-12629(Apache Solr, XXE→RunExecutableListener RCE) 행과 해설 추가(cvelistV5 레코드 확인) | @anthonynoh5202 |

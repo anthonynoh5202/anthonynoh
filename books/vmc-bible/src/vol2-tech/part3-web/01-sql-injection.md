@@ -100,7 +100,7 @@ if sort_column not in ALLOWED:
 
 ### 3.1 코드 리뷰 / 정적 분석
 
-**grep으로 시작한다.** 쿼리 문자열 안에 변수 보간이 있는지 본다.
+**grep으로 시작한다.** 쿼리 문자열 안에 변수 보간이 있는지 본다. 아래 grep과 semgrep 명령은 모두 **저장소 루트**(`anthonynoh/`)에서 실행한 기준이다. `labs/web-sqli/` 안에서 실행하면 경로를 그에 맞게 줄인다.
 
 ```bash
 # Python (1) execute()에 직접 포매팅한 경우
@@ -120,6 +120,8 @@ grep -rnE "(mysqli_query|->query|pg_query)\s*\(.*\\\$" --include='*.php' .
 ```bash
 semgrep --config p/sql-injection .
 ```
+
+폐쇄망이라면 룰 파일을 미리 받아 두고 `--config 파일또는디렉터리`로 준다. 레지스트리 룰의 원본은 [semgrep/semgrep-rules](https://github.com/semgrep/semgrep-rules) 저장소에 있으므로(예: `python/lang/security/audit/formatted-sql-query.yaml`, `python/flask/security/injection/tainted-sql-string.yaml`) 필요한 YAML만 복사해 와도 된다. 로컬 룰 파일로는 네트워크 없이 돈다(위 두 룰로 `app.py` 6건 실측).
 
 직접 쓰면 **taint 모드**로 쓴다. 패턴 하나(`$DB.execute(f"...")`)로는 위 grep (1)과 같은 이유로 `app.py`를 못 잡는다. 소스(요청 값)에서 싱크(실행 함수의 쿼리 인자)까지 흐름을 따라가야 한다.
 
@@ -173,6 +175,13 @@ semgrep --config sqli-taint.yaml --metrics=off labs/web-sqli/app/app.py
 
 두 응답이 다르면 Boolean 기반 블라인드 인젝션이 확인된 것이다.
 
+위 표는 문자열 컨텍스트(`WHERE col = '입력'`)의 일반형이다. 4절 실습 앱에서는 이 페이로드로 차이가 **보이지 않는다**. `/search`는 `LIKE '%입력%'`이라 뒤에 `%'`가 붙어 `'1'='1%'`가 거짓이 되고, `/login`은 비밀번호 조건이 그대로 남기 때문이다. 실습 앱에서 참/거짓을 보려면 숫자 컨텍스트인 `/item`을 쓴다.
+
+| 입력 (실습 앱) | 조립된 쿼리 | 응답 |
+|---|---|---|
+| `/item?id=1 AND 1=1` | `... WHERE id = 1 AND 1=1` | `Found: …` |
+| `/item?id=1 AND 1=2` | `... WHERE id = 1 AND 1=2` | `Not found` |
+
 **3단계: 시간 지연**
 
 응답 차이가 없을 때. DB별 문법이 다르다.
@@ -183,6 +192,8 @@ semgrep --config sqli-taint.yaml --metrics=off labs/web-sqli/app/app.py
 | PostgreSQL | `'; SELECT pg_sleep(5)-- ` |
 | MSSQL | `'; WAITFOR DELAY '0:0:5'-- ` |
 | SQLite | `' AND 1=LIKE('ABCDEFG',UPPER(HEX(RANDOMBLOB(300000000))))-- ` |
+
+SQLite 행은 `SLEEP` 같은 함수가 없어 큰 난수 블롭을 만들게 하는 방식이라, 환경에 따라 10~30초(독자 실측 약 25초, 이 책의 확인 환경 13초)가 걸리고 그동안 DB 프로세스가 CPU를 점유한다. 실습 환경에서만 쓰고 **운영망에는 넣지 않는다**. 운영망 대상 신고의 확인 범위는 [제3편 1부 2장](../../vol3-practice/01-workflow-tech/02-verification.md) 7.2절(비파괴 확인)을 따른다.
 
 **자동화**: 후보가 확인된 뒤 `sqlmap`으로 범위를 확인한다. 자동화 도구는 "있다/없다"를 넓게 찾고, 사람은 "어디까지 가능한가"를 깊게 본다.
 
@@ -204,7 +215,7 @@ docker compose up --build
 
 ### 4.1 인증 우회
 
-1. 로그인 폼에 `username=admin'-- `, `password=아무거나` 를 넣는다.
+1. 로그인 폼에 `username=admin'-- `, `password=아무거나` 를 넣는다. `--` 뒤의 공백은 MySQL에서 주석으로 인식되기 위한 필수 조건이고, 실습 앱의 SQLite는 공백이 없어도 통과한다(실행 확인).
 2. 조립된 쿼리는 이렇게 된다.
    ```sql
    SELECT * FROM users WHERE username = 'admin'-- ' AND password = '아무거나'
@@ -374,3 +385,4 @@ Second-order 인젝션은 **방어 위치를 잘못 잡은** 경우다. 회원�
 | 2026-10-21 | 다이어그램 2개(Mermaid), 실습 스크린샷 4장 추가 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 6건을 cvelistV5 레코드로 대조(전부 실존·설명 일치). Joomla 행의 미확인 커밋 링크를 CVE 레코드의 공식 보안 공지로 교체 | 검증팀 |
 | 2026-10-22 | 독자 테스트 반영: 3.1절 grep에 변수 할당형(`query = f"SELECT`) 패턴 추가, Semgrep 룰을 taint 모드로 교체(app.py 3건 실측), `p/sql-injection`의 네트워크 필요 명시. 8절에서 SQLi가 아닌 세 건을 비교용 표로 분리하고 CVE-2014-3704·CVE-2023-48788을 레코드 확인 후 추가. 4.4에 컨테이너 재빌드 안내. 장 참조 표기 정리 | @anthonynoh5202 |
+| 2026-10-23 | 독자 테스트 2차 반영: 3.2절 참/거짓 표 아래에 실습 앱 기준 예(`/item?id=1 AND 1=1` vs `1=2`)와 문자열형 페이로드가 안 보이는 이유 추가. grep·semgrep 실행 디렉터리(저장소 루트) 명시. `p/sql-injection` 폐쇄망 대안(`--config 로컬 룰 파일`, semgrep 1.182 실측). `admin'-- ` 끝 공백의 MySQL/SQLite 차이 한 줄(SQLite 실행 확인). SQLite 시간 지연 페이로드의 소요 시간·CPU 점유와 운영망 금지(제3편 1부 2장 7.2) 한 줄 | @anthonynoh5202 |

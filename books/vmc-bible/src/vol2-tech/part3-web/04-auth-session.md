@@ -303,7 +303,7 @@ print(jwt.decode(forged, "server-secret", algorithms=["HS256"]))      # ✅ Inva
 
 **원리.** 서버는 IdP의 **공개키**로 RS256 서명을 검증한다. 검증 코드가 토큰 헤더의 `alg`를 그대로 따르고, 어떤 알고리즘이든 "설정에 있는 그 키"를 넘기는 구조라면, 헤더를 `HS256`으로 바꾼 토큰은 **공개키 바이트를 HMAC 비밀로 쓰는 검증**을 받게 된다. 공개키는 이름 그대로 공개다. `/.well-known/jwks.json`, TLS 인증서, 또는 같은 키로 만든 서명 두 개에서 모듈러스를 복원하는 방법으로 얻는다. 공격자는 `HMAC-SHA256(key = 공개키 바이트, data = header.payload)`로 서명하면 되고, 서버는 같은 계산을 하므로 일치한다. 조건은 하나다. **서버가 메모리에 쥔 키와 바이트 단위로 같아야 한다.** PEM이면 줄 끝의 개행까지, DER이면 DER 그대로, JWK에서 변환했다면 서버가 변환한 결과와 같은 형식이어야 하므로 실제 점검에서는 몇 가지 형식을 다 시도한다.
 
-실습 환경에서 자기 키로 재현하면 15줄이다. 취약한 검증기는 통과시키고, 라이브러리는 거부한다.
+실습 환경에서 자기 키로 재현하면 20줄이 안 된다. 취약한 검증기는 통과시키고, 라이브러리는 거부한다.
 
 ```python
 # confusion.py  (실습용. 키는 방금 만든 자기 것)
@@ -319,9 +319,14 @@ sig = b64(hmac.new(pub_pem, f"{head}.{body}".encode(), hashlib.sha256).digest())
 forged = f"{head}.{body}.{sig}"
 # ❌ 취약: 헤더의 alg를 따르고 "그 키"로 HMAC 비교
 print(hmac.compare_digest(sig, b64(hmac.new(pub_pem, f"{head}.{body}".encode(), hashlib.sha256).digest())))  # True
-# ✅ PyJWT 2.15: 둘 다 예외
-jwt.decode(forged, pub_pem, algorithms=["RS256"])   # InvalidAlgorithmError: The specified alg value is not allowed
-jwt.decode(forged, pub_pem, algorithms=["HS256"])   # InvalidKeyError: … asymmetric key … should not be used as an HMAC secret
+# ✅ PyJWT 2.15: 둘 다 예외. 첫 호출의 예외로 스크립트가 멈추면 둘째 결과를 못 보므로 각각 try/except로 감싼다
+for algs in (["RS256"], ["HS256"]):
+    try:
+        jwt.decode(forged, pub_pem, algorithms=algs)
+    except jwt.exceptions.PyJWTError as e:
+        print(algs, type(e).__name__, e)
+# ['RS256'] InvalidAlgorithmError The specified alg value is not allowed
+# ['HS256'] InvalidKeyError The specified key is an asymmetric key or x509 certificate and should not be used as an HMAC secret.
 ```
 
 **라이브러리가 막는 두 겹.** 첫째는 알고리즘 허용 목록이다. PyJWT 2.x는 `algorithms`를 생략하면 `decode()` 자체를 거부하고, 토큰의 `alg`가 목록에 없으면 `InvalidAlgorithmError`다. 둘째는 **키 종류와 알고리즘의 결합**이다. 허용 목록에 `HS256`이 들어 있더라도, `HMACAlgorithm.prepare_key()`가 키가 PEM·SSH·DER 형식이면 거부한다(PEM·SSH 검사는 2.4.0에서 추가된 [CVE-2022-29217](https://nvd.nist.gov/vuln/detail/CVE-2022-29217)의 패치이고, DER 검사는 2.14.0에서 추가됐다).
@@ -453,3 +458,4 @@ https://client.example@attacker.example/callback                          ← us
 | 2026-10-22 | 기술 검증: CVE 6건 레코드 대조(전부 실존). 타이밍 예제의 미정의 _verify 헬퍼 추가, PyJWT 2.x에서 algorithms 생략 호출이 거부됨을 반영. argon2·hmac·PyJWT alg:none 예제 실행 확인 | 검증팀 |
 | 2026-10-23 | 기술 검증(2차, 7절): PyJWT master `HMACAlgorithm.prepare_key`·jsonwebtoken master `verify.js` 인용을 원 소스와 대조(일치), confusion.py(PyJWT 2.15.1)·confusion.js(jsonwebtoken 9.0.2) 재실행으로 예외 문구 확인, CVE-2022-29217 레코드 대조. DER 키 검사 추가 버전(2.14.0)을 2.4.0 패치와 구분하고, `<meta http-equiv="Set-Cookie">`가 현행 브라우저에서 무시됨을 명시 | 검증팀 |
 | 2026-10-22 | 독자 테스트 반영: 7절에 JWT 알고리즘 혼동(PyJWT 2.15·jsonwebtoken 9.0.2 소스·실행 확인), 세션 고정 우회 흐름, OAuth redirect_uri 우회 패턴 추가. 장 참조 표기 정리 | @anthonynoh5202 |
+| 2026-10-23 | 독자 테스트 2차 반영: 7.1 `confusion.py`의 두 `jwt.decode` 호출을 각각 try/except로 감싸 두 예외가 모두 출력되게 수정(PyJWT 2.15.1로 실행 확인) | @anthonynoh5202 |

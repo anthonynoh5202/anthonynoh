@@ -116,7 +116,7 @@ subprocess.run(["git", "clone", "--upload-pack=touch pwned_git", "file:///srv/re
 subprocess.run(["curl", "-s", "-o/tmp/curlout", "http://127.0.0.1:8765/"])        # 응답이 파일로 저장
 ```
 
-`git clone -- "--upload-pack=…"`처럼 입력 앞에 `--`를 두면 "repository does not exist"로 끝나고 파일은 생기지 않았다. `--`를 지원하지 않는 프로그램이면 `-`로 시작하는 입력을 거부한다.
+`git clone -- "--upload-pack=…"`처럼 입력 앞에 `--`를 두면 그 값은 옵션이 아니라 저장소 위치로 읽힌다. 위 세 번째 줄 그대로 `--`를 넣으면 위치 인자가 셋이 되어 git 2.43은 `fatal: Too many arguments.`로 끝나고, 인자가 둘이면 `fatal: repository '--upload-pack=…' does not exist`로 끝난다. 어느 쪽이든 파일은 생기지 않았다(실행 확인). `--`를 지원하지 않는 프로그램이면 `-`로 시작하는 입력을 거부한다.
 
 ## 3. 탐지 방법
 
@@ -265,7 +265,9 @@ curl 'http://127.0.0.1:5000/safe?host=-c%2010'               # ping: -c 10: Name
 
 ## 7. 우회 기법 🔴
 
-방어가 불완전할 때 공격자가 쓰는 기법이다. 페이로드는 4.1의 로컬 환경 기준이며, 아래 표의 항목은 bash와 dash(`/bin/sh`)에서 실행해 확인했다. 중괄호 확장만 dash에서 실패한다.
+방어가 불완전할 때 공격자가 쓰는 기법이다. 페이로드는 4.1의 로컬 환경 기준이며, 아래 "공백 우회"·"블랙리스트 우회" 두 표의 페이로드 8개는 bash 5.2와 dash 0.5.12(`/bin/sh`)에서 `sh -c '페이로드'`로 실행해 확인했다("Windows와 Linux의 차이" 표는 비교표라 실행 대상이 아니다). 중괄호 확장 한 줄만 dash에서 실패하고 나머지는 두 셸에서 같다.
+
+페이로드를 curl로 보낼 때는 `-g`(`--globoff`)를 붙인다. curl은 URL 안의 `{a,b}`를 URL 두 개로 펼치고 `[…]`는 범위 문법으로 해석해 오류를 내므로, `-g`가 없으면 `{cat,/etc/hostname}`은 `c=cat`과 `c=/etc/hostname` 두 요청으로 나뉘어 중괄호가 서버에 닿지 않는다(curl 8.5에서 확인). `-G --data-urlencode 'host=…'`로 보내도 글로빙을 피할 수 있다.
 
 ### 공백 우회
 
@@ -278,7 +280,7 @@ curl 'http://127.0.0.1:5000/safe?host=-c%2010'               # ping: -c 10: Name
 
 | 막은 것 | 우회 | 원리 |
 |---|---|---|
-| `cat`, `id` 같은 명령어 | `c"a"t`, `c\at`, `/???/c?t` | 셸은 따옴표·백슬래시를 제거한 뒤 실행하고, 글로브는 경로를 확장한다 |
+| `cat`, `id` 같은 명령어 | `c"a"t`, `c\at`, `/b?n/?at` | 셸은 따옴표·백슬래시를 제거한 뒤 실행하고, 글로브는 경로를 확장한다. 글로브는 **하나만 매칭**되게 고른다. `/???/c?t`는 Ubuntu에서 `/bin/cat`과 `/bin/cut`에 모두 맞아 `cat`이 두 번째 인자로 밀리고, `/b?n/?at`은 `/bin/cat` 하나다(`ls` 글로브로 확인) |
 | 명령어 | `a=ca;b=t;$a$b /etc/hostname` | 변수 조합. 실행 전 치환 |
 | `id` 같은 특정 문자열 필터 | `echo aWQ= \| base64 -d \| sh` | 페이로드를 인코딩해 실행 시점에 복원 (`aWQ=`는 `id`의 base64) |
 | 입력이 작은따옴표 안 | `';id;'`로 따옴표를 닫는다. 큰따옴표 안이면 `$(id)`가 그대로 실행된다 | 문맥을 먼저 알아야 한다 |
@@ -350,3 +352,4 @@ curl 'http://127.0.0.1:5000/safe?host=-c%2010'               # ping: -c 10: Name
 |---|---|---|
 | 2026-10-22 | 초안 작성. Flask 예제·Semgrep 룰·인자 인젝션(tar/git/curl)·우회 페이로드 로컬 실행 확인, CVE 6건 cvelistV5 레코드 대조 | @anthonynoh5202 |
 | 2026-10-23 | 기술 검증(2차): CVE 9건 레코드 재대조(전부 실존, 제품·버전·CWE 일치). Flask 예제 5개 요청·Semgrep 룰·Java `Runtime.exec` 데모 재실행, CodeQL 쿼리 CWE-88 태그·Semgrep 룰 경로 확인. `Runtime.exec(String)` 구분자를 `StringTokenizer` 기준으로, 우회 표의 "모든 영문자 필터" 행을 base64 페이로드에 맞게 수정, 중괄호 확장이 dash에서 실패함을 추가, PHP-CGI 수정 내용을 소스 기준으로 보정 | 검증팀 |
+| 2026-10-23 | 독자 테스트 2차 반영: 글로브 예를 `/???/c?t`(Ubuntu에서 `/bin/cut`도 매칭)에서 단일 매칭 `/b?n/?at`으로 교체, curl 전송 시 `-g` 필요(중괄호·대괄호 글로빙, curl 8.5 확인) 추가. git 2.43의 `--` 사용 시 메시지(`Too many arguments.` / `does not exist`)로 갱신(실행 확인). 7절 "실행해 확인" 문장을 두 표 8개 페이로드·bash 5.2·dash 0.5.12로 구체화(재실행 확인) | @anthonynoh5202 |

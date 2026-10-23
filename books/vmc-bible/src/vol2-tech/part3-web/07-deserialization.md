@@ -42,7 +42,7 @@ flowchart LR
 |---|---|---|---|
 | Java | `ObjectInputStream.readObject()`, RMI, JMX, T3, XStream·Jackson 다형 타입 | `readObject`, `readResolve`, `hashCode`/`compareTo`(컬렉션 복원 시) | Commons Collections, Spring, Groovy, JDK (`URLDNS`) |
 | PHP | `unserialize()`, `phar://` 스트림 래퍼 | `__wakeup`, `__destruct`, `__toString` | 프레임워크·라이브러리 클래스 (POP 체인) |
-| Python | `pickle.loads()`, `yaml.load()`(5.1 미만), `shelve`, `jsonpickle` | `__reduce__`가 돌려주는 (callable, args) | 가젯이 필요 없다. `os.system`을 직접 지정한다 |
+| Python | `pickle.loads()`, `yaml.load()`(5.4 미만. 5.1~5.3.1의 `FullLoader`도 포함. 6.0부터 `Loader` 인자 필수), `shelve`, `jsonpickle` | `__reduce__`가 돌려주는 (callable, args) | 가젯이 필요 없다. `os.system`을 직접 지정한다 |
 | .NET | `BinaryFormatter`, `SoapFormatter`, `NetDataContractSerializer`, `LosFormatter`(ViewState), Json.NET `TypeNameHandling` | `OnDeserialized`, 생성자, 프로퍼티 setter | ysoserial.net 가젯 (`TypeConfuseDelegate`, `ObjectDataProvider` 등) |
 
 Python pickle이 가장 극단적이다. `__reduce__`는 "이 객체를 되살리려면 이 함수를 이 인자로 호출하라"는 뜻이고, 함수에 `os.system`을 써도 된다. 가젯 체인을 찾을 필요조차 없다. Python 공식 문서는 pickle 모듈 첫머리에서 "신뢰할 수 없는 출처의 데이터를 언피클하지 말라"고 경고한다.
@@ -97,7 +97,9 @@ $data = unserialize($raw, ['allowed_classes' => false]);   // 객체를 전혀 �
 import pickle
 obj = pickle.loads(base64.b64decode(request.cookies["state"]))
 
-# ❌ 취약: PyYAML 5.1 미만의 yaml.load()는 임의 Python 객체를 만든다 (CVE-2017-18342)
+# ❌ 취약: PyYAML 5.1 미만의 yaml.load()는 임의 Python 객체를 만든다 (CVE-2017-18342).
+#    5.1~5.3.1의 기본값 FullLoader도 python/object/new 생성자로 임의 객체를 만들 수 있었다
+#    (CVE-2020-1747, 불완전 수정 CVE-2020-14343. 5.4에서 수정). 6.0부터는 Loader 인자가 없으면 TypeError다
 cfg = yaml.load(request.data)
 ```
 
@@ -244,7 +246,7 @@ pickle.loads(payload)          # ← 이 줄에서 echo가 실행된다. 객체�
 | 클래스 차단 목록 | 목록에 없는 새 가젯 체인. 차단된 클래스를 다른 직렬화 메커니즘(RMI 원격 객체, JRMP)으로 감싸 필터를 건너뛰는 변형 |
 | JEP 290 필터의 깊이·크기 제한 | 제한 안에 들어오는 짧은 체인 선택 |
 | "Java 직렬화 안 씀, JSON 씀" | Jackson `enableDefaultTyping` ([CVE-2017-7525](https://nvd.nist.gov/vuln/detail/CVE-2017-7525)), Json.NET `TypeNameHandling.All`, XStream, fastjson `autoType`. JSON·XML 안에 클래스 이름을 쓰게 하는 설정이 있으면 같은 문제다 |
-| PHP `unserialize` 입력 없음 | `phar://` 래퍼. `file_exists()`, `is_file()`, `getimagesize()` 같은 파일 함수에 `phar://업로드파일`을 넘기면 phar 메타데이터가 역직렬화된다. Sam Thomas, Black Hat USA 2018 |
+| PHP `unserialize` 입력 없음 | `phar://` 래퍼. **PHP 8.0 미만**에서는 `file_exists()`, `is_file()`, `getimagesize()` 같은 파일 함수에 `phar://업로드파일`을 넘기면 phar 메타데이터가 자동으로 역직렬화된다. 8.0부터 파일 함수는 메타데이터를 건드리지 않고 `Phar::getMetadata()`를 직접 불러야만 역직렬화된다(PHP 8.3에서 실행해 확인). Sam Thomas, Black Hat USA 2018 |
 | PHP 7.4+ `__unserialize` | 구 `__wakeup` 대신 새 메서드를 쓰는 클래스에서 다시 체인을 찾는다 |
 | Python `RestrictedUnpickler` | `find_class`에서 허용한 모듈 안의 위험한 속성(예: `builtins.getattr`)을 디딤돌로 사용 |
 | .NET ViewState MAC | 머신 키가 고정·유출된 경우 서명을 직접 만든다 (CVE-2020-0688). `ysoserial.net -p ViewState` |
@@ -378,9 +380,14 @@ o = new InvokerTransformer("invoke", new Class[]{Object.class, Object[].class},
         new Object[]{null, new Object[0]}).transform(o);                       // → java.lang.Runtime@…
 Transformer[] ts = { /* 위 세 개 + */ new InvokerTransformer("exec",
         new Class[]{String.class}, new Object[]{"touch /tmp/lab/marker"}), new ConstantTransformer(1) };
-Map lazy = LazyMap.decorate(new HashMap(), new ChainedTransformer(ts));
+Transformer chain = new ChainedTransformer(ts);
+Map lazy = LazyMap.decorate(new HashMap(), chain);
 lazy.get("foo");                                           // 5단계: 여기서 touch 실행
+// LazyMap은 한 번 만든 값을 안쪽 HashMap에 넣어 두므로 같은 맵에 "foo"를 다시 물으면
+// 팩토리(체인)가 돌지 않는다. 단계마다 새 LazyMap을 만들어야 체인이 다시 실행된다
+Map lazy2 = LazyMap.decorate(new HashMap(), chain);
 new TiedMapEntry(lazy2, "foo").hashCode();                 // 6단계: hashCode 하나로 같은 결과
+Map lazy3 = LazyMap.decorate(new HashMap(), chain);
 new HashMap().put(new TiedMapEntry(lazy3, "foo"), 1);      // 7단계: readObject가 밟는 putVal 경로
 ```
 
@@ -492,3 +499,4 @@ HashSet                → java.util   허용
 | 2026-10-22 | 기술 검증: CVE 11건 레코드 대조(전부 실존). pickle 재현 코드 실행 확인 후 지문·json.loads 예외 종류 설명 보정. ObjectInputFilter 문법 Java로 실행 확인 | 검증팀 |
 | 2026-10-23 | 기술 검증(2차, 7절): ysoserial CommonsCollections6·CommonsCollections1·JavaVersion 소스와 Commons Collections 3.1 태그의 TiedMapEntry·LazyMap·ChainedTransformer·InvokerTransformer 소스로 인용 코드·호출 순서·`update <= 71` 조건 대조(일치). 3.2.2(2015-11-12)·4.1(2015-11-25) 릴리스일, `enableUnsafeSerialization` 속성명, 4.0 TransformingComparator의 Serializable 여부를 소스로 확인. ChainSteps를 JDK 21+CC 3.1로 재실행(5·6·7단계 표식 생성). JEP 290 `filterCheck` 시점을 JDK 17 ObjectInputStream 소스로 확인. JEP 415 서술을 기본 팩토리가 교체 동작임을 명시하도록 보정, CC6 호출 순서가 주석을 풀어 쓴 것임을 명시 | 검증팀 |
 | 2026-10-22 | 독자 테스트 반영: 7절을 🔴로 확장. Commons Collections 3.1 체인(CC6) 고리별 해부·ysoserial 소스 인용·단계별 자바 호출 실습, 가젯 체인 탐색법과 버전별 차이, JEP 290 차단 지점. 장 참조 표기 정리 | @anthonynoh5202 |
+| 2026-10-23 | 독자 테스트 2차 반영: `phar://` 자동 역직렬화를 PHP 8.0 미만 조건으로 한정(8.3에서 실행 확인). PyYAML 범위를 5.4 미만(FullLoader 포함, CVE-2020-1747·CVE-2020-14343)·6.0부터 Loader 필수로 정정(6.0에서 실행 확인). ChainSteps의 `lazy2`·`lazy3` 정의와 LazyMap 캐시 설명 추가(CC 3.1로 재실행 확인) | @anthonynoh5202 |

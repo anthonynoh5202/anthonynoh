@@ -17,7 +17,7 @@ docker compose down -v   # 초기화
 
 ## 힌트
 
-- `/login`: 주석 `-- ` 로 뒤를 지운다. 공백 포함.
+- `/login`: 주석 `-- ` 로 뒤를 지운다. 공백 포함(MySQL 기준. SQLite인 이 앱은 없어도 된다).
 - `/search`: 컬럼 수부터. `' ORDER BY N-- `
 - `/item`: 숫자 컨텍스트라 따옴표가 필요 없다. `SUBSTR`, `UNICODE`.
 

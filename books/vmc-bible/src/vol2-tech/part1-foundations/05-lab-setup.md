@@ -32,7 +32,7 @@ ls
 
 ```
 labs/
-  README.md          실습 목록과 공통 규칙
+  README.md          실습 목록과 공통 규칙 (이 책 밖의 파일이다. 저장소의 labs/README.md)
   web-sqli/          웹 1장 SQL 인젝션
     docker-compose.yml
     app/             취약한 앱 소스 (고치는 것까지가 실습)
@@ -52,7 +52,10 @@ docker compose up --build
 ```
  * Running on all addresses (0.0.0.0)
  * Running on http://127.0.0.1:8080
+ * Running on http://192.0.2.2:8080        ← 세 번째 줄은 그 기기의 네트워크 주소. 환경마다 다르다
 ```
+
+세 번째 줄이 보이는 이유는 앱이 컨테이너 안에서 `0.0.0.0`(모든 인터페이스)에 바인딩되기 때문이다. Docker로 띄울 때는 `docker-compose.yml`의 `127.0.0.1:8080:8080` 설정이 호스트 쪽 노출을 루프백으로 제한하므로 그 주소로는 밖에서 접근할 수 없다. 반면 아래처럼 Docker 없이 직접 띄우면 그 줄의 주소가 **실제로 같은 네트워크의 다른 기기에서 열리는 주소**가 된다.
 
 Docker를 쓸 수 없으면 앱을 직접 띄워도 된다. 앱은 Flask와 표준 라이브러리의 sqlite3만 쓴다.
 
@@ -62,7 +65,7 @@ python3 -m venv .venv && . .venv/bin/activate
 pip install flask && python app.py        # 같은 'Running on ...' 출력. DB는 /tmp/lab.db
 ```
 
-이 경우 포트가 `0.0.0.0:8080`에 열리므로 5절의 격리 규칙(공용 네트워크에서 띄우지 않기)을 더 엄격히 지킨다. 코드를 고친 뒤 반영하려면 Docker는 `docker compose up --build`로 다시 빌드하고, 직접 띄운 경우는 프로세스를 다시 시작한다.
+이 경우 포트가 `0.0.0.0:8080`에 열리고 위 출력의 세 번째 줄 주소로 같은 네트워크의 누구나 접속할 수 있으므로, 5절의 격리 규칙(공용 네트워크에서 띄우지 않기)을 더 엄격히 지킨다. 루프백에만 열고 싶으면 `app.py`의 `app.run(host="0.0.0.0", ...)`을 `host="127.0.0.1"`로 바꿔 띄운다. 코드를 고친 뒤 반영하려면 Docker는 `docker compose up --build`로 다시 빌드하고, 직접 띄운 경우는 프로세스를 다시 시작한다.
 
 끝낼 때:
 
@@ -101,7 +104,7 @@ Kali Linux가 없어도 된다. 이 책에서 쓰는 도구는 대부분 개별 
 | 디컴파일러 | Ghidra | [공식 릴리스](https://github.com/NationalSecurityAgency/ghidra/releases) |
 | 정적 분석 | semgrep | `pip install semgrep` |
 
-바이너리 실습은 공용 컨테이너 `labs/binary-base/`(gdb+pwndbg, pwntools, AFL++, radare2)를 쓸 수 있다. 실제 제보와 바이너리를 다루는 **분석 환경**(VM 격리, 영역별 도구 세트, 설치 스크립트)은 [6장](06-analysis-workstation.md)에서 다룬다.
+바이너리 실습은 공용 컨테이너 `labs/binary-base/`(gdb+pwndbg, pwntools, AFL++, radare2. 사용법은 저장소의 `labs/binary-base/README.md`, [GitHub](https://github.com/anthonynoh5202/anthonynoh/blob/main/labs/binary-base/README.md))를 쓸 수 있다. 실제 제보와 바이너리를 다루는 **분석 환경**(VM 격리, 영역별 도구 세트, 설치 스크립트)은 [6장](06-analysis-workstation.md)에서 다룬다.
 
 ## 7. 문제 해결
 
@@ -123,7 +126,7 @@ Kali Linux가 없어도 된다. 이 책에서 쓰는 도구는 대부분 개별 
 ## 더 읽기
 
 - [Docker Compose 공식 문서](https://docs.docker.com/compose/)
-- [labs/README.md](https://github.com/anthonynoh5202/anthonynoh/blob/main/labs/README.md) · 실습 환경 전체 목록
+- [labs/README.md](https://github.com/anthonynoh5202/anthonynoh/blob/main/labs/README.md) · 실습 환경 전체 목록. 저장소를 받았다면 `labs/README.md`를 바로 열면 된다(mdBook 밖의 파일이라 책 안 링크로는 걸 수 없다)
 
 ## 변경 이력
 
@@ -132,3 +135,4 @@ Kali Linux가 없어도 된다. 이 책에서 쓰는 도구는 대부분 개별 
 | 2026-10-21 | 초안 작성 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: `docker compose up`에는 `--platform` 옵션이 없어 `DOCKER_DEFAULT_PLATFORM` 환경변수로 정정 | 검증팀 |
 | 2026-10-22 | 독자 테스트 반영: 3절 기동 문구를 Flask 3 실제 출력(`Running on all addresses (0.0.0.0)`)으로, Docker 없이 `pip install flask && python app.py`로 띄우는 대안과 재빌드 안내 추가, 바이너리 도구 설치 참조를 6장으로 정정 | @anthonynoh5202 |
+| 2026-10-23 | 독자 테스트 2차 반영: 기동 출력의 세 번째 줄(`Running on http://<외부IP>:8080`)과 0.0.0.0 바인딩 주의를 보강(Flask 3.0.3 실행 확인). GitHub URL로만 걸려 있던 `labs/README.md`·`labs/binary-base/README.md`에 저장소 경로 텍스트 병기 | @anthonynoh5202 |
