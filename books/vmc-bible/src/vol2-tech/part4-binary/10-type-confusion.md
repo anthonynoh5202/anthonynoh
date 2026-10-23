@@ -240,14 +240,14 @@ int main(int argc, char **argv) {
    ```
    마지막 줄이 핵심이다. gdb는 `c`의 **정적 타입**을 믿고 "Circle의 vtable"이라 하지만 그 주소는 Admin의 것이다. 컴파일된 코드도 같은 믿음으로 동작한다.
 
-3. 호출 명령을 본다. 타입 검사는 어디에도 없다.
+3. 호출 명령을 본다. 타입 검사는 어디에도 없다(Intel 문법 기준. 순정 gdb는 AT&T 문법이 기본이므로 `set disassembly-flavor intel`을 먼저 친다. [00장 3.4절](00-overview.md)).
    ```
    (gdb) x/6i $pc
-   => 0x4011fc <main+102>: mov    rax,QWORD PTR [rbp-0x38]   ; c
-      0x401200 <main+106>: mov    rax,QWORD PTR [rax]        ; vptr
-      0x401203 <main+109>: mov    rdx,QWORD PTR [rax]        ; vtable[0]
-      ...                                                     ; rdi = this
-      0x40120d <main+119>: call   rdx                        ; → Admin::shell
+   => 0x4011fc <main(int, char**)+102>: mov    rax,QWORD PTR [rbp-0x38]   ; c
+      0x401200 <main(int, char**)+106>: mov    rax,QWORD PTR [rax]        ; vptr
+      0x401203 <main(int, char**)+109>: mov    rdx,QWORD PTR [rax]        ; vtable[0]
+      ...                                                                  ; rdi = this
+      0x40120d <main(int, char**)+119>: call   rdx                        ; → Admin::shell
    ```
    `delete s`도 같은 방식으로 Admin의 소멸자(슬롯 1)를 부른다. 실제 취약점에서는 공격자가 객체의 **내용**까지 정하므로, vptr 자리에 가짜 vtable 주소를 넣어 `call rdx`를 임의 주소로 보낸다. 그다음은 [8장 ROP](08-rop.md)다.
 
@@ -257,9 +257,9 @@ int main(int argc, char **argv) {
    clang++ -O1 -flto -fvisibility=hidden -fsanitize=cfi -fuse-ld=lld -o tc_cfi_trap tc.cpp && ./tc_cfi_trap x
    # Illegal instruction (core dumped)        ← 진단 없이 ud2로 중단하는 기본(트랩) 모드. 종료 코드 132
    ```
-   Ubuntu 24.04의 clang 18은 CFI·UBSan 런타임이 `libclang-rt-18-dev`에 있다(없으면 `missing sanitizer ignorelist` 오류).
+   Ubuntu 24.04의 clang 18은 CFI·UBSan 런타임과 `cfi_ignorelist.txt`가 `libclang-rt-18-dev`에 있다(없으면 `missing sanitizer ignorelist` 오류). `-fsanitize=cfi`는 `-fvisibility=` 없이는 컴파일 자체를 거부한다(`only allowed with '-fvisibility='`). `vptr` 빌드는 3.2절의 10행 보고 뒤에 11행(`c->draw()`)과 12행(`delete s`)의 `member call on address ... does not point to an object of type` 보고가 이어지고(총 3건) 프로그램은 계속 실행되어 `Admin::shell`까지 찍는다. CFI 진단 빌드는 첫 보고 뒤 종료 코드 1로 멈춘다.
 
-5. 고친다. 10행을 `dynamic_cast<Circle *>(s)`로 바꾸고 `nullptr` 검사를 넣으면 `./tc x`는 아무 함수도 부르지 않고 종료한다. 9행의 C 스타일 캐스트는 `dynamic_cast`로 바꿀 수 없다(무관한 타입). 그 줄이 "입력이 타입을 정하는 지점"이고, 실제 코드에서는 그 지점에 타입 태그 검사가 있어야 한다.
+5. 고친다. 10행을 `dynamic_cast<Circle *>(s)`로 바꾸고 `nullptr` 검사를 넣으면 `./tc x`는 `draw`도 `shell`도 부르지 않고 종료한다(실측: 캐스트가 `nullptr`을 돌려준다). 9행의 C 스타일 캐스트는 `dynamic_cast`로 바꿀 수 없다(무관한 타입). 그 줄이 "입력이 타입을 정하는 지점"이고, 실제 코드에서는 그 지점에 타입 태그 검사가 있어야 한다.
 
 ### 4.3 더 해 보기
 
@@ -284,7 +284,7 @@ int main(int argc, char **argv) {
 | 코드 | RTTI를 끈 코드베이스는 **자체 타입 태그 + 검사 캐스트 헬퍼**로 통일 (LLVM `isa<>`/`dyn_cast<>`, Blink `IsA<>`/`DynamicTo<>`). 맨 `static_cast`를 리뷰에서 거부 | 검사를 빠뜨릴 수 없는 API |
 | 코드 | union은 태그와 함께 구조체로 묶고, 태그·멤버를 한 함수에서만 바꾼다. C++은 `std::variant`, Rust는 `enum` | 태그 불일치 제거 |
 | 코드 | JIT·최적화 코드는 "사용자 코드를 부를 수 있는 연산" 목록을 보수적으로. 의심되면 부작용 있음으로 표시 | 추측 오류 차단 |
-| 언어 | 새 코드는 메모리 안전 언어로. Rust의 `enum`·패턴 매칭은 태그 없는 union을 **표현할 수 없다** | 유형 자체 제거 |
+| 언어 | 새 코드는 메모리 안전 언어로. 안전한 Rust에는 태그 없는 union이 **없다**(`enum`은 항상 태그를 가지며, `union` 멤버 읽기는 `unsafe` 블록에서만 된다) | 유형 자체 제거 |
 | 컴파일러 | 테스트 빌드 `-fsanitize=undefined`(vptr 포함), 릴리스 빌드 Clang CFI(`-fsanitize=cfi-vcall,cfi-icall` + LTO). Android 플랫폼·Chrome 적용 | 혼동된 vtable 호출을 크래시로 |
 | 커널 | `CONFIG_CFI_CLANG`(kCFI, Linux 6.1+ x86-64·arm64), 객체 조회 API의 타입 검사 | 커널 함수 포인터 혼동 차단 |
 | 런타임 | 브라우저 V8 샌드박스(힙 안의 포인터를 오프셋으로 바꿔 힙 밖 쓰기 차단), 사이트 격리 | 혼동 뒤 피해 범위 축소 |
@@ -301,7 +301,7 @@ int main(int argc, char **argv) {
 | CFI `cfi-vcall` | 허용 집합은 "같은 클래스 계층의 같은 슬롯"이다. 계층 안의 **다른 파생 클래스** 함수는 허용되므로, 공격자는 같은 슬롯에 있는 쓸모 있는 함수(파일 쓰기, 명령 실행에 가까운 메서드)를 고른다. 이를 COOP(counterfeit object-oriented programming)이라 부른다 |
 | CFI `cfi-icall` | 같은 함수 시그니처를 가진 모든 함수가 허용된다. `void (*)(void*)` 같은 흔한 시그니처는 집합이 수백 개다 |
 | CFI 전체 | **데이터 전용 공격**. 코드 포인터를 건드리지 않고 길이·권한·경로 같은 데이터만 바꾼다. 타입 혼동으로 얻은 임의 읽기·쓰기는 CFI와 무관하게 성립한다 |
-| CFI 캐스트 검사 | `cfi-derived-cast`·`cfi-unrelated-cast`는 비용 때문에 기본으로 끄는 제품이 많다(Chromium 빌드 옵션 `use_cfi_cast`는 기본 꺼짐). 캐스트 지점의 혼동은 vcall 검사까지 가야 잡힌다 |
+| CFI 캐스트 검사 | `cfi-derived-cast`·`cfi-unrelated-cast`는 비용 때문에 끄는 제품이 많다(Chromium `build/config/sanitizers/sanitizers.gni`의 `use_cfi_cast = is_cfi && is_chromeos`, 즉 ChromeOS 공식 빌드에서만 켜진다). 캐스트 지점의 혼동은 vcall 검사까지 가야 잡힌다 |
 | Windows CFG | 함수 **시작 주소**만 검사한다. 타입을 보지 않으므로 아무 함수의 시작으로 호출을 돌릴 수 있다 |
 | V8 샌드박스 | 샌드박스 안의 힙은 여전히 임의 읽기·쓰기가 되므로, 샌드박스 밖으로 나가는 **두 번째 취약점**(샌드박스 우회)이 필요하다. 8절 CVE-2023-3079의 공개 분석이 "타입 혼동 + 새 샌드박스 탈출"로 구성된 이유 |
 
@@ -366,3 +366,4 @@ int main(int argc, char **argv) {
 | 날짜 | 변경 | 기여자 |
 |---|---|---|
 | 2026-10-22 | 독자 테스트 반영: 장 신설. tc.cpp를 g++ 13.3/clang 18.1(Ubuntu 24.04)로 빌드해 vtable 혼동·gdb 출력·`-fsanitize=vptr`·Clang CFI(진단·트랩) 출력 실측. CVE 6건 cvelistV5 레코드 대조 | @anthonynoh5202 |
+| 2026-10-23 | 기술 검증(2차): CVE 7건(표 6건 + CVE-2019-11708) cvelistV5 재대조(모두 실존, 버전·참조 일치), MFSA 2019-18/19 공지일(6/18, 6/20) 확인. tc.cpp를 본문 플래그 그대로 재빌드해 두 경로·gdb 값(vptr=`_ZTV5Admin+16`, `info vtbl`)·`-fsanitize=vptr`(3건 보고)·CFI 진단/트랩(rc 1/132)·`dynamic_cast` 수정판 실측. gdb 디스어셈블리를 실측 심볼명으로 정정하고 Intel 문법 전제 명시, `-fvisibility=` 필수(clang 18 오류 메시지) 추가, Chromium `use_cfi_cast` 조건을 `sanitizers.gni` 원문(ChromeOS 한정)으로 정정, Rust `union` 서술 정정 | 검증팀 |

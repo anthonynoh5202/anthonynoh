@@ -207,3 +207,4 @@ setarch $(uname -m) -R ./vuln        # 이 프로세스만 ASLR 해제
 | 2026-10-22 | 기술 검증 완료, 수정 없음. 빌드 플래그로 컴파일한 바이너리의 `checksec --file=` 출력(pwntools 4.15)이 본문과 일치, `-Wstringop-overflow` 경고·`setarch -R`·gdb ASLR 동작 확인, 레지스터·호출 규약·스택 명령 설명 검토 | 검증팀 |
 | 2026-10-22 | 독자 테스트 반영: checksec 예시에 실측 `RWX: Has RWX segments` 줄과 pwntools 4.15의 추가 줄 설명, 9장 퍼저의 Docker 예외 명시, 장 참조 표기 정리 | @anthonynoh5202 |
 | 2026-10-22 | 독자 테스트 반영: 10장 타입 혼동 신설에 따라 지도·근본 원인 표에 한 줄 추가 | @anthonynoh5202 |
+| 2026-10-23 | 기술 검증(2차): 지도(Mermaid)·근본 원인 표의 10장 행(CWE-843) 검토, 실습 빌드 규칙·gdb ASLR 동작 재확인. 수정 없음 | 검증팀 |

@@ -452,3 +452,4 @@ MiraclePtr의 동작 원리는 Chromium 문서 [raw_ptr.md](https://github.com/c
 | 2026-10-22 | 10섹션 본문 작성. ASan 출력·실습 코드 로컬 검증, CVE 6건 확인 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 6건 cvelistV5 대조(모두 실존, 제품·버전·참조 링크 일치). uaf.c를 ASan 유무·`s = NULL`·함수 포인터 변형으로 재실행. ASan 보고서의 소스 줄 번호를 실측값(15/12/9)으로 정정, 4단계의 gdb 설명(비정규 주소라 `call` 명령에서 멈춤) 보완 | 검증팀 |
 | 2026-10-22 | 독자 테스트 반영: 4.2절을 해제→재할당→함수 포인터 호출 경로 변경까지의 완결 실습(uaf2.c, `-no-pie` 빌드·페이로드·gdb 출력 실측, PIE 대조)으로 교체, 5절 표에 2′·3′·4′ 조건 추가, 7절에 재할당 제어 조건(크기·bin·타이밍)과 브라우저·커널 개념 추가, 10장 타입 혼동 교차 링크, 장 참조 표기 정리 | @anthonynoh5202 |
+| 2026-10-23 | 기술 검증(2차): uaf2.c를 본문 플래그로 재빌드해 1~5단계 재실행(`nm` win=0x401204, 같은 주소 재할당, 페이로드로 win 도달, gdb `p *s`·`x/4gx`(0x1011)·`call *%rdx`, PIE 빌드 SIGSEGV) 모두 일치. 7.1 재할당 조건표(tcache 16바이트 bin·7개 상한), 7.2의 MiraclePtr(`raw_ptr.md`의 격리·ref-count 서술)·PartitionAlloc·슬랩 캐시·`CONFIG_SLAB_FREELIST_RANDOM`/`RANDOM_KMALLOC_CACHES`(mm/Kconfig v6.6)·kCFI(arch/Kconfig v6.1 `CFI_CLANG`) 대조. 수정 없음 | 검증팀 |

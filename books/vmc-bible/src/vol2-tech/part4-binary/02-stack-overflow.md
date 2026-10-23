@@ -436,3 +436,4 @@ canary=0xade6e1703298b200 saved_rbp=0x7ffc7087dbe0 ret=0x4012e3
 | 2026-10-22 | 기술 검증: CVE 4건 cvelistV5 대조(모두 실존), 권고·패치 링크를 레코드 URL로 교체. 실습 전체(ret2win·셸코드·cyclic·FORTIFY) 재실행. `pwn cyclic -l`의 `-n 8` 오류 수정(72가 아닌 값이 나옴), FORTIFY가 `read()`도 잡는다는 점 수정(`__read_chk`), 부호 문제 예제(`len < sizeof buf`는 실제로는 거부됨) 수정, gdb 줄 번호·카나리 브루트포스 횟수 정정 | 검증팀 |
 | 2026-10-22 | 독자 테스트 반영: 8절 CVE-2019-18634의 영향·수정 버전을 CVE 레코드와 sudo NEWS로 재확인(공식 수정 1.8.31, 레코드의 1.8.26은 악용 가능 경계). 장 참조 표기 정리 | @anthonynoh5202 |
 | 2026-10-22 | 독자 테스트 반영: 7절에 7.1 "카나리 누출 → 재사용" 사례 추가. canary.c를 `-fstack-protector-all -no-pie`로 빌드해 `%N$p` 오프셋 스캔·gdb 프레임·pwntools 흐름·오답 카나리 대조를 실측 | @anthonynoh5202 |
+| 2026-10-23 | 기술 검증(2차): 7.1을 canary.c(vuln.c + `printf(name)`)로 재구성해 재실행: `%15$p`=카나리(최하위 바이트 00)·`%16$p`=저장된 rbp·`%17$p`=반환 주소, `name`은 `rbp-0x50`(오프셋 72/80/88), pwntools 흐름으로 win 도달, 오답 카나리는 `*** stack smashing detected ***` SIGABRT(-6). `-fcf-protection` 기본(endbr64) 확인. 수정 없음 | 검증팀 |

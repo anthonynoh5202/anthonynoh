@@ -280,7 +280,7 @@ checksec --file=./fmt_relro     # RELRO: Full RELRO
 | 후보 표적 | 상태 (glibc 2.39, Ubuntu 24.04) | 필요한 것 |
 |---|---|---|
 | `__malloc_hook`, `__free_hook` | glibc 2.34에서 **제거**. `nm -D libc.so.6`에 `__malloc_hook@GLIBC_2.2.5` 호환 심볼이 아직 보이지만 `malloc`이 더는 읽지 않는 빈 변수다. 덮어도 아무 일도 없다 | 쓸 수 없음 |
-| `exit` 핸들러 (`__exit_funcs`의 `atexit` 항목) | 존재. 단 함수 포인터가 **포인터 맹글링**(`PTR_MANGLE`: 스레드별 비밀 값과 XOR 후 회전)되어 있어 비밀 값(`fs:0x30`)을 먼저 읽어야 한다 | libc 주소 + 비밀 값 누출, 쓰기 2회 이상 |
+| `exit` 핸들러 (`__exit_funcs`의 `atexit` 항목) | 존재. 단 함수 포인터가 **포인터 맹글링**(`PTR_MANGLE`: 프로세스 비밀 값과 XOR 후 좌회전 17비트. x86-64는 `xor %fs:0x30, reg; rol $17, reg`)되어 있어 비밀 값(`tcbhead_t.pointer_guard`, 각 스레드 TCB의 `fs:0x30`에 복사됨)을 먼저 읽어야 한다 | libc 주소 + 비밀 값 누출, 쓰기 2회 이상 |
 | `stdout`의 `_IO_FILE` vtable 포인터 | 존재. 2.24부터 vtable이 `__libc_IO_vtables` 구역 안인지 검사하므로 구역 안의 다른 vtable(`_IO_wfile_jumps` 등)로 바꿔 우회하는 기법이 버전마다 바뀐다 | libc 주소 누출, 버전별 기법 |
 | **스택의 반환 주소** | 항상 존재. 맹글링·검사 없음. 카나리와 무관(순차 덮어쓰기가 아니라 `%n`으로 그 자리만 쓴다) | **스택 주소 누출** 한 번 |
 
@@ -374,3 +374,4 @@ b'... [+] win() reached\n'
 | 2026-10-22 | 기술 검증: CVE 4건 cvelistV5 대조(모두 실존), sudo·MSVR·VMSA·libinput 링크를 레코드 URL로 교체, libinput 영향 버전 정정. `read_rodata.py`·`got_overwrite.py`를 Partial/Full RELRO 빌드에서 재실행(Full RELRO는 SIGSEGV 확인). 경고 줄 번호 정정, `.fini_array`가 Partial RELRO에서도 읽기 전용임을 명시, FORTIFY의 `%N$n` 메시지 추가 | 검증팀 |
 | 2026-10-22 | 독자 테스트 반영: 3.1절 "Ubuntu gcc는 -Werror=format-security 기본"을 실측(기본은 -Wformat-security 경고, -Werror는 dpkg-buildflags)으로 정정. 장 참조 표기 정리 | @anthonynoh5202 |
 | 2026-10-22 | 독자 테스트 반영: 7절에 7.1 "Full RELRO에서 GOT 대신 무엇을 덮는가" 추가. 표적 후보표(`__malloc_hook` 류의 2.34 제거를 `nm -D` 호환 심볼과 함께 명시), fmt2.c를 Full RELRO로 빌드해 스택 누출→반환 주소 쓰기 흐름과 GOT 쓰기 대조군(SIGSEGV)을 실측 | @anthonynoh5202 |
+| 2026-10-23 | 기술 검증(2차): 7.1 표를 glibc 소스로 대조(NEWS 2.34 훅 제거·`nm -D` 호환 심볼 `V __malloc_hook@GLIBC_2.2.5` 실측, NEWS 2.24 BZ#20191 vtable 검증·`libioP.h`의 `IO_validate_vtable`/`__libc_IO_vtables`, `sysdeps/.../x86_64/pointer_guard.h`·`nptl/tls.h`의 `PTR_MANGLE`과 `pointer_guard` 오프셋 0x30). 포인터 가드를 "스레드별"에서 프로세스 비밀 값(스레드 TCB에 복사)으로 정정하고 회전량(17비트) 명시. fmt2.c를 Full RELRO로 재빌드해 `%8$p`·gdb `$rbp+8`/`%12$p` 거리·`fmtstr_payload` 64바이트·win 도달·GOT 대조군(-11) 재확인 | 검증팀 |

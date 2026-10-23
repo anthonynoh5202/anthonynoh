@@ -367,7 +367,7 @@ static void *seq_buf_alloc(unsigned long size)
 }
 ```
 
-`dentry_path`·`prepend`의 `int buflen`은 그대로 두고, **그 `int`에 음수가 들어갈 수 있는 크기를 처음부터 거부**했다. 6절의 "입력 숫자에 의미 있는 상한"이 커널에서 어떻게 생겼는지 보여 주는 예이고, 리뷰에서 `size_t → int` 매개변수 경계를 찾으면 "그 값이 2³¹을 넘을 수 있는가"를 반드시 묻게 되는 이유다.
+`dentry_path`·`prepend`의 `int buflen`은 그대로 두고, **그 `int`에 음수가 들어갈 수 있는 크기를 처음부터 거부**했다(CVE 레코드 기준 영향 범위는 3.16부터 5.13.4 이전까지이며, 같은 수정이 5.13.4 스테이블에 백포트됐다). 6절의 "입력 숫자에 의미 있는 상한"이 커널에서 어떻게 생겼는지 보여 주는 예이고, 리뷰에서 `size_t → int` 매개변수 경계를 찾으면 "그 값이 2³¹을 넘을 수 있는가"를 반드시 묻게 되는 이유다.
 
 ## 8. 실제 CVE 사례
 
@@ -424,3 +424,4 @@ static void *seq_buf_alloc(unsigned long size)
 | 2026-10-22 | 10섹션 본문 작성. 컴파일러 경고·UBSan·ASan 출력, `ckd_mul`/`__builtin_mul_overflow` 로컬 검증, CVE 6건 확인 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 6건 cvelistV5 대조(모두 실존, 버전·패치 링크 일치). records.c(ASan·UBSan·무새니타이저·수정판), `ckd_mul`(clang 18 `-std=c23`), `-Wconversion` 계열 경고, `-fwrapv` 실험을 재실행. 통상 산술 변환 표의 예시(`len > sizeof buf`는 통과가 아니라 거부) 정정, ASan 줄 번호 정정, 5단계 예제를 UBSan이 실제로 보고하는 형태(`int r = x + 1; return r > x;`)로 교체(한 식으로 쓰면 gcc가 접어 버려 보고 안 됨) | 검증팀 |
 | 2026-10-22 | 독자 테스트 반영: 7절에 7.1 CVE-2021-33909 Sequoia 단계 서술 추가(v5.13 `seq_file.c`·`d_path.c`·`proc_namespace.c` 소스와 v5.14 `seq_buf_alloc()` diff 대조, Qualys 권고문 기준). 장 참조 표기 정리 | @anthonynoh5202 |
+| 2026-10-23 | 기술 검증(2차): 7.1의 5단계를 커널 소스로 재대조(v5.13 `seq_file.c` 242행 `seq_buf_alloc(m->size <<= 1)`, `seq_dentry()`의 `size_t size`→`dentry_path(dentry, buf, size)`, `fs.h`의 `MAX_RW_COUNT (INT_MAX & PAGE_MASK)`, `d_path.c`의 `prepend()`·`dentry_path()` 원문, `proc_namespace.c`의 `seq_dentry(m, mnt->mnt_root, ...)`, v5.14 `seq_buf_alloc()`의 `size > MAX_RW_COUNT` 검사) 모두 일치. CVE-2021-33909 레코드(3.16~5.13.4 이전, CID-8cae8cd89f05) 확인해 영향 범위 한 줄 추가 | 검증팀 |
