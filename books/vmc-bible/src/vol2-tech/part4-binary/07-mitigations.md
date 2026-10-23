@@ -224,9 +224,9 @@ CFI의 한계는 **허용 집합**에 있다. 공격자는 검사가 허용하�
 
 ### 7.3 ARM PAC와 MTE
 
-**PAC**(Pointer Authentication Code, ARMv8.3)는 포인터의 상위 미사용 비트에 **서명**을 넣는다. 함수 진입 시 `paciasp`로 반환 주소에 서명하고, 반환 직전 `autiasp`로 검증한다. 서명은 포인터 값, 문맥(보통 스택 포인터), 프로세스별 비밀 키(`exec` 시 커널이 무작위 배정)로 계산된다. 커널 문서([pointer-authentication.rst](https://github.com/torvalds/linux/blob/master/Documentation/arch/arm64/pointer-authentication.rst))에 따르면 PAC 비트 수는 `55 - 가상 주소 비트 수`로, 48비트 주소 공간이면 **7비트**다. 공격자가 반환 주소를 덮으면 서명이 맞지 않아 검증에서 실패한다.
+**PAC**(Pointer Authentication Code, ARMv8.3)는 포인터의 상위 미사용 비트에 **서명**을 넣는다. 함수 진입 시 `paciasp`로 반환 주소에 서명하고, 반환 직전 `autiasp`로 검증한다. 서명은 포인터 값, 문맥(보통 스택 포인터), 프로세스별 비밀 키(`exec` 시 커널이 무작위 배정)로 계산된다. 커널 문서([pointer-authentication.rst](https://github.com/torvalds/linux/blob/master/Documentation/arch/arm64/pointer-authentication.rst))에 따르면 PAC 비트 수는 `55 - 가상 주소 비트 수`로, 48비트 주소 공간이면 **7비트**다. 이 7비트는 리눅스 **사용자 공간**의 흔한 설정(48비트 VA, 상위 바이트는 TBI(Top Byte Ignore)로 제외) 기준이며, 같은 문서가 "가상 주소 크기와 포인터 태깅 사용 여부에 따라 달라진다"고 적듯이 39·52비트 VA로 구성한 커널, 커널 공간 포인터, arm64e(iOS·macOS)에서는 비트 수가 다르다. 공격자가 반환 주소를 덮으면 서명이 맞지 않아 검증에서 실패한다.
 
-우회는 세 가지로 요약된다. (1) 7비트면 1/128 확률의 브루트포스가 가능하므로 크래시가 치명적이지 않은 대상(포크 서버, 커널 일부)에서는 시도된다. (2) 서명된 포인터를 **다른 문맥에서 재사용**하거나, 공격자 포인터에 서명해 주는 **서명 가젯**(signing gadget)을 찾는다. (3) 서명되지 않은 포인터(데이터 포인터, 일부 함수 포인터)를 표적으로 바꾼다. iOS·macOS(arm64e)와 Android 커널이 주요 적용처라 모바일 취약점 연구의 필수 지식이다.
+우회는 세 가지로 요약된다. (1) 7비트(위 기준)면 1/128 확률의 브루트포스가 가능하므로 크래시가 치명적이지 않은 대상(포크 서버, 커널 일부)에서는 시도된다. (2) 서명된 포인터를 **다른 문맥에서 재사용**하거나, 공격자 포인터에 서명해 주는 **서명 가젯**(signing gadget)을 찾는다. (3) 서명되지 않은 포인터(데이터 포인터, 일부 함수 포인터)를 표적으로 바꾼다. iOS·macOS(arm64e)와 Android 커널이 주요 적용처라 모바일 취약점 연구의 필수 지식이다.
 
 **MTE**(Memory Tagging Extension, ARMv8.5)는 접근법이 다르다. 제어 흐름이 아니라 **메모리 손상 자체**를 잡는다. 커널 문서([memory-tagging-extension.rst](https://github.com/torvalds/linux/blob/master/Documentation/arch/arm64/memory-tagging-extension.rst))에 따르면 물리 메모리 **16바이트 단위**마다 **4비트** 할당 태그를 두고, 포인터의 상위 비트(59~56)에 든 논리 태그와 비교해 다르면 예외를 낸다. 할당자가 `malloc`마다 다른 태그를 붙이면, 이웃 청크로 넘치는 쓰기(힙 오버플로)와 해제 후 재할당된 청크 접근(UAF)이 태그 불일치로 잡힌다. ASan을 하드웨어로 구현한 셈이며, 성능 비용이 낮아 **프로덕션**에서 켤 수 있다.
 
@@ -282,3 +282,4 @@ MTE의 한계는 4비트라는 수에 있다. 태그는 16가지뿐이라 임의
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 본문 8절·조합표 작성. checksec 출력·컴파일 플래그 로컬 검증, CET·PAC·MTE는 커널 문서 기준으로 기술 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: `pwn checksec` 출력(실습 바이너리·/bin/ls)·`readelf -lW`/`-n` 출력을 pwntools 4.15·Ubuntu 24.04에서 재실행해 일치 확인. PAC 비트 수(55 − VA 비트)·MTE(16바이트 단위 4비트, 비트 59~56)·shstk(`user_shstk`)를 커널 문서 원문으로 대조. 카나리가 "스레드당 하나"라는 표현을 "프로세스당 하나를 각 스레드 TLS에 복사"로 정정 | 검증팀 |
+| 2026-10-23 | 독자 테스트 2차 반영: 7.3 PAC 비트 수 "7비트"가 리눅스 사용자 공간(48비트 VA, TBI) 기준이며 VA 크기·커널 공간·arm64e에 따라 다르다는 한 줄 추가(커널 문서 `pointer-authentication.rst` 원문 기준) | @anthonynoh5202 |

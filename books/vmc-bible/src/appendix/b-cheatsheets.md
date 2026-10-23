@@ -7,6 +7,7 @@
 > **한눈에 보기**
 > 자주 찾는 명령과 페이로드 문법을 한 곳에. 실습 환경에서만 사용한다.
 > 명령은 2026-10 기준 현행 버전(Docker Compose v2, gdb 15, pwntools 4.15, Semgrep 1.18x, CodeQL CLI 2.x)으로 확인했다.
+> 9절은 시니어용이다. ROPgadget 7.x, ropper 1.13, one_gadget 2.1, pwninit 3.3, patchelf 0.18, binutils 2.42, Ghidra 12.1로 실행 확인했다.
 
 ## 1. Docker Compose 실습 명령
 
@@ -231,6 +232,150 @@ pwntools `checksec` 출력 기준이다. 같은 이름의 셸 스크립트(check
 | 포맷 스트링 | `%x.%x.%x.%x` · `%s` | 스택 값이 찍히는가 / 크래시 | `%n` 쓰기. [제2편 바이너리 3장](../vol2-tech/part4-binary/03-format-string.md) |
 | 정수 오버플로 | `-1` · `2147483648` · `4294967295` · `0` | 길이·개수 검사 우회, 큰 할당, 크래시 | [제2편 바이너리 6장](../vol2-tech/part4-binary/06-integer-overflow.md) |
 
+## 9. 시니어용
+
+실습 환경·허가받은 대상에서만 쓴다. 이 절의 명령은 모두 Ubuntu 24.04(glibc 2.39)에서 로컬 바이너리로 실행 확인했다.
+
+### 9.1 가젯 찾기와 one_gadget
+
+```bash
+# ROPgadget (pip install ROPgadget)
+ROPgadget --binary ./vuln --only "pop|ret"                       # pop·ret만으로 된 가젯
+ROPgadget --binary ./libc.so.6 --only "pop|ret" --re "pop rdi"   # 정규식으로 좁히기 → 0x2a873 : pop rdi ; pop rbp ; ret
+ROPgadget --binary ./libc.so.6 --string "/bin/sh"                # 문자열 주소 → 0x1cc42f
+ROPgadget --binary ./vuln --ropchain                             # execve 체인 자동 생성 시도 (정적 링크 바이너리에서 유용)
+# ropper (pip install ropper)
+ropper --file ./libc.so.6 --search "pop rdi; ret" --nocolor      # 0x10c08d: pop rdi; ret;
+ropper --file ./vuln --search "syscall" --nocolor ; ropper --file ./vuln --jmp rsp   # 특정 명령 / jmp·call reg
+# one_gadget (gem install one_gadget. Ruby 필요. 미설치면 `gem install one_gadget --no-document`)
+one_gadget ./libc.so.6                 # "셸 띄우는 한 주소" 후보와 조건. glibc 2.39: 0x583ec posix_spawn(..., "/bin/sh", ...)
+one_gadget ./libc.so.6 -l 1            # 조건이 더 까다로운 후보까지 (2.39에서 17개)
+one_gadget ./libc.so.6 --near printf   # 특정 함수 근처 후보 (부분 덮어쓰기용)
+```
+
+출력의 `constraints`(예: `rsp & 0xf == 0`, `rbx == NULL`)가 ROP 체인 끝에서 실제로 성립하는지 gdb로 확인한 뒤 쓴다. 조건이 안 맞으면 다음 후보로 넘어간다.
+
+### 9.2 libc 맞추기: patchelf·pwninit
+
+익스플로잇의 오프셋은 **대상 환경의 libc**가 정한다. 받은 libc·ld로 로컬 바이너리를 돌린다.
+
+```bash
+strings ./libc.so.6 | grep "GNU C Library"      # GNU C Library (Ubuntu GLIBC 2.39-0ubuntu8.9) ...
+pwn libcdb file ./libc.so.6                     # 식별. 없으면 https://libc.rip 에 심벌 주소 몇 개로 조회
+patchelf --print-interpreter ./vuln ; patchelf --print-needed ./vuln
+patchelf --set-interpreter ./ld-linux-x86-64.so.2 --set-rpath . ./vuln   # 받은 ld·libc를 쓰도록 바꿈 (원본은 복사해 둔다)
+# pwninit (cargo install pwninit, 또는 GitHub 릴리스 바이너리). 디렉터리의 bin·libc·ld를 찾아 위 작업 + solve.py 뼈대
+pwninit                                         # bin: ./vuln  libc: ./libc.so.6 → vuln_patched, solve.py
+pwninit --no-template                           # solve.py 생성 생략. --bin/--libc/--ld 로 직접 지정 가능
+```
+
+`pwninit`은 ld가 없으면 Ubuntu launchpad에서 같은 버전의 `libc6` .deb을 내려받아 꺼내고(`libc6-dbg`로 심벌도 복원), 오프라인이면 경고만 내고 `vuln_patched`·`solve.py`까지는 만든다(실측).
+
+### 9.3 strace · ltrace · objdump · readelf
+
+```bash
+strace -f -e trace=execve,openat,read,write -o st.log ./vuln     # 자식 포함, 시스템 콜 선택, 파일로
+strace -e trace=%network -s 256 -p PID                          # 실행 중 프로세스, 문자열 256바이트까지
+strace -e inject=openat:error=ENOENT -e trace=openat ./vuln      # 장애 주입 (오류 경로 테스트)
+ltrace -e 'read+printf+puts' ./vuln                             # 라이브러리 호출 선택
+ltrace -S -f ./vuln                                             # 시스템 콜(SYS_*)까지, 자식 포함
+objdump -d -M intel --no-show-raw-insn ./vuln                   # Intel 문법, 기계어 바이트 생략
+objdump -d -M intel --disassemble=win ./vuln                    # 함수 하나만
+objdump -s -j .rodata ./vuln ; objdump -R ./vuln                # 섹션 덤프 / 동적 재배치(GOT 슬롯)
+objdump -T ./libc.so.6 | grep " system$"                        # 동적 심벌 오프셋 → 0x58750
+readelf -h ./vuln                                               # Type: EXEC(No PIE) / DYN(PIE)
+readelf -lW ./vuln | grep -E "GNU_STACK|GNU_RELRO"              # RWE면 실행 가능 스택
+readelf -dW ./vuln | grep -E "NEEDED|FLAGS|RPATH|RUNPATH"       # BIND_NOW = Full RELRO
+readelf -sW ./vuln | grep -E " win| main" ; readelf -rW ./vuln  # 심벌 / 재배치
+readelf -S ./vuln | grep -E "\.got|\.plt|\.fini_array"          # 섹션 주소
+readelf -n ./vuln | grep "x86 feature"                          # IBT, SHSTK
+```
+
+### 9.4 Ghidra headless
+
+```bash
+GHIDRA=/opt/ghidra_12.1_PUBLIC                                  # 설치 경로
+$GHIDRA/support/analyzeHeadless /abs/proj demo -import /abs/vuln \
+  -scriptPath /abs/scripts -postScript ExportFuncs.java /abs/funcs.txt -deleteProject
+# 경로는 절대 경로. "./"로 시작하면 "Path element starting with '.' is not permitted"
+# -process (기존 프로젝트 재분석) · -recursive · -overwrite · -readOnly · -noanalysis · -analysisTimeoutPerFile 600 · -preScript
+# .py 스크립트는 PyGhidra로 시작해야 한다 ("Ghidra was not started with PyGhidra"). Java 스크립트가 기본
+```
+
+```java
+// ExportFuncs.java — 함수 주소·이름을 파일로 쓰는 최소 후처리 스크립트 (실측 출력: 00401196 win / 004011b0 greet / 00401213 main)
+import ghidra.app.script.GhidraScript;
+import ghidra.program.model.listing.Function;
+import java.io.PrintWriter;
+public class ExportFuncs extends GhidraScript {
+    @Override public void run() throws Exception {
+        String[] a = getScriptArgs();
+        try (PrintWriter out = new PrintWriter(a.length > 0 ? a[0] : "funcs.txt")) {
+            for (Function f : currentProgram.getFunctionManager().getFunctions(true))
+                out.println(f.getEntryPoint() + " " + f.getName());
+        }
+    }
+}
+```
+
+### 9.5 glibc 버전별 힙 검사 요약
+
+[제2편 바이너리 4장 7.2절](../vol2-tech/part4-binary/04-heap.md)의 표 요약이다. 버전은 glibc 소스 태그로 확인한 것이다.
+
+| glibc | 바뀐 것 | 기법에 미친 영향 |
+|---|---|---|
+| 2.24 | `_IO_FILE` vtable 검증(`IO_validate_vtable`) | 구역 밖 가짜 vtable 차단. 구역 안 vtable(`_IO_wfile_jumps` 등)로 우회 |
+| 2.26 | tcache 도입 | poisoning·double free가 가장 쉬운 시기(~2.28) |
+| 2.28 | unsorted bin 제거 시 `bck->fd` 검사. `_IO_str_jumps` 버퍼 함수 포인터 제거 | unsorted bin attack 차단. house of orange의 `_IO_str_overflow` 경로 차단 |
+| 2.29 | tcache `key` double free 검사. top chunk size 검사 | 단순 double free 차단(`key` 덮으면 통과). house of force 차단 |
+| 2.30 | large bin `nextsize`/`bk` 검사 | largebin attack 한 분기 차단 |
+| 2.32 | safe-linking + 정렬 검사 (tcache·fastbin) | 포이즈닝에 힙 주소 누출 필요 |
+| 2.34 | `__malloc_hook`/`__free_hook` 제거. `tcache_key` 랜덤 | 훅 종착지 소멸. `key` 복원 불가(다른 값 덮기는 가능) |
+| 2.38 | libio vtable을 `__io_vtables[]` 배열로 통합 | 검사 성격 동일 |
+| 2.42 | large bin 남은 분기에도 `nextsize` 검사 | largebin attack 차단 |
+| master (2.42.9000) | `malloc.c`에서 fastbin 코드 제거 | fastbin dup 계열 소멸. 2.43 릴리스 확인 필요 |
+
+### 9.6 요청 스머글링 탐침 바이트열
+
+[제2편 웹 12장 3.2절](../vol2-tech/part3-web/12-http-request-smuggling.md)의 시간 지연 탐침이다. `\r\n`은 실제 CRLF다. Burp Repeater에서는 **Update Content-Length를 끄고** 보낸다. **CL.TE 탐침을 먼저** 보낸다(순서를 바꾸면 CL.TE 환경에서 실제 데싱크가 난다).
+
+```http
+POST / HTTP/1.1               ← CL.TE 탐침. 프런트(CL=4)는 "1\r\nA" 까지만 넘기고,
+Host: lab                        백엔드(TE)는 "A" 다음 청크를 기다린다 → 지연
+Transfer-Encoding: chunked
+Content-Length: 4
+
+1\r\n
+A\r\n
+X
+```
+
+```http
+POST / HTTP/1.1               ← TE.CL 탐침. 프런트(TE)는 "0\r\n\r\n" 까지만 넘기고,
+Host: lab                        백엔드(CL=6)는 1바이트를 더 기다린다 → 지연
+Transfer-Encoding: chunked
+Content-Length: 6
+
+0\r\n
+\r\n
+X
+```
+
+지연이 보이면 응답 차이(스머글한 `GET /404` 뒤의 정상 요청이 404를 받는지)로 확정한다. TE 난독화 변형: `Transfer-Encoding: xchunked`, `Transfer-Encoding : chunked`, `Transfer-Encoding: chunked` 두 줄, `X: X[\n]Transfer-Encoding: chunked`.
+
+### 9.7 역직렬화 지문
+
+입력·쿠키·파라미터·파일에서 이 패턴이 보이면 [제2편 웹 7장](../vol2-tech/part3-web/07-deserialization.md)이다. 바이트열과 base64 둘 다 찾는다(로컬에서 직렬화해 확인).
+
+| 형식 | 바이트 / 문자 | base64 시작 | 비고 |
+|---|---|---|---|
+| Java `ObjectOutputStream` | `AC ED 00 05` | `rO0AB` | STREAM_MAGIC 0xACED + 버전 5. `.ser` 파일, JSF ViewState, RMI·JMX |
+| PHP `serialize` | `O:8:"stdClass":0:{}` · `a:1:{s:1:"a";i:1;}` | `Tzo` (`O:`) | 객체 `O:길이:"클래스":수:{...}`, 배열 `a:`, 문자열 `s:`, 정수 `i:` |
+| Python pickle | `\x80\x04\x95` (프로토콜 4·5) · `\x80\x03` · `\x80\x02` | `gASV` · `gAN` · `gAJ` | 0x80 = PROTO, 다음 바이트가 프로토콜 번호. 4부터 0x95 FRAME |
+| .NET BinaryFormatter | `00 01 00 00 00 FF FF FF FF 01 00 00 00 00 00 00 00` | `AAEAAAD/////AQAAAAAAAAA` | MS-NRBF SerializationHeaderRecord(RootId 1, HeaderId -1, 버전 1.0). ViewState·`.NET Remoting` |
+| Ruby `Marshal` | `\x04\x08` | `BAh` | Marshal 4.8. Rails 세션 쿠키(구버전)·캐시 |
+| Node `node-serialize` | `_$$ND_FUNC$$_function` | — | 문자열 표식. IIFE `(){...}()`가 붙으면 즉시 실행 |
+
 ## 체크리스트
 
 - [ ] 실습 앱을 띄우고 내리고 초기화하는 명령 세 개를 안 보고 칠 수 있는가?
@@ -239,6 +384,8 @@ pwntools `checksec` 출력 기준이다. 같은 이름의 셸 스크립트(check
 - [ ] Semgrep 룰 하나를 쓰고 `validate`·`test`를 통과시킬 수 있는가?
 - [ ] `curl` 만으로 쿠키·헤더·JSON 본문을 조작할 수 있는가?
 - [ ] checksec 출력을 보고 "어떤 공격이 막혀 있는가"를 말할 수 있는가?
+- [ ] (시니어) 받은 libc로 바이너리를 패치해 돌리고, `one_gadget`의 조건을 gdb로 확인할 수 있는가?
+- [ ] (시니어) 대상 glibc 버전을 보고 9.5 표에서 쓸 수 있는 기법과 막힌 기법을 가를 수 있는가?
 
 ## 더 읽기
 
@@ -251,6 +398,9 @@ pwntools `checksec` 출력 기준이다. 같은 이름의 셸 스크립트(check
 - [curl 매뉴얼](https://curl.se/docs/manpage.html)
 - [FIRST CVSS v3.1 Specification](https://www.first.org/cvss/v3.1/specification-document)
 - [PayloadsAllTheThings](https://github.com/swisskyrepo/PayloadsAllTheThings) · 유형별 페이로드 모음 (실습 환경에서만)
+- [ROPgadget](https://github.com/JonathanSalwan/ROPgadget) · [ropper](https://github.com/sashs/Ropper) · [one_gadget](https://github.com/david942j/one_gadget) · [pwninit](https://github.com/io12/pwninit) · [patchelf](https://github.com/NixOS/patchelf) · 9.1~9.2 도구
+- Ghidra 설치 디렉터리의 `support/analyzeHeadlessREADME.html` (12.1 배포본에 포함) · 9.4 옵션 전체. [Ghidra 저장소](https://github.com/NationalSecurityAgency/ghidra)
+- [MS-NRBF: .NET Remoting Binary Format](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-nrbf/) · 9.7 .NET 헤더 레코드의 1차 자료
 
 ## 변경 이력
 
@@ -260,3 +410,4 @@ pwntools `checksec` 출력 기준이다. 같은 이름의 셸 스크립트(check
 | 2026-10-22 | 본문 작성. Compose, gdb/pwndbg, pwntools, Semgrep/CodeQL, HTTP, checksec, CVSS, 첫 탐지 입력 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: pwntools 4.15 API(context 기본 i386, recvuntil/recvline 시그니처, cyclic_find=40, flat, Gadget[0], pwn template/libcdb/shellcraft 옵션)·checksec 출력, gdb 15.1 명령, semgrep 1.182 validate/test/ci 옵션, docker compose 플래그를 실제 실행으로 대조. pwndbg 힙 명령 이름을 현행 문서의 하이픈 표기로 수정 | 검증팀 |
 | 2026-10-22 | 독자 테스트 반영: Semgrep `validate`/`test`를 도구 부 5장과 같은 플래그 형식으로 통일(하위 명령은 주석으로). 장 참조에 편 표기 추가 | @anthonynoh5202 |
+| 2026-10-23 | 독자 테스트 2차 반영: 9절 "시니어용" 신설. ROPgadget/ropper/one_gadget(gem 설치 후 glibc 2.39 libc로 실행), patchelf·pwninit(cargo 설치, 오프라인 동작 확인), strace/ltrace/objdump/readelf 플래그, Ghidra 12.1 headless(Java 후처리 스크립트 실행 확인, 절대 경로·PyGhidra 제약), glibc 버전별 힙 검사 요약표(4장 7.2절과 동일 출처), 스머글링 탐침(웹 12장 3.2절과 동일 바이트열), 역직렬화 지문(Java·pickle·PHP·Ruby는 로컬 직렬화로 확인, .NET은 MS-NRBF 헤더에서 base64 계산) | @anthonynoh5202 |

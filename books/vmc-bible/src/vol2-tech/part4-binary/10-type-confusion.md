@@ -298,20 +298,70 @@ int main(int argc, char **argv) {
 |---|---|
 | `dynamic_cast` | 검사 **뒤에** 타입이 바뀌는 창(콜백, 스크립트 실행, 락 해제)을 찾는다. 검사된 포인터를 오래 들고 있는 코드가 표적 |
 | 자체 타입 태그 | 태그 자체가 객체 안에 있으면, 다른 취약점(오버플로·UAF)으로 태그를 덮는다. 태그 검사를 건너뛰는 "빠른 경로"(캐시, 인라인 캐시)를 찾는다 |
-| CFI `cfi-vcall` | 허용 집합은 "같은 클래스 계층의 같은 슬롯"이다. 계층 안의 **다른 파생 클래스** 함수는 허용되므로, 공격자는 같은 슬롯에 있는 쓸모 있는 함수(파일 쓰기, 명령 실행에 가까운 메서드)를 고른다. 이를 COOP(counterfeit object-oriented programming)이라 부른다 |
+| CFI `cfi-vcall` | 허용 집합은 "호출 지점의 **정적 타입**과 그 파생 클래스의 vtable, 같은 슬롯"이다. 계층 안의 **다른 파생 클래스** 함수는 허용되므로, 공격자는 같은 슬롯에 있는 쓸모 있는 함수(파일 쓰기, 명령 실행에 가까운 메서드)를 고른다. 이를 COOP(counterfeit object-oriented programming)이라 부른다. 무관한 클래스의 vtable은 거부된다(7.1 실측) |
 | CFI `cfi-icall` | 같은 함수 시그니처를 가진 모든 함수가 허용된다. `void (*)(void*)` 같은 흔한 시그니처는 집합이 수백 개다 |
 | CFI 전체 | **데이터 전용 공격**. 코드 포인터를 건드리지 않고 길이·권한·경로 같은 데이터만 바꾼다. 타입 혼동으로 얻은 임의 읽기·쓰기는 CFI와 무관하게 성립한다 |
 | CFI 캐스트 검사 | `cfi-derived-cast`·`cfi-unrelated-cast`는 비용 때문에 끄는 제품이 많다(Chromium `build/config/sanitizers/sanitizers.gni`의 `use_cfi_cast = is_cfi && is_chromeos`, 즉 ChromeOS 공식 빌드에서만 켜진다). 캐스트 지점의 혼동은 vcall 검사까지 가야 잡힌다 |
 | Windows CFG | 함수 **시작 주소**만 검사한다. 타입을 보지 않으므로 아무 함수의 시작으로 호출을 돌릴 수 있다 |
 | V8 샌드박스 | 샌드박스 안의 힙은 여전히 임의 읽기·쓰기가 되므로, 샌드박스 밖으로 나가는 **두 번째 취약점**(샌드박스 우회)이 필요하다. 8절 CVE-2023-3079의 공개 분석이 "타입 혼동 + 새 샌드박스 탈출"로 구성된 이유 |
 
-**CFI 아래에서의 한계를 한 번 더.** CFI는 "호출 목적지가 타입에 맞는 함수인가"를 묻지, "이 객체가 정말 그 타입인가"를 묻지 않는다. 그래서 타입 혼동으로 만든 **가짜 객체**(fakeobj)의 vptr이 **진짜 vtable**(허용 집합 안)을 가리키면 검사를 통과한다. 공격자는 가짜 객체에 진짜 vtable을 붙이고, 그 클래스의 메서드가 객체 필드를 어떻게 쓰는지를 이용해 읽기·쓰기 프리미티브를 만든다. JS 엔진 익스플로잇이 "함수 포인터 덮기"가 아니라 "길이 필드 조작 → 임의 읽기·쓰기 → 쓰기 가능한 코드 영역(JIT 페이지, WebAssembly) 찾기"로 흘러가는 이유이고, 그 마지막 단계가 7장·8장의 완화와 만난다.
+**CFI 아래에서의 한계를 한 번 더.** CFI는 "호출 목적지가 타입에 맞는 함수인가"를 묻지, "이 객체가 정말 그 타입인가"를 묻지 않는다. 그래서 타입 혼동으로 만든 **가짜 객체**(fakeobj)의 vptr이 호출 지점의 타입 계층 안에 있는 **진짜 vtable**을 가리키면 검사를 통과한다(7.1에서 실측). 공격자는 가짜 객체에 진짜 vtable을 붙이고, 그 클래스의 메서드가 객체 필드를 어떻게 쓰는지를 이용해 읽기·쓰기 프리미티브를 만든다. JS 엔진 익스플로잇이 "함수 포인터 덮기"가 아니라 "길이 필드 조작 → 임의 읽기·쓰기 → 쓰기 가능한 코드 영역(JIT 페이지, WebAssembly) 찾기"로 흘러가는 이유이고, 그 마지막 단계가 7장·8장의 완화와 만난다.
 
 브라우저 JS 엔진에서의 전형적 흐름은 다음과 같다(개념. 엔진·버전별 세부는 다르다).
 
 1. **혼동 만들기 → `addrof`/`fakeobj`**: 최적화된 함수 안에서 double 배열로 믿는 객체를 객체 배열로 바꾼다. 객체 배열에 객체를 넣고 double 배열로 읽으면 객체 주소가 숫자로 나오고(`addrof`), 반대로 숫자를 쓰고 객체로 읽으면 그 숫자가 객체 포인터가 된다(`fakeobj`).
 2. **가짜 배열**: `fakeobj`로 "길이가 거대한 배열"을 흉내 내는 가짜 객체를 만들어 그 인덱스로 힙 전체를 읽고 쓴다.
 3. **코드 실행**: 쓰기·실행이 모두 되는 영역(과거에는 JIT 코드 페이지, 현재는 WebAssembly 관련 구조)을 찾아 코드를 넣거나 함수 포인터를 돌린다. V8 샌드박스가 켜진 버전에서는 2단계가 샌드박스 안에 갇히므로 추가 취약점이 필요하다.
+
+### 7.1 한 사례의 실제 우회 과정: CFI 아래의 가짜 객체는 어디까지 통과하는가
+
+표의 `cfi-vcall` 행을 실측으로 확인한다. 질문은 두 개다. 4절의 `tc.cpp`처럼 `Circle`로 믿는 자리에 **무관한** `Admin`의 진짜 vtable이 있으면 `cfi-vcall`은 허용하는가. 그리고 **같은 계층**의 다른 파생 클래스 vtable이면 어떤가. 공격자가 내용을 정하는 버퍼(`fake[16]`)의 첫 8바이트에 진짜 vtable 주소를 넣고, 정적 타입 `Shape*`와 `Circle*` 두 지점에서 호출한다. 캐스트 검사(`cfi-unrelated-cast`)가 먼저 잡는 것을 피하려고 `-fsanitize=cfi-vcall`만 켠다.
+
+```cpp
+/* tc_cfi2.cpp — cfi-vcall 아래에서 "진짜 vtable"을 단 가짜 객체 */
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cstdint>
+struct Shape  { virtual void draw() { puts("Shape::draw"); } virtual ~Shape() {} };
+struct Circle : Shape { void draw() override { puts("Circle::draw"); } };
+struct Debug  : Shape { void draw() override { puts("Debug::draw   <- 같은 계층의 다른 파생 클래스"); } };
+struct Admin  { virtual void shell() { puts("Admin::shell  <- 무관한 클래스"); } virtual ~Admin() {} };
+
+int main(int argc, char **argv) {
+    setvbuf(stdout, NULL, _IONBF, 0);                    /* CFI 실패 시 버퍼를 못 비우므로 */
+    Shape *real[3] = { new Circle, new Debug, nullptr };   /* vtable이 링크에 남도록 */
+    Admin *adm = new Admin;
+    char fake[16];                                       /* 가짜 객체: 공격자가 내용을 정한다 */
+    uintptr_t vt = (argc > 1 && argv[1][0] == 'a') ? *(uintptr_t *)adm     /* Admin의 진짜 vtable */
+                 : (argc > 1)                          ? *(uintptr_t *)real[1] /* Debug의 진짜 vtable */
+                 :                                       *(uintptr_t *)real[0]; /* Circle의 진짜 vtable */
+    memcpy(fake, &vt, sizeof vt);
+    Shape  *s = (Shape *)fake;                           /* 정적 타입 Shape로 호출 (21행) */
+    s->draw();
+    Circle *c = (Circle *)fake;                          /* 정적 타입 Circle로 호출 (23행) */
+    c->draw();
+    return 0;
+}
+```
+
+```bash
+clang++ -g -O1 -flto -fvisibility=hidden -fsanitize=cfi-vcall -fno-sanitize-trap=all -fuse-ld=lld -o tc_cfi2 tc_cfi2.cpp
+./tc_cfi2        # vptr = Circle의 진짜 vtable
+# Circle::draw
+# Circle::draw                                  ← 두 지점 모두 통과. exit 0
+./tc_cfi2 d      # vptr = Debug의 진짜 vtable (Shape의 다른 파생 클래스)
+# Debug::draw   <- 같은 계층의 다른 파생 클래스      ← Shape* 지점(21행) 통과. Debug::draw가 실행됐다
+# tc_cfi2.cpp:23:5: runtime error: control flow integrity check for type 'Circle' failed during virtual call (vtable address 0x55c1998c22b0)
+# 0x55c1998c22b0: note: vtable is of type 'Debug'   ← Circle* 지점(23행) 거부. exit 1
+./tc_cfi2 a      # vptr = Admin의 진짜 vtable (무관한 클래스)
+# tc_cfi2.cpp:21:5: runtime error: control flow integrity check for type 'Shape' failed during virtual call (vtable address 0x560f63d7c2f0)
+# 0x560f63d7c2f0: note: vtable is of type 'Admin'    ← Shape* 지점에서 이미 거부. exit 1
+```
+
+결과를 표의 말로 옮기면 이렇다. 허용 집합은 **호출 지점의 정적 타입과 그 파생 클래스들의 vtable**이다. `Shape*`로 부르는 지점에서는 `Circle`·`Debug`가 모두 통과하고 `Admin`은 거부된다. `Circle*`로 부르는 지점에서는 `Circle`만 통과한다. 4절 `tc.cpp`의 상황(Circle 자리에 Admin)은 캐스트 검사 없이 `cfi-vcall`만 켜도 **거부**된다. 진단 모드를 빼면(`-fno-sanitize-trap=all` 제거) 같은 지점에서 `ud2`로 죽는다(exit 132, 실측).
+
+**읽을 것 세 가지.** (1) CFI가 막는 것은 "집합 밖의 vtable"이지 "가짜 객체"가 아니다. `./tc_cfi2 d`에서 `Debug::draw`는 `fake[16]`을 자기 객체로 알고 실행됐다. 메서드가 객체 필드를 읽고 쓰는 만큼 공격자는 그 필드를 정한다. 이것이 7절 본문의 fakeobj 흐름이고, COOP는 집합 안에서 **가장 쓸모 있는 메서드**를 고르는 작업이다. (2) 집합의 크기는 호출 지점의 정적 타입이 정한다. 실제 엔진 코드는 대개 기반 클래스 포인터(`Node*`, `JSObject*`)로 호출하므로 집합이 수십~수백 개다. 리뷰에서 "이 가상 호출의 정적 타입이 얼마나 일반적인가"가 곧 CFI 아래에서의 공격 표면이다. (3) 같은 이유로 `cfi-vcall`은 **같은 계층의 타입 혼동**(`Circle`과 `Square`를 섞는 종류)을 잡지 못한다. 그 혼동은 캐스트 검사(`cfi-derived-cast`, 표의 "비용 때문에 끄는 제품이 많다")나 UBSan `vptr`(3.2절)의 영역이고, 릴리스 빌드에는 대개 없다.
 
 ## 8. 실제 CVE 사례
 
@@ -367,3 +417,4 @@ int main(int argc, char **argv) {
 |---|---|---|
 | 2026-10-22 | 독자 테스트 반영: 장 신설. tc.cpp를 g++ 13.3/clang 18.1(Ubuntu 24.04)로 빌드해 vtable 혼동·gdb 출력·`-fsanitize=vptr`·Clang CFI(진단·트랩) 출력 실측. CVE 6건 cvelistV5 레코드 대조 | @anthonynoh5202 |
 | 2026-10-23 | 기술 검증(2차): CVE 7건(표 6건 + CVE-2019-11708) cvelistV5 재대조(모두 실존, 버전·참조 일치), MFSA 2019-18/19 공지일(6/18, 6/20) 확인. tc.cpp를 본문 플래그 그대로 재빌드해 두 경로·gdb 값(vptr=`_ZTV5Admin+16`, `info vtbl`)·`-fsanitize=vptr`(3건 보고)·CFI 진단/트랩(rc 1/132)·`dynamic_cast` 수정판 실측. gdb 디스어셈블리를 실측 심볼명으로 정정하고 Intel 문법 전제 명시, `-fvisibility=` 필수(clang 18 오류 메시지) 추가, Chromium `use_cfi_cast` 조건을 `sanitizers.gni` 원문(ChromeOS 한정)으로 정정, Rust `union` 서술 정정 | 검증팀 |
+| 2026-10-23 | 독자 테스트 2차 반영: 7절에 7.1 "CFI 아래의 가짜 객체" 실측 추가(`tc_cfi2.cpp` 25줄, clang 18 `-fsanitize=cfi-vcall`: Circle 통과, Debug는 `Shape*` 지점 통과·`Circle*` 지점 거부, Admin은 `Shape*` 지점부터 거부, 트랩 모드 exit 132). 7절 표의 `cfi-vcall` 행과 "한계" 문단을 실측(허용 집합 = 정적 타입과 그 파생 클래스)에 맞춰 보강. COOP·addrof/fakeobj는 개념 서술 유지 | @anthonynoh5202 |

