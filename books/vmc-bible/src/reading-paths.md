@@ -45,8 +45,9 @@
 
 1. [제1편 2부 제도](vol1-center/02-programs/05-bug-bounty.md)의 세 장, [신고포상제](vol1-center/02-programs/05-bug-bounty.md)·[상시 신고조치제](vol1-center/02-programs/06-cvd-vdp.md)·[포털과 보안공지](vol1-center/02-programs/07-portal-advisory.md)를 먼저 읽는다. 센터가 신고자·제조사·기관을 어떤 규칙으로 만나는지가 여기 있다.
 2. 제2편은 자기 분야 장의 **7. 우회 기법**과 **8. 실제 CVE 사례**를 중심으로 읽는다. 1~6절은 아는 내용이면 건너뛰고, 모르는 것이 나오면 그 장을 처음부터 읽는다.
-3. [제2편 워크스루](vol2-tech/part7-walkthroughs/00-overview.md)를 하나 골라 이 책의 실습 환경에서 재현한다. 센터가 말하는 "재현"의 기준을 몸으로 익힌다.
-4. [제3편 1부 2장 검증](vol3-practice/01-workflow-tech/02-verification.md)을 읽는다. 전 직장의 검증과 센터의 검증이 어디서 다른지 본다.
+3. 분야 밖 최소 경로. 웹 출신은 [제2편 바이너리 1장](vol2-tech/part4-binary/01-memory-basics.md) → [2장](vol2-tech/part4-binary/02-stack-overflow.md)·[3장](vol2-tech/part4-binary/03-format-string.md)의 4절 실습 → [워크스루 2장 Heartbleed](vol2-tech/part7-walkthroughs/02-cve-2014-0160-heartbleed.md). 바이너리 출신은 [제2편 웹 1장](vol2-tech/part3-web/01-sql-injection.md) 실습 → [워크스루 1장 Log4Shell](vol2-tech/part7-walkthroughs/01-cve-2021-44228-log4shell.md).
+4. [제2편 워크스루](vol2-tech/part7-walkthroughs/00-overview.md)를 하나 골라 이 책의 실습 환경에서 재현한다. 센터가 말하는 "재현"의 기준을 몸으로 익힌다.
+5. [제3편 1부 2장 검증](vol3-practice/01-workflow-tech/02-verification.md)을 읽는다. 전 직장의 검증과 센터의 검증이 어디서 다른지 본다.
 
 [제3편 2부 2장](vol3-practice/02-onboarding/02-existing.md)은 센터 재직자 전제라서 "2026년에 바뀐 것" 표만 보면 된다.
 

@@ -7,7 +7,7 @@
 | 1 | 센터 내부 팀 구성과 정원 | [제1편 1부 2장](../vol1-center/01-understanding/02-where.md) | ⬜ |
 | 2 | 디지털위협대응본부 산하 조직 정확한 목록 | [제1편 1부 2장](../vol1-center/01-understanding/02-where.md) | ⬜ |
 | 3 | 인력 수치 기준일, 현재 정원표, 비상근 인력의 소속과 협업 규칙 | [제1편 1부 2장](../vol1-center/01-understanding/02-where.md) | ⬜ |
-| 4 | 일원화 이전 각 경로 담당 팀과 이관된 업무 목록: 신고포상제·보안공지·CNA 등 기능의 센터 신설 전 소속 팀, 센터로의 이관 시점·범위(전입자의 이전 소속·담당 범위 구분) | [제1편 1부 1장 4절](../vol1-center/01-understanding/01-why.md), [제3편 2부 3장](../vol3-practice/02-onboarding/03-transfer.md) | ⬜ |
+| 4 | 일원화 이전 각 경로 담당 팀과 이관된 업무 목록: 신고포상제·보안공지·CNA 등 기능의 센터 신설 전 소속 팀, 센터로의 이관 시점·범위(전입자의 이전 소속·담당 범위 구분). 확인 방법: KISA 공개 조직도의 과거 판과 알리오(공공기관 경영정보 공개시스템) 공시의 조직·정원 자료를 연도별로 대조해 각 기능의 소속 팀을 좁힌 뒤 내부 인사·직제 자료로 확정한다 | [제1편 1부 1장 4절](../vol1-center/01-understanding/01-why.md), [제3편 2부 3장](../vol3-practice/02-onboarding/03-transfer.md) | ⬜ |
 | 5 | 국내 취약점 식별번호 체계(KVE 등)의 부여 규칙 | [제1편 1부 4장](../vol1-center/01-understanding/04-workflow.md) | ⬜ |
 | 6 | 내부 연락 체계, SLA(응답 시한) | [제1편 1부 3장](../vol1-center/01-understanding/03-roles.md) | ⬜ |
 | 7 | 실제 처리 사례 1건 (익명화) | [제1편 1부 4장 4절](../vol1-center/01-understanding/04-workflow.md) | ⬜ |

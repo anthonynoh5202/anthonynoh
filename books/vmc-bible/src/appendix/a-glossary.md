@@ -52,15 +52,17 @@
 | **경쟁 조건** (race condition) | 둘 이상의 동작이 겹쳐 실행될 때 순서·타이밍에 따라 결과가 달라져 생기는 취약점. 확인과 사용 사이에 상태가 바뀌는 TOCTOU가 대표적 | [경쟁 조건](../vol2-tech/part3-web/10-race-condition.md) |
 | **공격 표면** (attack surface) | 외부 입력이 들어오는 모든 지점 | [공격 표면](../vol2-tech/part1-foundations/03-attack-surface.md) |
 | **블라인드 인젝션** (blind injection) | 결과가 직접 보이지 않고 참/거짓이나 시간 차이로만 알 수 있는 인젝션 | [SQL 인젝션](../vol2-tech/part3-web/01-sql-injection.md) |
+| **소스·싱크·새니타이저** (source · sink · sanitizer) | 정적 분석의 데이터 흐름 모델. 소스는 외부 입력이 들어오는 지점, 싱크는 그 값이 위험한 동작(쿼리 실행, 명령 실행, 메모리 복사)에 쓰이는 지점, 새니타이저는 그 사이에서 값을 검증·정화해 흐름을 끊는 지점이다. 소스에서 싱크까지 새니타이저 없이 닿는 경로가 취약점 후보다 | 제2편 [방법론 4장](../vol2-tech/part2-methodology/04-static-analysis.md) |
 | **신뢰 경계** (trust boundary) | 신뢰 수준이 달라지는 지점. 취약점은 거의 항상 여기서 생긴다 | [취약점이란](../vol2-tech/part1-foundations/01-what-is-vulnerability.md) |
+| **역직렬화** (deserialization) | 직렬화된 데이터를 객체로 되돌리는 것. 입력을 신뢰하면 코드 실행 | [역직렬화](../vol2-tech/part3-web/07-deserialization.md) |
 | **완화 기법** (mitigation) | ASLR, NX, Canary, PIE, RELRO, CFI 등 익스플로잇을 어렵게 하는 장치 | [완화 기법](../vol2-tech/part4-binary/07-mitigations.md) |
 | **익스플로잇** (exploit) | 취약점을 실제로 이용하는 코드나 절차 | [취약점이란](../vol2-tech/part1-foundations/01-what-is-vulnerability.md) |
-| **역직렬화** (deserialization) | 직렬화된 데이터를 객체로 되돌리는 것. 입력을 신뢰하면 코드 실행 | [역직렬화](../vol2-tech/part3-web/07-deserialization.md) |
-| **퍼징** (fuzzing) | 예상 밖 입력을 자동으로 대량 주입해 결함을 찾는 기법 | [퍼징](../vol2-tech/part4-binary/09-fuzzing.md) |
 | **파라미터화된 쿼리** (parameterized query) | 쿼리와 입력을 분리해 전달하는 방식. SQL 인젝션의 근본 방어 | [SQL 인젝션](../vol2-tech/part3-web/01-sql-injection.md) |
+| **퍼징** (fuzzing) | 예상 밖 입력을 자동으로 대량 주입해 결함을 찾는 기법 | [퍼징](../vol2-tech/part4-binary/09-fuzzing.md) |
 | **ADP** | Authorized Data Publisher. CVE 레코드에서 CNA 컨테이너 외에 CVSS·CWE·SSVC 같은 보강 정보를 자기 컨테이너에 덧붙일 권한이 있는 조직. CISA의 Vulnrichment가 대표 사례 | [CWE · CVE · CVSS](../vol2-tech/part1-foundations/02-cwe-cve-cvss.md) |
 | **ASLR** | Address Space Layout Randomization. 메모리 주소 무작위화 | [완화 기법](../vol2-tech/part4-binary/07-mitigations.md) |
 | **CSRF** | Cross-Site Request Forgery. 로그인된 사용자의 브라우저가 공격자가 꾸민 요청을 사용자 의도 없이 대상 사이트에 보내게 하는 공격. 브라우저가 쿠키를 자동으로 붙이는 성질을 이용하며, SameSite 쿠키와 토큰으로 막는다 | [인증과 세션](../vol2-tech/part3-web/04-auth-session.md) |
+| **CVSS 벡터** (벡터 문자열, vector string) | CVSS 점수의 근거가 되는 지표 값을 한 줄로 적은 문자열. 예: `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H`(공격 경로 네트워크, 복잡도 낮음, 권한·사용자 상호작용 불필요, 기밀성·무결성·가용성 모두 높음 → 9.8). 점수만 적지 말고 벡터를 함께 적어야 다른 사람이 판단을 검증할 수 있다 | 제2편 [기초 2장](../vol2-tech/part1-foundations/02-cwe-cve-cvss.md), [보고 2장](../vol2-tech/part8-reporting/02-severity.md) |
 | **DoS** | Denial of Service, 서비스 거부. 자원 고갈이나 크래시로 정상 사용자가 서비스를 쓸 수 없게 만드는 공격. 여러 출발지에서 동시에 하면 DDoS | [취약점이란](../vol2-tech/part1-foundations/01-what-is-vulnerability.md) |
 | **FORTIFY_SOURCE** | GCC·glibc의 컴파일 시 보강 옵션. 버퍼 크기를 컴파일 시점에 알 수 있는 `memcpy`·`strcpy`·`sprintf` 등 호출을 길이 검사 버전(`__memcpy_chk` 등)으로 바꿔, 실행 중 오버플로를 잡아 중단시킨다 | [완화 기법](../vol2-tech/part4-binary/07-mitigations.md) |
 | **GOT** | Global Offset Table. 동적 링크된 바이너리에서 외부 함수·변수의 실제 주소를 담는 표. 쓰기 가능하면 덮어쓰기 표적이 되고, Full RELRO가 이를 읽기 전용으로 만든다 | [완화 기법](../vol2-tech/part4-binary/07-mitigations.md), [ROP](../vol2-tech/part4-binary/08-rop.md) |
@@ -93,3 +95,4 @@
 | 2026-10-22 | 기술 검증: 경쟁 조건 정의를 TOCTOU 포함 일반 정의로 보정, N-day 항목의 출처 없는 수치성 서술 삭제, 링크 대상 파일 존재 확인 | 검증팀 |
 | 2026-10-22 | 독자 테스트 반영: 센터·제도 용어 12개(KEV·KVE·TLP·EPSS·NVD·CISA·MITRE·OWASP·IoC·해외 CERT·평가위원회 등)와 기술 용어 19개(RCE·DoS·WAF·CSRF·SSTI·XXE·mXSS·GOT·PLT·tcache·safe-linking·FORTIFY_SOURCE·IMDS·SCA·SBOM·ADP·SSVC·가젯 등) 추가, 장 참조 표기 통일 | @anthonynoh5202 |
 | 2026-10-23 | 기술 검증(2차): TLP RED 정의를 FIRST 기준으로 보정하고 링크를 TLP 표가 있는 제3편 1부 4장 2절로, PLT·ret2plt 설명 정밀화, IMDSv2 토큰 방식(PUT→헤더) 명시, SSVC 결정값(Track·Track*·Attend·Act)과 ADP가 넣는 값 구분, 국가AI전략위원회 "총괄" 단정 완화; tcache 2.26·safe-linking 2.32·ADP·EPSS·KEV 정의는 확인 | 검증팀 |
+| 2026-10-23 | 독자 테스트 2차 반영: "소스·싱크·새니타이저", "CVSS 벡터(벡터 문자열)" 항목 추가, 기술 용어 표의 가나다순 정렬 바로잡음(역직렬화→완화 기법→익스플로잇, 파라미터화된 쿼리→퍼징) | @anthonynoh5202 |
