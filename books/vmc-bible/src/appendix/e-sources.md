@@ -78,6 +78,14 @@
 - [디지털타임스: 국내 CNA 현황 (KISA, 금보원 포괄적 범위)](https://www.dt.co.kr/article/11438707)
 - [아시아경제 2026-05-18: 금융권 취약점 포상제, 가상자산사업자 등 70개사](https://view.asiae.co.kr/article/2026051811422356057)
 
+## 국제 표준·공개 체계 (부록 A, 제3편 1부 4장)
+
+- [FIRST: Traffic Light Protocol (TLP) 2.0](https://www.first.org/tlp/) · 제3편 1부 4장 2절 등급 표, 부록 A
+- [FIRST: Exploit Prediction Scoring System (EPSS)](https://www.first.org/epss/) · 부록 A
+- [CISA: Known Exploited Vulnerabilities Catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) · 부록 A
+- [CISA: Stakeholder-Specific Vulnerability Categorization (SSVC)](https://www.cisa.gov/stakeholder-specific-vulnerability-categorization-ssvc) · 부록 A
+- [CISA Vulnrichment (ADP 컨테이너 보강 저장소)](https://github.com/cisagov/vulnrichment) · 부록 A의 ADP·SSVC 항목
+
 ## 참고 (본문 미인용)
 
 본문에서 직접 인용하지는 않았지만 같은 주제를 다루어 함께 읽을 만한 자료.

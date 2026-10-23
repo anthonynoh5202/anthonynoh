@@ -8,7 +8,7 @@
 |---|---|---|
 | **118** | KISA 전화 상담·신고 창구. 외부 신고가 센터로 들어오는 입구 중 하나 | [제1편 2부 7장](../vol1-center/02-programs/07-portal-advisory.md) |
 | **공동운영사** | 신고포상제에 참여해 자사 제품 취약점 포상금을 직접 부담하는 기업 | [제1편 2부 5장](../vol1-center/02-programs/05-bug-bounty.md) |
-| **국가AI전략위원회** | 국가인공지능전략위원회. 상시 신고조치제 총괄 | [제1편 3부 11장](../vol1-center/03-partners/11-external.md) |
+| **국가AI전략위원회** | 국가인공지능전략위원회. 상시 신고조치제를 과기정통부·국정원·KISA와 함께 추진하며 시범사업 공고를 낸 주체 | [제1편 3부 11장](../vol1-center/03-partners/11-external.md) |
 | **기반시설** | 주요정보통신기반시설. 정보통신기반 보호법상 지정된 시설 | [제1편 2부 8장](../vol1-center/02-programs/08-assessment-support.md) |
 | **보호나라** | boho.or.kr. KISA의 보안공지와 침해사고 신고 사이트(KrCERT/CC) | [제1편 2부 7장](../vol1-center/02-programs/07-portal-advisory.md) |
 | **상시 신고조치제** | 보안취약점 상시 신고조치제. 2026.5 시범사업 시작한 CVD/VDP 제도 | [제1편 2부 6장](../vol1-center/02-programs/06-cvd-vdp.md) |
@@ -40,7 +40,7 @@
 | **OWASP** | Open Worldwide Application Security Project. 웹 애플리케이션 보안 비영리 커뮤니티. Top 10, ASVS, Juice Shop 등을 낸다. Top 10은 분류 체계가 아니라 인식 제고 문서 | 제2편 [기초 2장](../vol2-tech/part1-foundations/02-cwe-cve-cvss.md) |
 | **PoC** | Proof of Concept. 취약점이 실제임을 보이는 최소 증명 | 제2편 [방법론 6장](../vol2-tech/part2-methodology/06-exploit-verification.md) |
 | **TF** | 태스크포스. 센터 출범 시 형태 | [제1편 1부 2장](../vol1-center/01-understanding/02-where.md) |
-| **TLP** | Traffic Light Protocol. 정보의 공유 범위를 색으로 표시하는 FIRST 표준(2.0). RED(수신자 본인만) · AMBER+STRICT(수신 조직 안에서만) · AMBER(수신 조직과 그 고객까지) · GREEN(소속 커뮤니티까지) · CLEAR(제한 없음). 취약점 정보를 유관기관과 주고받을 때 붙인다 | [제1편 3부 11장](../vol1-center/03-partners/11-external.md) |
+| **TLP** | Traffic Light Protocol. 정보의 공유 범위를 색으로 표시하는 FIRST 표준(2.0). RED(정보를 받은 자리의 참여자만) · AMBER+STRICT(수신 조직 안에서만) · AMBER(수신 조직과 보호가 필요한 그 고객까지, need-to-know) · GREEN(소속 커뮤니티까지, 공개 채널 불가) · CLEAR(제한 없음). 취약점 정보를 유관기관과 주고받을 때 붙인다 | [제3편 1부 4장](../vol3-practice/01-workflow-tech/04-advisory.md) 2절 |
 | **VDP** | Vulnerability Disclosure Policy, 취약점 공개 정책. 기관이 "여기까지는 찾아도 된다"를 사전 공개 | [제1편 2부 6장](../vol1-center/02-programs/06-cvd-vdp.md) |
 
 ## 기술 용어
@@ -65,10 +65,10 @@
 | **FORTIFY_SOURCE** | GCC·glibc의 컴파일 시 보강 옵션. 버퍼 크기를 컴파일 시점에 알 수 있는 `memcpy`·`strcpy`·`sprintf` 등 호출을 길이 검사 버전(`__memcpy_chk` 등)으로 바꿔, 실행 중 오버플로를 잡아 중단시킨다 | [완화 기법](../vol2-tech/part4-binary/07-mitigations.md) |
 | **GOT** | Global Offset Table. 동적 링크된 바이너리에서 외부 함수·변수의 실제 주소를 담는 표. 쓰기 가능하면 덮어쓰기 표적이 되고, Full RELRO가 이를 읽기 전용으로 만든다 | [완화 기법](../vol2-tech/part4-binary/07-mitigations.md), [ROP](../vol2-tech/part4-binary/08-rop.md) |
 | **IDOR** | Insecure Direct Object Reference. ID만 바꿔 남의 자원에 접근 | [접근 제어](../vol2-tech/part3-web/05-access-control.md) |
-| **IMDS** | Instance Metadata Service. 클라우드 VM이 자기 메타데이터와 임시 자격증명을 받는 링크 로컬 주소(169.254.169.254)의 서비스. SSRF의 대표 표적이며, IMDSv2는 먼저 토큰을 받게 해 단순 SSRF를 막는다 | [SSRF](../vol2-tech/part3-web/03-ssrf.md), [클라우드](../vol2-tech/part5-extended/02-cloud.md) |
+| **IMDS** | Instance Metadata Service. 클라우드 VM이 자기 메타데이터와 임시 자격증명을 받는 링크 로컬 주소(169.254.169.254)의 서비스. SSRF의 대표 표적이며, IMDSv2는 먼저 PUT 요청으로 세션 토큰을 받아 이후 요청의 헤더에 넣게 하므로 PUT이나 임의 헤더를 보낼 수 없는 단순 SSRF를 막는다 | [SSRF](../vol2-tech/part3-web/03-ssrf.md), [클라우드](../vol2-tech/part5-extended/02-cloud.md) |
 | **mXSS** | Mutation XSS. 브라우저가 HTML을 파싱하고 다시 직렬화하는 과정에서 마크업이 바뀌어, 정화기(sanitizer)를 통과한 입력이 DOM에 들어간 뒤 스크립트로 변하는 XSS | [XSS](../vol2-tech/part3-web/02-xss.md) |
 | **N-day** | 패치가 나왔지만 적용되지 않은 취약점 | [취약점이란](../vol2-tech/part1-foundations/01-what-is-vulnerability.md) |
-| **PLT** | Procedure Linkage Table. 외부 함수 호출을 GOT 항목으로 넘기는 작은 스텁 코드의 묶음. ret2plt는 이 스텁을 가젯처럼 호출한다 | [ROP](../vol2-tech/part4-binary/08-rop.md) |
+| **PLT** | Procedure Linkage Table. 외부 함수 호출을 GOT 항목에 적힌 주소로 넘기는(`jmp *GOT[n]`) 작은 스텁 코드의 묶음. ret2plt는 반환 주소를 이 스텁으로 돌려, 라이브러리의 실제 주소를 모른 채 그 함수를 호출한다 | [ROP](../vol2-tech/part4-binary/08-rop.md) |
 | **PoC** | Proof of Concept. 취약점이 실제임을 보이는 최소 증명. 센터 업무의 "재현"은 PoC가 자기 환경에서 돌아가는지 확인하는 일 | [익스플로잇 검증](../vol2-tech/part2-methodology/06-exploit-verification.md) |
 | **RCE** | Remote Code Execution, 원격 코드 실행. 공격자가 네트워크 너머에서 대상 시스템에 임의 코드를 실행시키는 결과. 결과를 가리키는 말이라 CWE가 아니며, 원인(역직렬화, 명령 인젝션, 버퍼 오버플로 등)을 따로 적는다 | [CWE · CVE · CVSS](../vol2-tech/part1-foundations/02-cwe-cve-cvss.md) |
 | **ROP** | Return-Oriented Programming. 기존 코드 조각을 이어 붙여 실행 | [ROP](../vol2-tech/part4-binary/08-rop.md) |
@@ -78,7 +78,7 @@
 | **SCA** | Software Composition Analysis. 의존성 목록을 알려진 취약점 DB와 대조해 취약한 컴포넌트를 찾는 분석. SAST가 자기 코드를 보는 것이라면 SCA는 가져다 쓴 코드를 본다 | [정보 수집](../vol2-tech/part2-methodology/02-recon.md), [공급망](../vol2-tech/part5-extended/04-supply-chain.md) |
 | **SSRF** | Server-Side Request Forgery. 서버가 공격자 지정 URL로 요청 | [SSRF](../vol2-tech/part3-web/03-ssrf.md) |
 | **SSTI** | Server-Side Template Injection. 사용자 입력이 템플릿 데이터가 아니라 템플릿 문자열 자체로 들어가, 템플릿 엔진이 그것을 평가하면서 코드 실행에 이르는 취약점 | [SSTI](../vol2-tech/part3-web/09-ssti.md) |
-| **SSVC** | Stakeholder-Specific Vulnerability Categorization. 점수 대신 의사결정 트리(악용 여부, 자동화 가능성, 기술적 영향 등)로 대응 수준을 정하는 CISA·CERT/CC의 체계. CISA ADP가 CVE 레코드에 값을 넣는다 | [CWE · CVE · CVSS](../vol2-tech/part1-foundations/02-cwe-cve-cvss.md) |
+| **SSVC** | Stakeholder-Specific Vulnerability Categorization. 점수 대신 의사결정 트리로 대응 수준을 정하는 CERT/CC·CISA의 체계. 결정 포인트(악용 여부 Exploitation, 자동화 가능성 Automatable, 기술적 영향 Technical Impact, 임무·안전 영향)를 거쳐 Track · Track\* · Attend · Act 넷 중 하나로 끝난다. CISA ADP는 앞의 세 결정 포인트 값을 CVE 레코드에 넣는다 | [CWE · CVE · CVSS](../vol2-tech/part1-foundations/02-cwe-cve-cvss.md) |
 | **tcache** | thread-local cache. glibc 2.26부터 `malloc`이 스레드별로 작은 청크를 크기별 단일 연결 리스트로 모아 두는 캐시. 검사가 느슨해 힙 익스플로잇의 첫 표적 | [힙 취약점](../vol2-tech/part4-binary/04-heap.md) |
 | **UAF** | Use-After-Free. 해제된 메모리를 계속 사용 | [UAF](../vol2-tech/part4-binary/05-uaf.md) |
 | **WAF** | Web Application Firewall. HTTP 요청·응답을 규칙으로 검사해 공격 패턴을 차단하는 장치. 우회가 가능하므로 패치까지 시간을 버는 임시 완화책이지 근본 수정이 아니다 | [SQL 인젝션](../vol2-tech/part3-web/01-sql-injection.md), [제3편 1부 3장](../vol3-practice/01-workflow-tech/03-remediation.md) |
@@ -92,3 +92,4 @@
 |---|---|---|
 | 2026-10-22 | 기술 검증: 경쟁 조건 정의를 TOCTOU 포함 일반 정의로 보정, N-day 항목의 출처 없는 수치성 서술 삭제, 링크 대상 파일 존재 확인 | 검증팀 |
 | 2026-10-22 | 독자 테스트 반영: 센터·제도 용어 12개(KEV·KVE·TLP·EPSS·NVD·CISA·MITRE·OWASP·IoC·해외 CERT·평가위원회 등)와 기술 용어 19개(RCE·DoS·WAF·CSRF·SSTI·XXE·mXSS·GOT·PLT·tcache·safe-linking·FORTIFY_SOURCE·IMDS·SCA·SBOM·ADP·SSVC·가젯 등) 추가, 장 참조 표기 통일 | @anthonynoh5202 |
+| 2026-10-23 | 기술 검증(2차): TLP RED 정의를 FIRST 기준으로 보정하고 링크를 TLP 표가 있는 제3편 1부 4장 2절로, PLT·ret2plt 설명 정밀화, IMDSv2 토큰 방식(PUT→헤더) 명시, SSVC 결정값(Track·Track*·Attend·Act)과 ADP가 넣는 값 구분, 국가AI전략위원회 "총괄" 단정 완화; tcache 2.26·safe-linking 2.32·ADP·EPSS·KEV 정의는 확인 | 검증팀 |
