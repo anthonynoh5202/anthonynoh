@@ -254,7 +254,7 @@ pickle.loads(payload)          # ← 이 줄에서 echo가 실행된다. 객체�
 
 ### 7.1 가젯 체인 해부: Commons Collections 3.1
 
-우회를 이해하려면 체인 하나를 끝까지 읽어야 한다. "차단 목록이 왜 안 되는가"는 체인의 각 고리가 **얼마나 평범한 코드**인지 보면 저절로 답이 나온다. 여기서는 ysoserial의 `CommonsCollections6`(Matthias Kaiser)을 따라간다. JDK 버전을 타지 않는 가장 단순한 형태다. 소스의 주석에 적힌 호출 순서는 다음과 같다.
+우회를 이해하려면 체인 하나를 끝까지 읽어야 한다. "차단 목록이 왜 안 되는가"는 체인의 각 고리가 **얼마나 평범한 코드**인지 보면 저절로 답이 나온다. 여기서는 ysoserial의 `CommonsCollections6`(Matthias Kaiser)을 따라간다. JDK 버전을 타지 않는 가장 단순한 형태다. 소스 주석의 호출 순서를 변환기 단위로 풀어 쓰면 다음과 같다.
 
 ```
 ObjectInputStream.readObject()
@@ -428,7 +428,7 @@ HashSet                → java.util   허용
 
 필터는 스트림의 **첫 비허용 클래스 이름**에서 체인을 끊는다. 그래서 두 가지가 따라온다. 첫째, 허용 목록(`!*`로 끝나는)만이 "모르는 체인"까지 막는다. 차단 목록은 7.2에서 찾은 다음 고리가 나오면 끝이다. 둘째, 필터가 막지 못하는 것도 분명하다. 허용한 패키지 안에서만 이어지는 체인(`URLDNS`처럼 JDK 클래스만 쓰는 체인은 `java.*`를 허용하면 통과한다), 그리고 역직렬화가 아닌 경로(Jackson 다형 타입, XStream)는 이 필터의 영역이 아니다. `maxdepth`·`maxarray`·`maxrefs`·`maxbytes` 제한은 DoS용이지 RCE 체인을 막는 장치가 아니다.
 
-적용 범위도 확인한다. `ObjectInputStream.setObjectInputFilter()`는 그 스트림 하나에, `-Djdk.serialFilter=`는 JVM 전역에 걸린다. 전역 필터를 켜 두고 코드에서 스트림별 필터로 덮어쓰면 **덮어쓴 쪽이 이긴다**. JDK 17의 JEP 415는 `jdk.serialFilterFactory`로 "스트림별 필터와 전역 필터를 합치는" 팩토리를 두어 이 문제를 다룬다. 점검 보고서에는 "필터가 있다"가 아니라 "어느 스트림에 어떤 패턴이 걸려 있고, `!*`로 끝나는가"를 적는다.
+적용 범위도 확인한다. `ObjectInputStream.setObjectInputFilter()`는 그 스트림 하나에, `-Djdk.serialFilter=`는 JVM 전역에 걸린다. 전역 필터를 켜 두고 코드에서 스트림별 필터로 덮어쓰면 **덮어쓴 쪽이 이긴다**. JDK 17의 JEP 415는 `jdk.serialFilterFactory`로 "스트림별 필터와 전역 필터를 합치는" 팩토리를 둘 수 있게 했다. 다만 기본 팩토리는 여전히 새 필터로 **교체**하므로(JDK 17·21의 `ObjectInputFilter.Config.BuiltinFilterFactory.apply`는 `newFilter`를 그대로 반환), 합치려면 `ObjectInputFilter.merge`를 쓰는 팩토리를 직접 등록해야 한다. 점검 보고서에는 "필터가 있다"가 아니라 "어느 스트림에 어떤 패턴이 걸려 있고, `!*`로 끝나는가"를 적는다.
 
 ## 8. 실제 CVE 사례
 
@@ -490,4 +490,5 @@ HashSet                → java.util   허용
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 전체 작성. 언어별 패턴 4종, CVE 5건, pickle 재현 코드, PortSwigger 랩 목록 추가 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 11건 레코드 대조(전부 실존). pickle 재현 코드 실행 확인 후 지문·json.loads 예외 종류 설명 보정. ObjectInputFilter 문법 Java로 실행 확인 | 검증팀 |
+| 2026-10-23 | 기술 검증(2차, 7절): ysoserial CommonsCollections6·CommonsCollections1·JavaVersion 소스와 Commons Collections 3.1 태그의 TiedMapEntry·LazyMap·ChainedTransformer·InvokerTransformer 소스로 인용 코드·호출 순서·`update <= 71` 조건 대조(일치). 3.2.2(2015-11-12)·4.1(2015-11-25) 릴리스일, `enableUnsafeSerialization` 속성명, 4.0 TransformingComparator의 Serializable 여부를 소스로 확인. ChainSteps를 JDK 21+CC 3.1로 재실행(5·6·7단계 표식 생성). JEP 290 `filterCheck` 시점을 JDK 17 ObjectInputStream 소스로 확인. JEP 415 서술을 기본 팩토리가 교체 동작임을 명시하도록 보정, CC6 호출 순서가 주석을 풀어 쓴 것임을 명시 | 검증팀 |
 | 2026-10-22 | 독자 테스트 반영: 7절을 🔴로 확장. Commons Collections 3.1 체인(CC6) 고리별 해부·ysoserial 소스 인용·단계별 자바 호출 실습, 가젯 체인 탐색법과 버전별 차이, JEP 290 차단 지점. 장 참조 표기 정리 | @anthonynoh5202 |

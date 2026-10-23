@@ -324,7 +324,7 @@ jwt.decode(forged, pub_pem, algorithms=["RS256"])   # InvalidAlgorithmError: The
 jwt.decode(forged, pub_pem, algorithms=["HS256"])   # InvalidKeyError: … asymmetric key … should not be used as an HMAC secret
 ```
 
-**라이브러리가 막는 두 겹.** 첫째는 알고리즘 허용 목록이다. PyJWT 2.x는 `algorithms`를 생략하면 `decode()` 자체를 거부하고, 토큰의 `alg`가 목록에 없으면 `InvalidAlgorithmError`다. 둘째는 **키 종류와 알고리즘의 결합**이다. 허용 목록에 `HS256`이 들어 있더라도, `HMACAlgorithm.prepare_key()`가 키가 PEM·SSH·DER 형식이면 거부한다(2.4.0에서 추가, [CVE-2022-29217](https://nvd.nist.gov/vuln/detail/CVE-2022-29217)의 패치).
+**라이브러리가 막는 두 겹.** 첫째는 알고리즘 허용 목록이다. PyJWT 2.x는 `algorithms`를 생략하면 `decode()` 자체를 거부하고, 토큰의 `alg`가 목록에 없으면 `InvalidAlgorithmError`다. 둘째는 **키 종류와 알고리즘의 결합**이다. 허용 목록에 `HS256`이 들어 있더라도, `HMACAlgorithm.prepare_key()`가 키가 PEM·SSH·DER 형식이면 거부한다(PEM·SSH 검사는 2.4.0에서 추가된 [CVE-2022-29217](https://nvd.nist.gov/vuln/detail/CVE-2022-29217)의 패치이고, DER 검사는 2.14.0에서 추가됐다).
 
 ```python
 # PyJWT jwt/algorithms.py, HMACAlgorithm.prepare_key (2.15)
@@ -355,7 +355,7 @@ if (header.alg.startsWith('HS') && secretOrPublicKey.type !== 'secret') {
 세션 고정(session fixation)은 공격자가 **먼저 안** 세션 ID로 피해자가 로그인하게 만드는 공격이다. 흐름은 네 단계다.
 
 1. 공격자가 사이트에 접속해 세션 ID `S`를 받는다. 서버가 아무 값이나 세션으로 받아들이는 설정(PHP `session.use_strict_mode=0`, 기본값)이면 받을 필요도 없이 지어내면 된다.
-2. 피해자 브라우저에 `S`를 심는다. URL 재작성(`;jsessionid=S`, `?PHPSESSID=S`)을 쓰는 서버면 링크 하나로 끝난다. 쿠키만 쓰는 서버면 같은 상위 도메인의 다른 서브도메인에서 `Set-Cookie: sid=S; Domain=.example.com`을 내리거나(서브도메인 XSS·헤더 인젝션), `<meta http-equiv="Set-Cookie">`를 쓴다.
+2. 피해자 브라우저에 `S`를 심는다. URL 재작성(`;jsessionid=S`, `?PHPSESSID=S`)을 쓰는 서버면 링크 하나로 끝난다. 쿠키만 쓰는 서버면 같은 상위 도메인의 다른 서브도메인에서 `Set-Cookie: sid=S; Domain=.example.com`을 내린다(서브도메인 XSS·헤더 인젝션). 옛 자료의 `<meta http-equiv="Set-Cookie">`는 현행 브라우저가 무시한다.
 3. 피해자가 `S`를 가진 채 로그인한다. 서버가 ID를 바꾸지 않으면 `S`가 인증된 세션이 된다.
 4. 공격자가 `S`로 요청을 보낸다.
 
@@ -451,4 +451,5 @@ https://client.example@attacker.example/callback                          ← us
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 본문 작성. 비밀번호 저장·타이밍·세션·JWT·OAuth·MFA, CVE 6건 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 6건 레코드 대조(전부 실존). 타이밍 예제의 미정의 _verify 헬퍼 추가, PyJWT 2.x에서 algorithms 생략 호출이 거부됨을 반영. argon2·hmac·PyJWT alg:none 예제 실행 확인 | 검증팀 |
+| 2026-10-23 | 기술 검증(2차, 7절): PyJWT master `HMACAlgorithm.prepare_key`·jsonwebtoken master `verify.js` 인용을 원 소스와 대조(일치), confusion.py(PyJWT 2.15.1)·confusion.js(jsonwebtoken 9.0.2) 재실행으로 예외 문구 확인, CVE-2022-29217 레코드 대조. DER 키 검사 추가 버전(2.14.0)을 2.4.0 패치와 구분하고, `<meta http-equiv="Set-Cookie">`가 현행 브라우저에서 무시됨을 명시 | 검증팀 |
 | 2026-10-22 | 독자 테스트 반영: 7절에 JWT 알고리즘 혼동(PyJWT 2.15·jsonwebtoken 9.0.2 소스·실행 확인), 세션 고정 우회 흐름, OAuth redirect_uri 우회 패턴 추가. 장 참조 표기 정리 | @anthonynoh5202 |

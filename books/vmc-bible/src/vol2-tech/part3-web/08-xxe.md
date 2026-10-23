@@ -409,4 +409,5 @@ etree.fromstring(doc, parser).text     # 'expanded' ← 파서가 하는 것 (re
 | 2026-10-21 | 초안(뼈대) 작성 | @anthonynoh5202 |
 | 2026-10-22 | 10섹션 전체 작성. 언어별 안전 설정 4종, 숨은 XML 입력 표, CVE 4건, lxml 재현 코드 추가 | @anthonynoh5202 |
 | 2026-10-22 | 기술 검증: CVE 4건 레코드 대조(전부 실존; CVE-2019-3773·CVE-2021-23926 영향 버전을 레코드 기준으로 수정). lxml 5.0부터 기본 resolve_entities='internal'로 바뀐 점을 반영해 취약 예제·재현 코드 수정(lxml 6.1·defusedxml 실행 확인). Java JAXP/StAX 설정 문자열 실행 확인 | 검증팀 |
+| 2026-10-23 | 기술 검증(2차, 7절): UTF-16 DOCTYPE·OOB 파라미터 개체 6단계(에러 기반)·내부 서브셋 PE 참조 거부·로컬 DTD 재사용을 lxml 6.1.3(libxml2 2.14.6)과 JDK 21 내장 파서로 재실행해 본문의 오류 문구(`PEReferences forbidden in internal subset`, `cannot occur within markup in the internal subset`, `FileNotFoundException`, `Can't resolve URI`)와 동작 차이를 확인. XML 1.0 WFC·4.2절 근거 확인. 수정 없음 | 검증팀 |
 | 2026-10-22 | 독자 테스트 반영: 7절에 로컬 DTD 재사용 원리(JDK 파서·libxml2 실행 확인), 블라인드 OOB 파라미터 개체 단계표, UTF-16 인코딩 우회 원리(lxml 실행 확인) 추가 | @anthonynoh5202 |

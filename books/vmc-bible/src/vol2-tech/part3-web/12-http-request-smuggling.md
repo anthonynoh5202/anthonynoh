@@ -48,7 +48,7 @@ sequenceDiagram
 | **TE.CL** | Transfer-Encoding | Content-Length | 스머글할 요청을 청크 안에 넣는다 |
 | **TE.TE** | 둘 다 TE 지원 | 둘 다 TE 지원 | TE 헤더를 **난독화**해 한쪽만 못 알아보게 만든다(7절) |
 | **H2.CL / H2.TE** | HTTP/2 | HTTP/1.1로 다운그레이드 | HTTP/2 요청의 `content-length`·`transfer-encoding`을 그대로 넘긴다 |
-| **CL.0** | Content-Length | 본문 무시 | TE 무관. 백엔드가 정적 파일·리다이렉트·오류 응답에서 본문을 읽지 않고 버리면, 프런트가 CL대로 넘긴 본문이 다음 요청이 된다. 8절의 nginx `error_page`(CVE-2019-20372)·httpd(CVE-2022-22720)가 이 유형 |
+| **CL.0** | Content-Length | 본문 무시 | TE 무관. 백엔드가 정적 파일·리다이렉트·오류 응답에서 본문을 읽지 않고 버리면, 프런트가 CL대로 넘긴 본문이 다음 요청이 된다. 8절의 nginx `error_page`(CVE-2019-20372)와 httpd 2.4.52 이하의 [CVE-2022-22720](https://nvd.nist.gov/vuln/detail/CVE-2022-22720)(본문 폐기 중 오류가 나도 연결을 닫지 않음)이 이 유형 |
 
 CL.TE와 TE.CL의 바이트열은 이렇다. 공백·줄바꿈 하나가 길이를 바꾸므로 `\r\n`을 명시한다.
 
@@ -82,7 +82,7 @@ x=1\r\n
 
 ### HTTP/2 다운그레이드
 
-HTTP/2는 바이너리 프레임에 길이가 명시돼 있어 요청 경계가 모호하지 않다. 문제는 프런트가 HTTP/2를 받아 **HTTP/1.1로 바꿔** 백엔드에 넘길 때다. 이때 프런트는 본문 길이에 맞는 `Content-Length`를 새로 만들어야 하는데, 클라이언트가 보낸 `content-length`나 `transfer-encoding` 헤더를 **그대로 베끼면** 백엔드는 프레임 길이가 아니라 그 헤더로 경계를 정한다. [RFC 9113 8.2.2절](https://www.rfc-editor.org/rfc/rfc9113#section-8.2.2)이 HTTP/2에서 `Transfer-Encoding` 같은 연결 전용 헤더를 금지하는 이유다. 또 HTTP/2 헤더 값에는 `\r\n`을 넣을 수 있어, 다운그레이드 후 **헤더 한 줄이 두 줄**이 되는 CRLF 주입도 같은 결과를 낸다. James Kettle의 2021년 연구 [HTTP/2: The Sequel is Always Worse](https://portswigger.net/research/http2)가 이 계열을 체계화했다.
+HTTP/2는 바이너리 프레임에 길이가 명시돼 있어 요청 경계가 모호하지 않다. 문제는 프런트가 HTTP/2를 받아 **HTTP/1.1로 바꿔** 백엔드에 넘길 때다. 이때 프런트는 본문 길이에 맞는 `Content-Length`를 새로 만들어야 하는데, 클라이언트가 보낸 `content-length`나 `transfer-encoding` 헤더를 **그대로 베끼면** 백엔드는 프레임 길이가 아니라 그 헤더로 경계를 정한다. [RFC 9113 8.2.2절](https://www.rfc-editor.org/rfc/rfc9113#section-8.2.2)이 HTTP/2에서 `Transfer-Encoding` 같은 연결 전용 헤더를 금지하는 이유다. 또 HTTP/2는 바이너리 프레임이라 헤더 값에 `\r\n` 바이트를 실을 수 있고([RFC 9113 8.2.1절](https://www.rfc-editor.org/rfc/rfc9113#section-8.2.1)은 금지하지만 검사하지 않는 구현이 있다), 다운그레이드 후 **헤더 한 줄이 두 줄**이 되는 CRLF 주입도 같은 결과를 낸다. James Kettle의 2021년 연구 [HTTP/2: The Sequel is Always Worse](https://portswigger.net/research/http2)가 이 계열을 체계화했다.
 
 ## 2. 발생하는 코드 패턴
 
@@ -348,3 +348,4 @@ TE 변형이 전부 막혀도 두 길이 남는다. 첫째, 백엔드가 본문�
 | 날짜 | 변경 | 기여자 |
 |---|---|---|
 | 2026-10-22 | 초안 작성. CL.TE·TE.CL 바이트열 길이 계산과 파서 모형, Node 22의 CL+TE 거부를 로컬 확인. CVE 8건 cvelistV5 레코드 대조 | @anthonynoh5202 |
+| 2026-10-23 | 기술 검증(2차): CVE 11건 레코드 재대조(전부 실존, 버전·CWE 일치). TE.CL 청크 길이(0x5c=92)·탐침 CL 값·파서 모형 재실행, Node 22 `HPE_INVALID_TRANSFER_ENCODING` 재확인, nginx 1.17.7 `error_page` 경로의 `ngx_http_discard_request_body` 추가를 소스로 확인. CL.0 행의 CVE-2022-22720이 8절에 없는데 "8절의"로 가리키던 것을 바로잡고, HTTP/2 헤더 값의 CR/LF가 규격상 금지(RFC 9113 8.2.1)임을 명시 | 검증팀 |
